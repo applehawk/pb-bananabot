@@ -1,0 +1,33 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  key_id      Int          @id @default(autoincrement())
+  id          String // telegram_id
+  name        String
+  nickname    String
+  connections Connection[]
+}
+
+model Connection {
+  key_id Int    @id @default(autoincrement())
+  tgid   String // telegram_id
+  name   String // key_telegram_id
+
+  server      String
+  server_port Int
+  password    String
+  method      String
+  access_url  String
+  User        User?  @relation(fields: [userKey_id], references: [key_id])
+  userKey_id  Int?
+}
