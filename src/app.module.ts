@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConnectionService } from './prisma/connection.service';
+import { UserService } from './prisma/user.service';
 
 @Module({
   imports: [
@@ -16,6 +17,6 @@ import { ConnectionService } from './prisma/connection.service';
     PrismaModule
   ],
   controllers: [AppController, OutlineBackendController],
-  providers: [AppService, ConnectionService],
+  providers: [AppService, ConnectionService, UserService],
 })
 export class AppModule {}

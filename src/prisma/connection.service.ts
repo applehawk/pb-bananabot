@@ -6,6 +6,23 @@ import { Connection, Prisma } from '@prisma/client';
 export class ConnectionService {
     constructor(private prisma: PrismaService) {}
 
+    async connectionFirst(params: {
+      skip?: number;
+      take?: number;
+      cursor?: Prisma.ConnectionWhereUniqueInput;
+      where?: Prisma.ConnectionWhereInput;
+      orderBy?: Prisma.ConnectionOrderByWithRelationInput;
+    }): Promise<Connection | null> {
+      const { skip, take, cursor, where, orderBy } = params;
+      return this.prisma.connection.findFirst({
+        skip,
+        take,
+        cursor,
+        where,
+        orderBy,
+      })
+    }
+
     async connection(
         connWhereUniqueInput: Prisma.ConnectionWhereUniqueInput,
       ): Promise<Connection | null> {

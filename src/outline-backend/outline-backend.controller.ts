@@ -6,12 +6,10 @@ import { config } from 'process';
 import { AxiosRequestConfig } from 'axios';
 
 import { Connection } from '@prisma/client';
-import { User } from '@prisma/client';
 import { ConnectionService } from 'src/prisma/connection.service';
-
-const OUTLINE_USERS_GATEWAY = "ssconf://users.outline.yourvpn.io"
-const OUTLINE_SALT = "qwerty123"
-const CONN_NAME = "Wow!"
+import { User } from '@prisma/client';
+import { UserService } from 'src/prisma/user.service';
+import { retry } from 'rxjs';
 
 type JSONValue =
     | string
@@ -20,19 +18,22 @@ type JSONValue =
     | { [x: string]: JSONValue }
     | Array<JSONValue>;
 
+const CONNLIMIT = 1
+
 @Controller('outline')
 export class OutlineBackendController {
     apiUrl: string
     vpnDomain: string
 
     outlineUsersGateway: string = "ssconf://users.outline.yourvpn.io"
-    outlineSalt: string = "qwerty123"
+    version: string = "v1"
     connName: string = "Wow!"
 
     constructor(
         private configService: ConfigService, 
         private readonly httpService: HttpService, 
-        private connectionService: ConnectionService) {   
+        private connectionService: ConnectionService,
+        private userService: UserService) {   
             this.apiUrl = this.configService.get<string>('OUTLINE_API_URL')
             this.vpnDomain = this.configService.get<string>('VPN_SERVER')
             this.outlineUsersGateway = "ssconf://" + this.vpnDomain
@@ -40,30 +41,93 @@ export class OutlineBackendController {
             console.log('VPN_SERVER: ' + this.vpnDomain)
     }
 
-    @Post(':id') //name = telegramId
-    create(@Res() res: Response, @Param('id') telegramId: string) {
-        const keyId = this.createNewKey(telegramId)
-        res.status(HttpStatus.OK).json({"key_id": keyId});
+    @Post('/user/:id') //name = telegramId
+    async createUser(@Res() res: Response, @Param('id') telegramId: string, 
+        @Query('firstname') firstname: string,
+        @Query('lastname') lastname?: string,
+        @Query('nickname') nickname?: string) {
+        var user = await this.userService.userFirst({ 
+            where: { id: telegramId }
+        })
+        if (user === null) {
+            user = await this.userService.createUser({
+                id: telegramId,
+                firstname: firstname,
+                lastname: lastname,
+                nickname: nickname,
+                connLimit: CONNLIMIT
+            })
+        }
+        res.status(HttpStatus.OK).json({
+            "id": user.id,
+            "firstname": user.firstname,
+            "lastname": user.lastname,
+            "nickname": user.nickname,
+            "connLimit": user.connLimit
+        });
     }
 
-    @Get('/dynamic/:telegramId')
-    getOutlineDynamicLink(@Param('telegramId') telegramId: string | number) {
-        let userIdNumber: number = +telegramId
-        let userIdHex: string = '0x'+userIdNumber.toString(16);
-        console.log(userIdHex)
-        return `${this.outlineUsersGateway}/conf/${this.outlineSalt}${userIdHex}#${this.connName}`
+    @Post('/user/:id/conn/:connName')
+    async createConnection(@Res() res: Response, @Param('id') telegramId: string, @Param('connName') connName: string) {
+        let user = await this.userService.userFirst({ 
+            where: { id: telegramId }
+        })
+        if (user === null) {
+            res.status(HttpStatus.NOT_FOUND).json({ "id": "UserNotFound"})
+            return
+        }
+        let connections = await this.connectionService.connections({ where: { userKey_id: user.key_id }})
+        if (connections.length >= user.connLimit) {
+            res.status(HttpStatus.NOT_FOUND).json({ "id": "ConnectionLimitExceed"})
+            return
+        }
+        
+        let response = await this.createNewKey(telegramId)
+        let newConnection = await this.connectionService.createConnection({
+            tgid: telegramId,
+            name: connName,
+            server: "95.174.68.173",
+            server_port: 2951,
+            method: response.method,
+            access_url: response.accessUrl,
+            password: response.password
+        })
+        let dynamicLink = this.getOutlineDynamicLink(telegramId, connName, newConnection.key_id)
+        res.status(HttpStatus.OK).json({ "link": dynamicLink})
     }
 
-    @Get('/conf/:hexId')
-    handleConfig(@Param('hexId') hexId: string) {
-        let userId = parseInt(hexId, 16)
-        //const result = await this.userConnectionService.connection({ id: string(userId) })
+    getOutlineDynamicLink(telegramId: string | number, connName: string, connId: number) {
+        let tgIdHex: string = (+telegramId).toString(16)
+        let connHex: string = connId.toString(16)
+        return`${this.outlineUsersGateway}/conf/${this.version}/${tgIdHex}/${connHex}/${connName}`
+    }
+
+    @Get('/conf/:version/:tgIdHex/:connIdHex')
+    async handleConfig(@Res() res: Response, @Param('version') version: string,
+        @Param('tgIdHex') tgIdHex: string, @Param('connIdHex') connIdHex: string) {
+
+        let tgId = parseInt(tgIdHex, 16)
+        let connId = parseInt(connIdHex, 16)
+
+        this.connectionService.connectionFirst({
+            where:{ tgid: tgId.toString() }
+        }).then( connection => {
+            res.status(HttpStatus.OK).json({
+                "server": connection.server,
+                "server_port": connection.server_port,
+                "password": connection.password,
+                "method": connection.method
+            })
+        }).catch( error => {
+            res.status(HttpStatus.NOT_FOUND);
+        })
     }
 
     async renameKey(keyId: string | number, keyName: string) {
         const url = `${this.apiUrl}/access-keys/${keyId}/name`;
         return this.httpService.axiosRef.put(url, { "name": keyName });
     }
+
 
     async createNewKey(withTelegramId: string) {
         let url = `${this.apiUrl}/access-keys`;
@@ -73,22 +137,6 @@ export class OutlineBackendController {
         await this.renameKey(keyId, withTelegramId)
 
         console.log(response.data)
-
-        let server_port: number = response.data.port
-        let password: string = response.data.password
-        let method: string  = response.data.method
-        let accessUrl: string = response.data.accessUrl
-
-        this.connectionService.createConnection({ 
-            tgid: withTelegramId, 
-            name: withTelegramId,
-            server: this.vpnDomain,
-            server_port: server_port,
-            password: password,
-            method: method,
-            access_url: accessUrl,
-        });
-
         return response.data;
     }
 }

@@ -13,8 +13,10 @@ datasource db {
 model User {
   key_id      Int          @id @default(autoincrement())
   id          String // telegram_id
-  name        String
+  firstname   String
+  lastname    String
   nickname    String
+  connLimit   Int
   connections Connection[]
 }
 
