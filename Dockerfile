@@ -11,6 +11,9 @@ COPY package*.json ./
 # Install app dependencies
 RUN npm install
 
+# Prisma generate db based on ORM
+RUN npx prisma generate
+
 # Bundle app source
 COPY . .
 
@@ -24,4 +27,4 @@ ENV NODE_ENV production
 EXPOSE 80
 
 # Run the application.
-CMD ["node", "./dist/main.js"]
+CMD ["node", "run", "start:prod"]
