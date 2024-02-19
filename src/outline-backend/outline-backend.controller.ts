@@ -10,6 +10,7 @@ import { ConnectionService } from 'src/prisma/connection.service';
 import { User } from '@prisma/client';
 import { UserService } from 'src/prisma/user.service';
 import { retry } from 'rxjs';
+import { PrismaClient, Prisma } from '@prisma/client'
 
 type JSONValue =
     | string
@@ -46,9 +47,21 @@ export class OutlineBackendController {
         @Query('firstname') firstname: string,
         @Query('lastname') lastname?: string,
         @Query('nickname') nickname?: string) {
-        var user = await this.userService.userFirst({ 
-            where: { id: telegramId }
-        })
+        var user = null
+        try {
+            user = await this.userService.userFirst({ 
+                where: { id: telegramId }
+            })
+        } catch (e) {
+            if (e instanceof Prisma.PrismaClientKnownRequestError) {
+                if (e.code === 'P2021') {
+                    console.log(
+                    'The table {table} does not exist in the current database.'
+                    )
+                }
+            }
+            throw e
+        }
         if (user === null) {
             user = await this.userService.createUser({
                 id: telegramId,
