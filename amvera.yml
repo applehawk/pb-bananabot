@@ -9,4 +9,3 @@ build:
 run:
   persistenceMount: /data
   containerPort: 3000
-  args: -p 8080:3000
