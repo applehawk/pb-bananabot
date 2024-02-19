@@ -4,7 +4,7 @@ RUN mkdir -p /usr/vpnssconf
 WORKDIR /usr/vpnssconf
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
-COPY src/prisma ./src/prisma/
+COPY src/prisma ./
 # Install app dependencies
 RUN npm install && npm install -g
 # Prisma generate db based on ORM
@@ -25,6 +25,6 @@ COPY --from=builder /usr/vpnssconf/src/prisma ./src/prisma
 # Use production node environment by default.
 ENV NODE_ENV production
 # Expose the port that the application listens on.
-EXPOSE 80
+EXPOSE 3000
 # Run the application.
 CMD ["npm", "run", "start:migrate:prod"]

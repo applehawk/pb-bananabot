@@ -16,7 +16,7 @@ async function bootstrap() {
   };
  
   const app = await NestFactory.create(AppModule, { httpsOptions } );
-  await app.listen(80);
+  await app.listen(3000);
 
 }
 bootstrap();
