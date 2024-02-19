@@ -7,7 +7,6 @@ const process = require("process");
 process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 
 async function bootstrap() {
-
   const httpsOptions = {
     key: fs.readFileSync('./cert/test/localhost.pem'),
     cert: fs.readFileSync('./cert/test/server.pem'),
@@ -15,7 +14,8 @@ async function bootstrap() {
   };
  
   const app = await NestFactory.create(AppModule, { httpsOptions } );
-  await app.listen(443);
+  await app.init();
 
+  await app.listen(process.env.PORT || 80);
 }
 bootstrap();
