@@ -26,6 +26,6 @@ COPY --from=builder /usr/vpnssconf/src/prisma ./src/prisma
 # Use production node environment by default.
 ENV NODE_ENV production
 # Expose the port that the application listens on.
-EXPOSE 80
+EXPOSE 3000
 # Run the application.
 CMD ["npm", "run", "start:migrate:prod"]

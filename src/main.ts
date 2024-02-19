@@ -12,11 +12,10 @@ async function bootstrap() {
     key: fs.readFileSync('./cert/test/localhost.pem'),
     cert: fs.readFileSync('./cert/test/server.pem'),
     passphrase: "1234",
-    rejectUnauthorized: false,
   };
  
   const app = await NestFactory.create(AppModule, { httpsOptions } );
-  await app.listen(80);
+  await app.listen(3000);
 
 }
 bootstrap();
