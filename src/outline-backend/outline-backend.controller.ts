@@ -21,7 +21,7 @@ type JSONValue =
 
 const CONNLIMIT = 1
 
-@Controller('outline')
+@Controller()
 export class OutlineBackendController {
     apiUrl: string
     vpnDomain: string
