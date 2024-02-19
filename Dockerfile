@@ -18,7 +18,6 @@ FROM node:alpine
 COPY --from=builder /usr/vpnssconf/node_modules ./node_modules
 COPY --from=builder /usr/vpnssconf/package*.json ./
 COPY --from=builder /usr/vpnssconf/dist ./dist
-COPY --from=builder /usr/vpnssconf/.env .env
 # Use production node environment by default.
 ENV NODE_ENV production
 # Expose the port that the application listens on.
