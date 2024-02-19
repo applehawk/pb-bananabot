@@ -114,7 +114,7 @@ export class OutlineBackendController {
         return`${this.outlineUsersGateway}/conf/${this.version}/${tgIdHex}/${connHex}/${connName}`
     }
 
-    @Get('/conf/:version/:tgIdHex/:connIdHex')
+    @Get('/conf/:version/:tgIdHex/:connIdHex/:connName')
     async handleConfig(@Res() res: Response, @Param('version') version: string,
         @Param('tgIdHex') tgIdHex: string, @Param('connIdHex') connIdHex: string) {
 
