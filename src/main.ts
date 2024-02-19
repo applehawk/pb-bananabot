@@ -9,6 +9,9 @@ process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
 async function bootstrap() {
 
   const httpsOptions = {
+    key: fs.readFileSync('./cert/test/localhost.pem'),
+    cert: fs.readFileSync('./cert/test/server.pem'),
+    passphrase: "1234",
     rejectUnauthorized: false,
   };
  
