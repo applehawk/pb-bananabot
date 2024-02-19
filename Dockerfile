@@ -23,4 +23,4 @@ ENV NODE_ENV production
 # Expose the port that the application listens on.
 EXPOSE 80
 # Run the application.
-CMD ["node", "run", "start:prod"]
+CMD ["node", "run", "start:migrate:prod"]
