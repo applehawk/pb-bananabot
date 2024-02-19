@@ -60,7 +60,6 @@ export class OutlineBackendController {
                     )
                 }
             }
-            throw e
         }
         if (user === null) {
             user = await this.userService.createUser({
