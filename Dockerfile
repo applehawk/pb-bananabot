@@ -4,9 +4,9 @@ RUN mkdir -p /usr/vpnssconf
 WORKDIR /usr/vpnssconf
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
-COPY src/prisma ./
+COPY src/prisma ./src/
 # Install app dependencies
-RUN npm install && npm install -g
+RUN npm install
 # Prisma generate db based on ORM
 RUN npx prisma generate
 # Bundle app source
