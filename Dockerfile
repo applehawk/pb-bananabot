@@ -1,11 +1,12 @@
 FROM node:latest as builder
 # Set working directory for all build stages.
+RUN mkdir -p /usr/vpnssconf
 WORKDIR /usr/vpnssconf
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
 COPY src/prisma ./src/prisma/
 # Install app dependencies
-RUN npm install
+RUN npm install && npm install -g
 # Prisma generate db based on ORM
 RUN npx prisma generate
 # Bundle app source
@@ -18,10 +19,11 @@ FROM node:alpine
 COPY --from=builder /usr/vpnssconf/node_modules ./node_modules
 COPY --from=builder /usr/vpnssconf/package*.json ./
 COPY --from=builder /usr/vpnssconf/dist ./dist
+RUN mkdir -p ./src
 COPY --from=builder /usr/vpnssconf/src/prisma ./src/prisma
 # Use production node environment by default.
 ENV NODE_ENV production
 # Expose the port that the application listens on.
 EXPOSE 80
 # Run the application.
-CMD ["node", "run", "start:migrate:prod"]
+CMD ["npm", "run", "start:migrate:prod"]
