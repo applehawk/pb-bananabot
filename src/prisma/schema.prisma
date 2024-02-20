@@ -28,7 +28,7 @@ model Connection {
   name   String // key_telegram_id
 
   server      String
-  server_port Int
+  server_port String
   password    String
   method      String
   access_url  String
