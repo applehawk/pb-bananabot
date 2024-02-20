@@ -95,23 +95,25 @@ export class OutlineBackendController {
         }
         
         let response = await this.createNewKey(telegramId)
+
+        let regexKey = /ss:\/\/(\w+)@(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}):(\w+)\//gm
+        let [ encodedBase64Key, serverAddress, port ] = [...response.accessUrl.matchAll(regexKey)][0]
+        console.log(`url64code: ${encodedBase64Key}, serverAddress: ${serverAddress}, port: ${port}`)
+        let decodedBase64Key: string = atob(encodedBase64Key);
+        let regexBase64Key = /(.+):(.+)/gm
+        let [encrypt_method, password ] = [...decodedBase64Key.matchAll(regexBase64Key)][0]
+        
         let newConnection = await this.connectionService.createConnection({
             tgid: telegramId,
             name: connName,
-            server: "95.174.68.173",
-            server_port: 2951,
-            method: response.method,
+            server: serverAddress,
+            server_port: port,
+            method: encrypt_method,
             access_url: response.accessUrl,
-            password: response.password
+            password: password
         })
         let dynamicLink = this.getOutlineDynamicLink(telegramId, connName, newConnection.key_id)
         res.status(HttpStatus.OK).json({ "link": dynamicLink})
-    }
-
-    getOutlineDynamicLink(telegramId: string | number, connName: string, connId: number) {
-        let tgIdHex: string = (+telegramId).toString(16)
-        let connHex: string = connId.toString(16)
-        return`${this.outlineUsersGateway}/conf/${this.version}/${tgIdHex}/${connHex}/${connName}`
     }
 
     @Get('/conf/:version/:tgIdHex/:connIdHex/:connName')
@@ -135,16 +137,20 @@ export class OutlineBackendController {
         })
     }
 
+    getOutlineDynamicLink(telegramId: string | number, connName: string, connId: number) {
+        let tgIdHex: string = (+telegramId).toString(16)
+        let connHex: string = connId.toString(16)
+        return`${this.outlineUsersGateway}/conf/${this.version}/${tgIdHex}/${connHex}/${connName}`
+    }
+// Management API Outline
     async renameKey(keyId: string | number, keyName: string) {
         const url = `${this.apiUrl}/access-keys/${keyId}/name`;
         return this.httpService.axiosRef.put(url, { "name": keyName });
     }
-
-
     async createNewKey(withTelegramId: string) {
         let url = `${this.apiUrl}/access-keys`;
-        console.log(url)
         let response = await this.httpService.axiosRef.post(url);
+
         let keyId: string = response.data.id
         await this.renameKey(keyId, withTelegramId)
 
