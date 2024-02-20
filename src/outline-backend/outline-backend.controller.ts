@@ -96,12 +96,12 @@ export class OutlineBackendController {
         
         let response = await this.createNewKey(telegramId)
 
-        let regexKey = /ss:\/\/(\w+)@(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}):(\w+)\//gm
+        let regexKey = /ss:\/\/(\w+)@(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}):(\w+)\//g
         let [ encodedBase64Key, serverAddress, port ] = [...response.accessUrl.matchAll(regexKey)][0]
         console.log(`url64code: ${encodedBase64Key}, serverAddress: ${serverAddress}, port: ${port}`)
         let decodedBase64Key: string = atob(encodedBase64Key);
-        let regexBase64Key = /(.+):(.+)/gm
-        let [encrypt_method, password ] = [...decodedBase64Key.matchAll(regexBase64Key)][0]
+        let regexBase64Key = /(.+):(.+)/g
+        let [ encrypt_method, password ] = [...decodedBase64Key.matchAll(regexBase64Key)][0]
         
         let newConnection = await this.connectionService.createConnection({
             tgid: telegramId,
