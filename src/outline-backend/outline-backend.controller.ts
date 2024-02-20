@@ -88,9 +88,15 @@ export class OutlineBackendController {
             res.status(HttpStatus.NOT_FOUND).json({ "id": "UserNotFound"})
             return
         }
+        var dynamicLink = `${this.outlineUsersGateway}/conf/${this.version}/`
+        
         let connections = await this.connectionService.connections({ where: { userKey_id: user.key_id }})
         if (connections.length >= user.connLimit) {
-            res.status(HttpStatus.NOT_FOUND).json({ "id": "ConnectionLimitExceed"})
+            let firstConnection = connections[0]
+            dynamicLink += `${this.connectionService.getOutlineDynamicLink(firstConnection)}`
+            res.status(HttpStatus.OK).json(
+                { "warning": "ConnectionsLimitExceed", "link": dynamicLink }
+            )
             return
         }
         
@@ -110,9 +116,14 @@ export class OutlineBackendController {
             server_port: port,
             method: encrypt_method,
             access_url: response.accessUrl,
-            password: password
+            password: password,
+            user: {
+                connect: { key_id: user.key_id }
+            }
         })
-        let dynamicLink = this.getOutlineDynamicLink(telegramId, connName, newConnection.key_id)
+
+        var dynamicLink = `${this.outlineUsersGateway}/conf/${this.version}/`
+        dynamicLink += `${this.connectionService.getOutlineDynamicLink(newConnection)}`
         res.status(HttpStatus.OK).json({ "link": dynamicLink})
     }
 
@@ -137,11 +148,6 @@ export class OutlineBackendController {
         })
     }
 
-    getOutlineDynamicLink(telegramId: string | number, connName: string, connId: number) {
-        let tgIdHex: string = (+telegramId).toString(16)
-        let connHex: string = connId.toString(16)
-        return`${this.outlineUsersGateway}/conf/${this.version}/${tgIdHex}/${connHex}/${connName}`
-    }
 // Management API Outline
     async renameKey(keyId: string | number, keyName: string) {
         const url = `${this.apiUrl}/access-keys/${keyId}/name`;

@@ -6,6 +6,15 @@ import { Connection, Prisma } from '@prisma/client';
 export class ConnectionService {
     constructor(private prisma: PrismaService) {}
 
+    getOutlineDynamicLink(connection: Connection) {
+      //telegramId: string | number, connName: string, connId: number
+      let tgIdHex: string = (+connection.tgid).toString(16)
+      let connIdHex: string = (+connection.key_id).toString(16)
+      let connName: string = connection.name
+
+      return`${tgIdHex}/${connIdHex}/${connName}`
+    }
+
     async connectionFirst(params: {
       skip?: number;
       take?: number;

@@ -9,7 +9,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = "file:/data/dev.db"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -32,6 +32,7 @@ model Connection {
   password    String
   method      String
   access_url  String
-  User        User?  @relation(fields: [userKey_id], references: [key_id])
+  //many-to-one
+  user        User?  @relation(fields: [userKey_id], references: [key_id])
   userKey_id  Int?
 }
