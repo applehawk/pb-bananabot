@@ -1,13 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
-const process = require("process");
-
-process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+import { BotModule } from './bot.module';
+import { Logger } from '@nestjs/common';
 
 async function bootstrap() { 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(BotModule);
   app.enableCors({ origin: "*", allowedHeaders:"*", methods: "*", credentials: true });
-  await app.init();
-  await app.listen(process.env.PORT || 80);
+  const port = process.env.PORT || 80;
+  await app.listen(port);
+  Logger.log(`Server running on port ${port}`, 'Bootstrap');
 }
 bootstrap();
