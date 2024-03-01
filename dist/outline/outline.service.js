@@ -21,11 +21,11 @@ let OutlineService = class OutlineService {
         this.userService = userService;
         this.connService = connService;
         this.httpService = httpService;
-        this.outlineUsersGateway = "ssconf://users.outline.yourvpn.io";
+        this.outlineUsersGateway = "users.outline.yourvpn.io";
         this.version = "v1";
         this.apiUrl = this.configService.get('OUTLINE_API_URL');
         this.vpnDomain = this.configService.get('VPN_SERVER');
-        this.outlineUsersGateway = "ssconf://" + this.vpnDomain;
+        this.outlineUsersGateway = this.vpnDomain;
         console.log('OUTLINE_API_URL: ' + this.apiUrl);
         console.log('VPN_SERVER: ' + this.vpnDomain);
     }
@@ -33,7 +33,13 @@ let OutlineService = class OutlineService {
         let tgIdHex = (+connection.tgid).toString(16);
         let connIdHex = (+connection.key_id).toString(16);
         let connName = connection.name;
-        return `${this.outlineUsersGateway}/conf/${this.version}/${tgIdHex}/${connIdHex}/${connName}`;
+        return `ssconf://${this.outlineUsersGateway}/conf/${this.version}/${tgIdHex}/${connIdHex}/${connName}`;
+    }
+    getConnectionRedirectLink(connection) {
+        let tgIdHex = (+connection.tgid).toString(16);
+        let connIdHex = (+connection.key_id).toString(16);
+        let connName = connection.name;
+        return `https://${this.outlineUsersGateway}/redirect/${this.version}/${tgIdHex}/${connIdHex}/${connName}`;
     }
     async createConnection(tgid, connName) {
         return this.userService

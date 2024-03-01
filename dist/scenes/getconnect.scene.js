@@ -17,6 +17,7 @@ const nestjs_telegraf_1 = require("nestjs-telegraf");
 const command_enum_1 = require("../enum/command.enum");
 const abstract_scene_1 = require("../abstract/abstract.scene");
 const scenes_const_1 = require("../constants/scenes.const");
+const telegraf_1 = require("telegraf");
 const outline_service_1 = require("../outline/outline.service");
 const connection_service_1 = require("../prisma/connection.service");
 let GetConnectScene = class GetConnectScene extends abstract_scene_1.AbstractScene {
@@ -33,10 +34,13 @@ let GetConnectScene = class GetConnectScene extends abstract_scene_1.AbstractSce
             return this.connService.connections({ where: { tgid: tgid } })
                 .then(connections => connections.reduce((acc, curr) => curr, null));
         });
-        console.log(connection);
         const outlineLink = this.outlineService.getOutlineDynamicLink(connection);
-        console.log(outlineLink);
+        const fastRedirectLink = this.outlineService.getConnectionRedirectLink(connection);
         const scene = scenes_const_1.SCENES.GET_CONNECT(outlineLink);
+        scene.buttons = [
+            [telegraf_1.Markup.button.url('для iOS 🍏', fastRedirectLink)],
+            [telegraf_1.Markup.button.url('для Android 🤖', fastRedirectLink)],
+        ];
         this.sceneReply(ctx, scene);
     }
 };

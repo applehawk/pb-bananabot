@@ -43,6 +43,17 @@ let OutlineController = class OutlineController {
             });
         });
     }
+    async getConnection(res, version, tgIdHex, connIdHex, connName) {
+        let tgidInt = parseInt(tgIdHex);
+        let connidInt = parseInt(connIdHex);
+        return this.connService.connection({ tgid: tgidInt, key_id: connidInt })
+            .then(connection => {
+            res.status(common_1.HttpStatus.OK).json({
+                "url": `${this.outlineService.getOutlineDynamicLink(connection)}`,
+                "status": 302,
+            });
+        });
+    }
     async createConnection(res, tgid, connName, lastConn) {
         let tgidInt = parseInt(tgid);
         return this.userService.findOneByUserId(tgidInt)
@@ -96,6 +107,17 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], OutlineController.prototype, "createUser", null);
+__decorate([
+    (0, common_1.Get)('/redirect/:version/:tgIdHex/:connIdHex/:connName'),
+    __param(0, (0, common_1.Res)()),
+    __param(1, (0, common_1.Param)('version')),
+    __param(2, (0, common_1.Param)('tgIdHex')),
+    __param(3, (0, common_1.Param)('connIdHex')),
+    __param(4, (0, common_1.Param)('connName')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, String, String, String]),
+    __metadata("design:returntype", Promise)
+], OutlineController.prototype, "getConnection", null);
 __decorate([
     (0, common_1.Post)('/user/:id/conn/:connName'),
     __param(0, (0, common_1.Res)()),

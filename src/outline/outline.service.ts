@@ -17,7 +17,7 @@ interface OutlineSSConnection {
 export class OutlineService {
     readonly apiUrl: string
     readonly vpnDomain: string
-    readonly outlineUsersGateway: string = "ssconf://users.outline.yourvpn.io"
+    readonly outlineUsersGateway: string = "users.outline.yourvpn.io"
     readonly version: string = "v1"
 
     constructor(
@@ -28,7 +28,7 @@ export class OutlineService {
       ) {
         this.apiUrl = this.configService.get<string>('OUTLINE_API_URL')
         this.vpnDomain = this.configService.get<string>('VPN_SERVER')
-        this.outlineUsersGateway = "ssconf://" + this.vpnDomain
+        this.outlineUsersGateway = this.vpnDomain
 
         console.log('OUTLINE_API_URL: ' + this.apiUrl)
         console.log('VPN_SERVER: ' + this.vpnDomain)
@@ -40,7 +40,15 @@ export class OutlineService {
         let connIdHex: string = (+connection.key_id).toString(16)
         let connName: string = connection.name
   
-        return `${this.outlineUsersGateway}/conf/${this.version}/${tgIdHex}/${connIdHex}/${connName}`
+        return `ssconf://${this.outlineUsersGateway}/conf/${this.version}/${tgIdHex}/${connIdHex}/${connName}`
+    }
+
+    getConnectionRedirectLink(connection: Connection) {
+        let tgIdHex: string = (+connection.tgid).toString(16)
+        let connIdHex: string = (+connection.key_id).toString(16)
+        let connName: string = connection.name
+
+        return `https://${this.outlineUsersGateway}/redirect/${this.version}/${tgIdHex}/${connIdHex}/${connName}`
     }
 
     async createConnection(tgid: number, connName: string) : Promise<Connection> {

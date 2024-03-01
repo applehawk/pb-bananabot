@@ -14,6 +14,7 @@ export declare class OutlineService {
     readonly version: string;
     constructor(configService: ConfigService, userService: UserService, connService: ConnectionService, httpService: HttpService);
     getOutlineDynamicLink(connection: Connection): string;
+    getConnectionRedirectLink(connection: Connection): string;
     createConnection(tgid: number, connName: string): Promise<Connection>;
     private parseOutlineAccessUrl;
     private renameKey;

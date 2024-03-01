@@ -40,6 +40,27 @@ export class OutlineController {
         })
     }
 
+    @Get('/redirect/:version/:tgIdHex/:connIdHex/:connName')
+    async getConnection(@Res() res: Response,
+        @Param('version') version: string, 
+        @Param('tgIdHex') tgIdHex: string, 
+        @Param('connIdHex') connIdHex: string,
+        @Param('connName') connName: string) 
+    {
+        let tgidInt = parseInt(tgIdHex)
+        let connidInt = parseInt(connIdHex)
+                
+        return this.connService.connection( {tgid: tgidInt, key_id: connidInt} )
+        .then( connection => {
+            res.status(HttpStatus.OK).json(
+                {
+                    "url": `${this.outlineService.getOutlineDynamicLink(connection)}`,
+                    "status": 302,
+                }
+            )
+        })
+    }
+
     @Post('/user/:id/conn/:connName')
     async createConnection(@Res() res: Response,
         @Param('id') tgid: string, 

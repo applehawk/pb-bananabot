@@ -25,11 +25,16 @@ export class GetConnectScene extends AbstractScene {
                 return this.connService.connections({where: {tgid: tgid}})
                 .then( connections => connections.reduce((acc, curr) => curr, null) )
             })
-        console.log(connection)
+            
         const outlineLink = this.outlineService.getOutlineDynamicLink(connection)
+        const fastRedirectLink = this.outlineService.getConnectionRedirectLink(connection)
 
-        console.log(outlineLink)
         const scene = SCENES.GET_CONNECT(outlineLink);
+
+        scene.buttons = [
+            [Markup.button.url('для iOS 🍏', fastRedirectLink)],
+            [Markup.button.url('для Android 🤖', fastRedirectLink)],
+        ]
         this.sceneReply(ctx, scene)
     }
 }

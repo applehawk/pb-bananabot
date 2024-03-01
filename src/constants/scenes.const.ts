@@ -1,6 +1,7 @@
 import { BUTTONS } from './buttons.const';
 import { CommandEnum } from '../enum/command.enum';
 import { buffer } from 'stream/consumers';
+import { Markup } from 'telegraf';
 
 export const SCENES = {
   [CommandEnum.START]: {
@@ -56,7 +57,7 @@ export const SCENES = {
       [BUTTONS[CommandEnum.IAM_PAYED]]
     ]
   },
-  [CommandEnum.GET_CONNECT]: (connectionLink: string) => ({
+  [CommandEnum.GET_CONNECT]: (connectionLink: string ) => ({
     text: `Подключение к Outline:  
 
     Ваша ссылка:
@@ -64,12 +65,9 @@ export const SCENES = {
     Нажмите чтобы скопировать (тапните) и добавьте в приложение
     
     Если приложение уже установлено - воспользуйтесь быстрым подключением
-    - Outline - для iOS 🍏[url]
-    - Outlune - для Android 🤖  
-    
-    Подключить в 1 клик!
-    - iOS 
-    - Android`,
+    - Outline - для iOS 🍏
+    - Outline - для Android 🤖`,
+    buttons: []
   }),
   [CommandEnum.STATUS]: {
     text: `Ваш статус`,

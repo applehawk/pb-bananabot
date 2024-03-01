@@ -29,6 +29,7 @@ export declare const SCENES: {
     };
     GET_CONNECT: (connectionLink: string) => {
         text: string;
+        buttons: any[];
     };
     STATUS: {
         text: string;
