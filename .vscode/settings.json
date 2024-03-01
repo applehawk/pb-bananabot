@@ -1,6 +1,6 @@
 {
-    "python.condaPath": "/Users/vladmac/miniconda3/condabin/conda",
-    "python.pythonPath": "/Users/vladmac/miniconda3/envs/node18/bin/python",
+    "python.condaPath": "/Users/macbook/miniconda3/condabin/conda",
+    "python.pythonPath": "/Users/macbook/miniconda3/envs/node18/bin/python",
     "python.terminal.activateEnvironment": true,
     "python.terminal.activateEnvInCurrentTerminal": true,
 }

@@ -11,9 +11,22 @@ export const SCENES = {
 
       Доступны локации: 
 ├ 🇦🇪 ОАЭ`,
-navigateButtons: [
-      [BUTTONS[CommandEnum.START_CONNECT]],
-    ]
+  navigateButtons: [
+  [BUTTONS[CommandEnum.STATUS], BUTTONS[CommandEnum.GET_CONNECT]],
+  [BUTTONS[CommandEnum.TOPUP_BALANCE], BUTTONS[CommandEnum.QUESTION]]
+]
+  },
+  [CommandEnum.HOME]: {
+    text: `Чтобы подключиться к VPN нужно:
+    Скачать приложение Outline на свой телефон:
+      Apple: https://apps.apple.com/us/app/outline-app/id1356177741
+      Android (ссылка 1): https://play.google.com/store/apps/details?id=org.outline.android.client
+      Android (ссылка 2): https://s3.amazonaws.com/outline-releases/client/android/stable/Outline-Client.apk
+    ‌если не работает для Android ссылка 1, используйте ссылку 2.`,  
+    buttons: [
+      [BUTTONS[CommandEnum.OUTLINE_APPLE], BUTTONS[CommandEnum.OUTLINE_ANDROID]],
+      [BUTTONS[CommandEnum.TOPUP_BALANCE]]
+    ],
   },
   [CommandEnum.START_CONNECT]: {
     text: `Чтобы подключиться к VPN нужно:
@@ -24,13 +37,47 @@ navigateButtons: [
 ‌если не работает для Android ссылка 1, используйте ссылку 2.`,
     buttons: [
       [BUTTONS[CommandEnum.OUTLINE_APPLE], BUTTONS[CommandEnum.OUTLINE_ANDROID]],
-      [BUTTONS[CommandEnum.OUTLINE_DOWNLOADED]]
+      [BUTTONS[CommandEnum.TOPUP_BALANCE]]
     ],
+  },
+  [CommandEnum.TOPUP_BALANCE]: {
+    text: `Для полного доступа выберите удобный для вас тариф:
+
+    190₽ / 1 мес
+    500₽ / 3 мес
+    900₽ / 6 мес
+    
+    💳 К оплате принимаются карты РФ:
+    Visa, MasterCard, МИР.`,
+    buttons: [
+      [BUTTONS[CommandEnum.TARIF_1]],
+      [BUTTONS[CommandEnum.TARIF_2]],
+      [BUTTONS[CommandEnum.TARIF_3]],
+      [BUTTONS[CommandEnum.IAM_PAYED]]
+    ]
+  },
+  [CommandEnum.GET_CONNECT]: (connectionLink: string) => ({
+    text: `Подключение к Outline:  
+
+    Ваша ссылка:
+    └ <code>${connectionLink}</code>
+    Нажмите чтобы скопировать (тапните) и добавьте в приложение
+    
+    Если приложение уже установлено - воспользуйтесь быстрым подключением
+    - Outline - для iOS 🍏[url]
+    - Outlune - для Android 🤖  
+    
+    Подключить в 1 клик!
+    - iOS 
+    - Android`,
+  }),
+  [CommandEnum.STATUS]: {
+    text: `Ваш статус`,
   },
   [CommandEnum.QUESTION]: {
     text: `Если у тебя есть вопрос, то ты можешь, посмотреть в документацию или задать его в нашем чате.`,
     buttons: [
-      [BUTTONS[CommandEnum.JOIN_CHAT], BUTTONS[CommandEnum.DOCUMENTATION]],
+      [BUTTONS[CommandEnum.JOIN_CHAT]],
     ]
   },
   ERROR: (message: string) => ({

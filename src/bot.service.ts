@@ -7,6 +7,9 @@ import { CommandEnum } from './enum/command.enum';
 import { BOT_NAME } from './constants/bot-name.const';
 import { ConfigService } from '@nestjs/config';
 import { replyOrEdit } from './utils/reply-or-edit';
+import { UserService } from './prisma/user.service';
+import { PrismaClient } from '@prisma/client';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class BotService {
@@ -19,6 +22,7 @@ export class BotService {
     @InjectBot(BOT_NAME)
     private readonly bot: Telegraf<Context>,
     private readonly configService: ConfigService,
+    private readonly userService: UserService,
   ) {
     
     Logger.log("constructor BotService")
@@ -27,15 +31,23 @@ export class BotService {
     this.isProd = configService.get('NODE_ENV') === 'production';
   }
 
-  getHello(): string {
-    return 'Hello World!';
-  }
-
   async start(ctx: Context) {
-   /* await replyOrEdit(
+   await replyOrEdit(
       ctx,
       SCENES[CommandEnum.START].navigateText,
       Markup.inlineKeyboard(SCENES[CommandEnum.START].navigateButtons),
-    );*/
+    );
+  }
+
+  async upsertUser(ctx: Context) {
+    const newUser: User = {
+      tgid: ctx.from.id,
+      chatId: ctx.chat.id,
+      firstname: ctx.from.first_name,
+      lastname: ctx.from.last_name,
+      nickname: ctx.from.username,
+      connLimit: 1
+    }
+    this.userService.upsert(newUser)
   }
 }

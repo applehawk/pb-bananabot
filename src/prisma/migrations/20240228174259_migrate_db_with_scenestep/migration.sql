@@ -1,0 +1,10 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "chatId" INTEGER;
+
+-- CreateTable
+CREATE TABLE "SceneStep" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "scene" TEXT NOT NULL,
+    "nextScene" TEXT NOT NULL,
+    "date" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -5,7 +5,6 @@ import { BOT_NAME } from './constants/bot-name.const';
 import { BotController } from './bot.controller';
 import { BotService } from './bot.service';
 import { BotUpdate } from './bot.update';
-import { OutlineBackendController } from './outline-backend/outline-backend.controller';
 import { HttpModule } from '@nestjs/axios';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConnectionService } from './prisma/connection.service';
@@ -18,6 +17,11 @@ import { session } from 'telegraf';
 import { HomeScene } from './scenes/home.scene';
 import { QuestionScene } from './scenes/question.scene';
 import { StartConnectScene } from './scenes/startconnect.scene';
+import { OutlineController } from './outline/outline.controller';
+import { OutlineService } from './outline/outline.service';
+import { TopupBalanceScene } from './scenes/topupbalance.scene';
+import { GetConnectScene } from './scenes/getconnect.scene';
+import { StatusScene } from './scenes/status.scene';
 
 @Module({
   imports: [
@@ -38,8 +42,8 @@ import { StartConnectScene } from './scenes/startconnect.scene';
     HttpModule,
   ],
   controllers: [
-    BotController, 
-    OutlineBackendController
+    //BotController, 
+    OutlineController
   ],
   providers: [
     {
@@ -53,9 +57,12 @@ import { StartConnectScene } from './scenes/startconnect.scene';
     StartScene,
     HomeScene,
     StartConnectScene,
+    TopupBalanceScene,
+    GetConnectScene,
     QuestionScene,
+    StatusScene,
     ConnectionService, 
-    UserService,
+    UserService, OutlineService,
   ],
   exports: [BotService],
 })

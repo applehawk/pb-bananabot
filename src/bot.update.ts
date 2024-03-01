@@ -40,7 +40,11 @@ export class BotUpdate {
       });
       return;
     }
+  
     ctx.session.messageId = undefined;
+    // we added any user which start communicate with TG Bot
+    await this.botService.upsertUser(ctx);
+
     await ctx.scene.enter(CommandEnum.START);
   }
 
@@ -59,19 +63,18 @@ export class BotUpdate {
 
   @Hears(BUTTONS[CommandEnum.HOME].text)
   async onMenuHears(@Ctx() ctx: Context & { update: any }) {
-    this.logger.log("onMenuHears")
     const message = ctx.update.message;
 
     if (!['private'].includes(message.chat.type)) return;
 
     try {
       this.logger.log('hears', ctx.message);
-      //const existUser = await this.userService.userFirst({where: id}) findOneByUserId(ctx.from.id);
-      //if (existUser) {
+      const existUser = await this.userService.findOneByUserId(ctx.from.id);
+      if (existUser) {
         ctx.scene.enter(CommandEnum.HOME);
-     // } else {
-     //   ctx.scene.enter(CommandEnum.START);
-     // }
+      } else {
+        ctx.scene.enter(CommandEnum.START);
+      }
     } catch (e) {
       this.logger.log(e);
     }
@@ -80,8 +83,9 @@ export class BotUpdate {
   @Hears(/.*/)
   async onHears(@Ctx() ctx: Context & { update: any }) {
     this.logger.log("onHears")
-    //const user = await this.userService.findOneByUserId(ctx.from.id);
+    const user = await this.userService.findOneByUserId(ctx.from.id);
     //if (user && !user.chatId) await this.userService.update(user.userId, { chatId: ctx.chat.id });
+    
     try {
       const message = ctx.update.message;
       const [command] = Object.entries(BUTTONS).find(([_, button]) => button.text === message.text);

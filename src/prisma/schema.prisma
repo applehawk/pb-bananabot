@@ -13,18 +13,18 @@ datasource db {
 }
 
 model User {
-  key_id      Int          @id @default(autoincrement())
-  id          String // telegram_id
+  tgid        Int @id // telegram_id
   firstname   String?
   lastname    String?
   nickname    String?
+  chatId      Int?
   connLimit   Int
   connections Connection[]
 }
 
 model Connection {
   key_id Int    @id @default(autoincrement())
-  tgid   String // telegram_id
+  tgid   Int // telegram_id
   name   String // key_telegram_id
 
   server      String
@@ -33,6 +33,13 @@ model Connection {
   method      String
   access_url  String
   //many-to-one
-  user        User?  @relation(fields: [userKey_id], references: [key_id])
-  userKey_id  Int?
+  user        User?  @relation(fields: [user_tgid], references: [tgid])
+  user_tgid  Int?
+}
+
+model SceneStep {
+  id Int @id @default(autoincrement())
+  scene String
+  nextScene String
+  date  DateTime @default(now())
 }

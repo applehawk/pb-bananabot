@@ -1,19 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { Connection, Prisma } from '@prisma/client';
+import { User } from '@prisma/client';
+
+interface OutlineSSConnection {
+  serverAddress: string,
+  port: string,
+  encrypt_method: string,
+  password: string,
+  accessUrl: string
+}
 
 @Injectable()
 export class ConnectionService {
     constructor(private prisma: PrismaService) {}
-
-    getOutlineDynamicLink(connection: Connection) {
-      //telegramId: string | number, connName: string, connId: number
-      let tgIdHex: string = (+connection.tgid).toString(16)
-      let connIdHex: string = (+connection.key_id).toString(16)
-      let connName: string = connection.name
-
-      return`${tgIdHex}/${connIdHex}/${connName}`
-    }
 
     async connectionFirst(params: {
       skip?: number;
@@ -58,13 +58,31 @@ export class ConnectionService {
       }
     
 
-    async createConnection(data: Prisma.ConnectionCreateInput): Promise<Connection> {
+    async createConnectionEntry(data: Prisma.ConnectionCreateInput): Promise<Connection> {
     return this.prisma.connection.create({
         data,
     });
     }
 
-    async updateConnnection(params: {
+    async createConnectionEntryWithOutlineConn(user: User, connName: string, outlineConnKey: OutlineSSConnection) {
+      const newKey = outlineConnKey
+      console.log('createConnectionWithOutlineConn')
+      return this.createConnectionEntry({
+          tgid: user.tgid,
+          name: connName,
+          server: newKey.serverAddress,
+          server_port: newKey.port,
+          method: newKey.encrypt_method,
+          access_url: newKey.accessUrl,
+          password: newKey.password,
+          user: {
+              connect: { tgid: user.tgid }
+          }
+      });
+  }
+
+
+    async updateConnnectionEntry(params: {
         where: Prisma.ConnectionWhereUniqueInput;
         data: Prisma.ConnectionUpdateInput;
       }): Promise<Connection> {
@@ -75,7 +93,7 @@ export class ConnectionService {
         });
       }
     
-    async deleteConnection(where: Prisma.ConnectionWhereUniqueInput): Promise<Connection> {
+    async deleteConnectionEntry(where: Prisma.ConnectionWhereUniqueInput): Promise<Connection> {
     return this.prisma.connection.delete({
         where,
     });

@@ -6,7 +6,7 @@ export class BotController {
   constructor(private readonly botService: BotService) {}
 
   @Get()
-  getHello(): string {
-    return this.botService.getHello();
+  ping(): string {
+    return "pong";
   }
 }
