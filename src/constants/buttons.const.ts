@@ -15,6 +15,7 @@ export const BUTTONS = {
   [CommandEnum.OUTLINE_ANDROID]: Markup.button.url('🤖 для Android','https://play.google.com/store/apps/details?id=org.outline.android.client'),
   [CommandEnum.OUTLINE_DOWNLOADED]: Markup.button.callback('Уже скачал', CommandEnum.OUTLINE_DOWNLOADED),
 
+  [CommandEnum.PAY_WITH_YOOMONEY]: Markup.button.callback('💳 картой РФ', CommandEnum.PAY_WITH_YOOMONEY),
   [CommandEnum.TARIF_1]: Markup.button.callback('✅ 1 месяц', CommandEnum.TARIF_1),
   [CommandEnum.TARIF_2]: Markup.button.callback('🔥 3 месяц', CommandEnum.TARIF_2),
   [CommandEnum.TARIF_3]:  Markup.button.callback('🚀 6 месяц', CommandEnum.TARIF_3),

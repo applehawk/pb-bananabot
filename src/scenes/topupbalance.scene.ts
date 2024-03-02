@@ -24,7 +24,13 @@ export class TopupBalanceScene extends AbstractScene {
     }
 
     @Action(CommandEnum.PAY_WITH_YOOMONEY)
-    async payWithYookassa(@Ctx() ctx: Context) {
+    async payWithYoomoney(@Ctx() ctx: Context) {
+      /**
+       *     this.logger.log(ctx.scene.session.current);
+    const tariff = await this.tariffService.getOneByName(ctx.scene.session.current.split('_')[0]);
+    ctx.session.tariffId = tariff._id.toString();
+       */
+      ctx.session.tariffId = 'FREE';
       await this.createPaymentAndReply(ctx, PaymentSystemEnum.YOOMONEY);
     }
 

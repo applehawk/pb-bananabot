@@ -50,7 +50,7 @@ export const SCENES = {
     💳 К оплате принимаются карты РФ:
     Visa, MasterCard, МИР.`,
     buttons: [
-      [BUTTONS[CommandEnum.TARIF_1]],
+      [BUTTONS[CommandEnum.PAY_WITH_YOOMONEY]],
       [BUTTONS[CommandEnum.TARIF_2]],
       [BUTTONS[CommandEnum.TARIF_3]],
       [BUTTONS[CommandEnum.IAM_PAYED]]

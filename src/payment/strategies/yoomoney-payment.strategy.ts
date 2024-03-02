@@ -15,6 +15,7 @@ export class YooMoneyPaymentStrategy implements PaymentStrategy {
     const paymentAmount = tariffPrice;
     const comment = `Payment for ${tariffPrice} tariff price, userId: ${data.userId}, chatId: ${data.chatId}`;
     const paymentId = uuidv4();
+    const orderId = uuidv4();
 
     const form = this.yooMoneyClient.generatePaymentForm(paymentAmount, paymentId, comment);
     const url = `${this.configService.get('DOMAIN')}/payment/${paymentId}`;
@@ -22,6 +23,7 @@ export class YooMoneyPaymentStrategy implements PaymentStrategy {
     const payment = new PaymentProxy({
       ...data,
       paymentId,
+      orderId,
       amount: tariffPrice,
       paymentSystem: PaymentSystemEnum.YOOMONEY,
       paymentAmount,
