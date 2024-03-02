@@ -24,7 +24,7 @@ model User {
 
 model Connection {
   id Int    @id @default(autoincrement())
-  name   String // key_telegram_id
+  name        String // key_telegram_id
   server      String
   server_port String
   password    String
