@@ -41,7 +41,7 @@ export class BotService {
 
   async upsertUser(ctx: Context) {
     const newUser: User = {
-      tgid: ctx.from.id,
+      userId: ctx.from.id,
       chatId: ctx.chat.id,
       firstname: ctx.from.first_name,
       lastname: ctx.from.last_name,

@@ -13,28 +13,61 @@ datasource db {
 }
 
 model User {
-  tgid        Int @id // telegram_id
+  userId      Int @id
+  chatId      Int?
   firstname   String?
   lastname    String?
   nickname    String?
-  chatId      Int?
   connLimit   Int
   connections Connection[]
 }
 
 model Connection {
-  key_id Int    @id @default(autoincrement())
-  tgid   Int // telegram_id
+  id Int    @id @default(autoincrement())
   name   String // key_telegram_id
-
   server      String
   server_port String
   password    String
   method      String
   access_url  String
   //many-to-one
-  user        User?  @relation(fields: [user_tgid], references: [tgid])
-  user_tgid  Int?
+  user        User?  @relation(fields: [userId], references: [userId])
+  userId      Int?
+}
+
+model Payment {
+  paymentId String @id
+  orderId String
+  status String @default("PENDING")
+  paymentSystem String @default("YOOMONEY")
+  userId Int
+  chatId Int
+  tariffId String
+  amount Int
+  paymentAt DateTime
+  paymentAmount Int
+  paymentCurrency String
+  description String?
+  url String
+  monthCount Int
+  transactionId String?
+  payerAmount String?
+  payerCurrency String?
+  network String?
+  address String?
+  from String?
+  txid String?
+  form String
+  isFinal Boolean?
+  email String?
+}
+
+model Tariff {
+  id String @id @unique
+  name String
+  connectionsLimit Int
+  price Int
+  @@index([price, connectionsLimit])
 }
 
 model SceneStep {

@@ -27,40 +27,39 @@ export class OutlineService {
         private readonly httpService: HttpService
       ) {
         this.apiUrl = this.configService.get<string>('OUTLINE_API_URL')
-        this.vpnDomain = this.configService.get<string>('VPN_SERVER')
+        this.vpnDomain = this.configService.get<string>('DOMAIN')
         this.outlineUsersGateway = this.vpnDomain
 
         console.log('OUTLINE_API_URL: ' + this.apiUrl)
-        console.log('VPN_SERVER: ' + this.vpnDomain)
+        console.log('DOMAIN: ' + this.vpnDomain)
     }
 
     getOutlineDynamicLink(connection: Connection) {
         //telegramId: string | number, connName: string, connId: number
-        let tgIdHex: string = (+connection.tgid).toString(16)
-        let connIdHex: string = (+connection.key_id).toString(16)
+        let connIdHex: string = (+connection.id).toString(16)
         let connName: string = connection.name
   
-        return `ssconf://${this.outlineUsersGateway}/conf/${this.version}/${tgIdHex}/${connIdHex}/${connName}`
+        return `ssconf://${this.outlineUsersGateway}/conf/${this.version}/${connIdHex}/${connName}`
     }
 
     getConnectionRedirectLink(connection: Connection) {
-        let tgIdHex: string = (+connection.tgid).toString(16)
-        let connIdHex: string = (+connection.key_id).toString(16)
+        let tgIdHex: string = (+connection.userId).toString(16)
+        let connIdHex: string = (+connection.id).toString(16)
         let connName: string = connection.name
 
         return `https://${this.outlineUsersGateway}/redirect/${this.version}/${tgIdHex}/${connIdHex}/${connName}`
     }
 
-    async createConnection(tgid: number, connName: string) : Promise<Connection> {
+    async createConnection(userId: number, connName: string) : Promise<Connection> {
         return this.userService
-        .userFirst({where: {tgid: tgid}})
+        .userFirst({where: {userId: userId}})
         .then(
             user => this.userService.limitExceedWithUser(user)
             .then(
                 isExceed => {
                     console.log(`isExceed = ${isExceed}`)
                     return isExceed == false ? 
-                    this.createNewKey(tgid)
+                    this.createNewKey(userId)
                         .then(newKey => this.parseOutlineAccessUrl(newKey.accessUrl))
                         .then(newConn => this.connService.createConnectionEntryWithOutlineConn(user, connName, newConn))
                     : Promise.reject("Limit exceed")
@@ -88,12 +87,11 @@ export class OutlineService {
         const url = `${this.apiUrl}/access-keys/${keyId}/name`;
         return this.httpService.axiosRef.put(url, { "name": keyName });
     }
-    private async createNewKey(withTelegramId: number) : Promise<any> {
+    private async createNewKey(userId: number) : Promise<any> {
         let url = `${this.apiUrl}/access-keys`;
-        let tgIdStr = withTelegramId.toString()
         return this.httpService.axiosRef.post(url)
             .then(
-                response => this.renameKey(response.data.id, tgIdStr)
+                response => this.renameKey(response.data.id, `${userId}`)
                 .then(_ => response.data)
             )
     }

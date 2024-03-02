@@ -84,7 +84,7 @@ export class BotUpdate {
   async onHears(@Ctx() ctx: Context & { update: any }) {
     this.logger.log("onHears")
     const user = await this.userService.findOneByUserId(ctx.from.id);
-    //if (user && !user.chatId) await this.userService.update(user.userId, { chatId: ctx.chat.id });
+    if (user && !user.chatId) await this.userService.updateUser({where: {userId: user.userId}, data: { chatId: ctx.chat.id }});
     
     try {
       const message = ctx.update.message;

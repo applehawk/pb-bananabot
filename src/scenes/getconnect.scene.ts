@@ -17,15 +17,16 @@ export class GetConnectScene extends AbstractScene {
 
     @SceneEnter()
     async onSceneEnter(@Ctx() ctx: Context) {
-        const tgid: number = ctx.from.id
+        const userId = ctx.from.id;
         this.logger.log(ctx.scene.session.current);
 
-        const connection = await this.outlineService.createConnection(ctx.from.id, "OpenPNBot")
+        const connection = await this.outlineService.createConnection(userId, "OpenPNBot")
             .catch( reason => {
-                return this.connService.connections({where: {tgid: tgid}})
+                return this.connService.connections({where: {userId: userId }})
                 .then( connections => connections.reduce((acc, curr) => curr, null) )
             })
-            
+        console.log(connection)
+        
         const outlineLink = this.outlineService.getOutlineDynamicLink(connection)
         const fastRedirectLink = this.outlineService.getConnectionRedirectLink(connection)
 

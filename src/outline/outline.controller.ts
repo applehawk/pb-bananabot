@@ -14,16 +14,16 @@ export class OutlineController {
         private userService: UserService) {   
     }
 
-    @Post('/user/:id') //name = telegramId
+    @Post('/user/:userId') //name = telegramId
     async createUser(@Res() res: Response, 
-        @Param('id') tgid: string, 
+        @Param('userId') userIdStr: string, 
         @Query('firstname') firstname: string,
         @Query('lastname') lastname?: string,
         @Query('nickname') nickname?: string) 
     {
-        var tgidInt = parseInt(tgid)
+        const userId = parseInt(userIdStr)
         return this.userService.upsert({
-            tgid: tgidInt,
+            userId: userId,
             firstname: firstname, 
             lastname: lastname,
             nickname: nickname,
@@ -31,7 +31,7 @@ export class OutlineController {
             connLimit: CONNLIMIT
         }).then(user => {
             res.status(HttpStatus.OK).json({
-                "id": user.tgid,
+                "id": user.userId,
                 "firstname": user.firstname,
                 "lastname": user.lastname,
                 "nickname": user.nickname,
@@ -40,17 +40,15 @@ export class OutlineController {
         })
     }
 
-    @Get('/redirect/:version/:tgIdHex/:connIdHex/:connName')
+    @Get('/redirect/:version/:connIdHex/:connName')
     async getConnection(@Res() res: Response,
-        @Param('version') version: string, 
-        @Param('tgIdHex') tgIdHex: string, 
+        @Param('version') version: string,
         @Param('connIdHex') connIdHex: string,
         @Param('connName') connName: string) 
     {
-        let tgidInt = parseInt(tgIdHex)
-        let connidInt = parseInt(connIdHex)
+        let connId = parseInt(connIdHex)
                 
-        return this.connService.connection( {tgid: tgidInt, key_id: connidInt} )
+        return this.connService.connection( {id: connId} )
         .then( connection => {
             res.status(HttpStatus.OK).json(
                 {
@@ -61,19 +59,18 @@ export class OutlineController {
         })
     }
 
-    @Post('/user/:id/conn/:connName')
+    @Post('/user/:userId/conn/:connName')
     async createConnection(@Res() res: Response,
-        @Param('id') tgid: string, 
+        @Param('userId') userIdStr: string, 
         @Param('connName') connName: string,
         @Query('lastConn') lastConn: boolean) {
-        let tgidInt = parseInt(tgid)
-        
-        return this.userService.findOneByUserId(tgidInt)
+        const userId = parseInt(userIdStr)
+        return this.userService.findOneByUserId(userId)
         .then(user => {
             console.log(`User found: ${user}`)
             return user !== null ? user : Promise.reject("UserNotFound")
         })
-        .then( user => this.outlineService.createConnection(tgidInt, connName))
+        .then( user => this.outlineService.createConnection(userId, connName))
         .then( newConn => {
             res.status(HttpStatus.OK).json(
                 {
@@ -82,7 +79,7 @@ export class OutlineController {
             )
         })
         .catch( (reason) => {
-            return this.connService.connections({where: {tgid: tgidInt}})
+            return this.connService.connections({where: {userId: userId}})
             .then( connections => connections.reduce((acc, curr) => curr, null) )
             .then( lastConnection => {
                 const outlineLink = this.outlineService.getOutlineDynamicLink(lastConnection)
@@ -93,15 +90,15 @@ export class OutlineController {
         })
     }
 
-    @Get('/conf/:version/:tgIdHex/:connIdHex/:connName')
-    async handleConfig(@Res() res: Response, @Param('version') version: string,
-        @Param('tgIdHex') tgIdHex: string, @Param('connIdHex') connIdHex: string) {
+    @Get('/conf/:version/:connIdHex/:connName')
+    async handleConfig(@Res() res: Response, 
+    @Param('version') version: string,
+    @Param('connIdHex') connIdHex: string) {
 
-        let tgId = parseInt(tgIdHex, 16)
         let connId = parseInt(connIdHex, 16)
 
         this.connService.connectionFirst({
-            where:{ tgid: tgId }
+            where:{ id: connId }
         }).then( connection => {
             res.status(HttpStatus.OK).json({
                 "server": connection.server,

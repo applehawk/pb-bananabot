@@ -68,7 +68,6 @@ export class ConnectionService {
       const newKey = outlineConnKey
       console.log('createConnectionWithOutlineConn')
       return this.createConnectionEntry({
-          tgid: user.tgid,
           name: connName,
           server: newKey.serverAddress,
           server_port: newKey.port,
@@ -76,7 +75,7 @@ export class ConnectionService {
           access_url: newKey.accessUrl,
           password: newKey.password,
           user: {
-              connect: { tgid: user.tgid }
+              connect: { userId: user.userId }
           }
       });
   }

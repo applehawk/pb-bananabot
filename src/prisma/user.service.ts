@@ -16,7 +16,7 @@ export class UserService {
 
       async limitExceedWithUser(user: User) : Promise<boolean> {
         return this.prisma.connection
-            .count({where: { tgid: user.tgid }})
+            .count({where: { userId: user.userId }})
             .then( count => {
               return count > user.connLimit
             })
@@ -25,7 +25,7 @@ export class UserService {
       async limitExceedWithTgId(userId: number) : Promise<boolean> {
         return new Promise<boolean>( _ => { 
           return this.findOneByUserId(userId).then( user => {
-            this.prisma.connection.count({where: { tgid: user.tgid }}).then( count => {
+            this.prisma.connection.count({where: { userId: user.userId }}).then( count => {
               return count > user.connLimit
             })
           }) 
@@ -33,7 +33,7 @@ export class UserService {
       }
 
       async findOneByUserId(userId: number): Promise<User | null> {
-        return this.userFirst({where: { tgid: userId } })
+        return this.userFirst({where: { userId: userId } })
       }
 
       async userFirst(params: {
@@ -79,7 +79,7 @@ export class UserService {
 
     async upsert(data: User): Promise<User | null> {
       return this.prisma.user.upsert( {
-        where: {tgid: data.tgid}, create: data, update: data
+        where: {userId: data.userId}, create: data, update: data
       })
     }
 
