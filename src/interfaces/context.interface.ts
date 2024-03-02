@@ -11,6 +11,7 @@ export interface Context extends BaseContext {
 
 interface SessionData extends Scenes.SceneSession<SceneSession> {
   messageId: number;
+  tariffId: string;
 }
 
 interface SceneSession extends Scenes.SceneSessionData {

@@ -5,7 +5,7 @@ import { Markup } from 'telegraf';
 import { Context } from '../interfaces/context.interface';
 import { replyOrEdit } from 'src/utils/reply-or-edit';
 import { SCENES } from 'src/constants/scenes.const';
-import { UserService } from 'src/prisma/user.service';
+import { UserService } from 'src/user/user.service';
 
 @Scene(CommandEnum.START)
 export class StartScene extends AbstractScene {/*

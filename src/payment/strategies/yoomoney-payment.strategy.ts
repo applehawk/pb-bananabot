@@ -11,9 +11,9 @@ import { ConfigService } from '@nestjs/config';
 export class YooMoneyPaymentStrategy implements PaymentStrategy {
   constructor(private readonly yooMoneyClient: YooMoneyClient, private readonly configService: ConfigService) {}
 
-  async createPayment({ tariffPrice, paymentMonths, ...data }: CreatePaymentData): Promise<PaymentProxy> {
-    const paymentAmount = tariffPrice * paymentMonths;
-    const comment = `Payment for ${paymentMonths} months, userId: ${data.userId}, chatId: ${data.chatId}`;
+  async createPayment({ tariffPrice, ...data }: CreatePaymentData): Promise<PaymentProxy> {
+    const paymentAmount = tariffPrice;
+    const comment = `Payment for ${tariffPrice} tariff price, userId: ${data.userId}, chatId: ${data.chatId}`;
     const paymentId = uuidv4();
 
     const form = this.yooMoneyClient.generatePaymentForm(paymentAmount, paymentId, comment);
@@ -28,7 +28,7 @@ export class YooMoneyPaymentStrategy implements PaymentStrategy {
       paymentCurrency: 'RUB',
       url,
       form,
-      monthCount: paymentMonths,
+      //monthCount: paymentMonths,
     });
 
     return payment;

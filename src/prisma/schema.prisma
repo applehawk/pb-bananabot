@@ -49,7 +49,6 @@ model Payment {
   paymentCurrency String
   description String?
   url String
-  monthCount Int
   transactionId String?
   payerAmount String?
   payerCurrency String?

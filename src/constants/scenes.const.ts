@@ -13,10 +13,9 @@ export const SCENES = {
       Доступны локации: 
 ├ 🇦🇪 ОАЭ`,
   navigateButtons: [
-  [BUTTONS[CommandEnum.STATUS], BUTTONS[CommandEnum.GET_CONNECT]],
-  [BUTTONS[CommandEnum.TOPUP_BALANCE], BUTTONS[CommandEnum.QUESTION]]
-]
-  },
+    [BUTTONS[CommandEnum.STATUS], BUTTONS[CommandEnum.GET_CONNECT]],
+    [BUTTONS[CommandEnum.TOPUP_BALANCE], BUTTONS[CommandEnum.QUESTION], BUTTONS[CommandEnum.HOME]]
+  ]},
   [CommandEnum.HOME]: {
     text: `Чтобы подключиться к VPN нужно:
     Скачать приложение Outline на свой телефон:

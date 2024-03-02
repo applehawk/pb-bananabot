@@ -14,8 +14,8 @@ export type CreatePaymentData = {
   chatId: number;
   tariffId: string;
   tariffPrice: number;
-  paymentMonths: number;
-  email?: string;
+  //paymentMonths: number;
+  //email?: string;
   paymentAt?: Date;
   limit?: number;
 };

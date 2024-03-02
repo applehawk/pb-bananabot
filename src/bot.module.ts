@@ -8,7 +8,7 @@ import { BotUpdate } from './bot.update';
 import { HttpModule } from '@nestjs/axios';
 import { PrismaModule } from './prisma/prisma.module';
 import { ConnectionService } from './prisma/connection.service';
-import { UserService } from './prisma/user.service';
+import { UserService } from './user/user.service';
 import { Start, TelegrafModule } from 'nestjs-telegraf';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StartScene } from './scenes/start.scene';
@@ -22,6 +22,8 @@ import { OutlineService } from './outline/outline.service';
 import { TopupBalanceScene } from './scenes/topupbalance.scene';
 import { GetConnectScene } from './scenes/getconnect.scene';
 import { StatusScene } from './scenes/status.scene';
+import { PaymentModule } from './payment/payment.module';
+import { UserModule } from './user/user.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { StatusScene } from './scenes/status.scene';
     }),
     PrismaModule,
     HttpModule,
+    PaymentModule,
+    UserModule
   ],
   controllers: [
     //BotController, 
@@ -51,7 +55,6 @@ import { StatusScene } from './scenes/status.scene';
       useClass: AllExceptionFilter,
     },
     BotService,
-    UserService,
     ConnectionService,
     BotUpdate,
     StartScene,

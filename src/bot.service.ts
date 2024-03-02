@@ -7,7 +7,7 @@ import { CommandEnum } from './enum/command.enum';
 import { BOT_NAME } from './constants/bot-name.const';
 import { ConfigService } from '@nestjs/config';
 import { replyOrEdit } from './utils/reply-or-edit';
-import { UserService } from './prisma/user.service';
+import { UserService } from './user/user.service';
 import { PrismaClient } from '@prisma/client';
 import { User } from '@prisma/client';
 

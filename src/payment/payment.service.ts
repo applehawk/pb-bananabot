@@ -16,7 +16,7 @@ import { createHash } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { YooMoneyClient } from '@app/yoomoney-client';
 import { PaymentStrategyFactory } from './strategies/factory/payment-strategy.factory';
-import { UserService } from 'src/prisma/user.service';
+import { UserService } from 'src/user/user.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -43,8 +43,8 @@ export class PaymentService {
     chatId: number,
     tariffId: string,
     paymentSystem: PaymentSystemEnum,
-    paymentMonths: number,
-    email?: string,
+    //paymentMonths: number,
+    //email?: string,
     paymentAt?: Date,
   ): Promise<Payment> {
     const user = await this.userService.findOneByUserId(userId);
@@ -61,8 +61,8 @@ export class PaymentService {
       chatId,
       tariffId,
       tariffPrice: tariff.price,
-      paymentMonths,
-      email,
+      //paymentMonths,
+      //email,
       paymentAt: paymentAt || DateTime.local().toJSDate(),
       limit: tariff.connectionsLimit,
     });

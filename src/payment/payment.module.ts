@@ -10,16 +10,22 @@ import { PaymentService } from './payment.service';
 //import { UserModule } from 'src/user/user.module';
 import { YooMoneyClientModule } from '@app/yoomoney-client';
 import { PaymentController } from './payment.controller';
+import { UserService } from 'src/user/user.service';
+import { TariffModule } from 'src/tariff/tariff.module';
+import { PrismaModule } from 'src/prisma/prisma.module';
+import { UserModule } from 'src/user/user.module';
+import { PaymentStrategyFactory } from './strategies/factory/payment-strategy.factory';
 
 @Module({
   imports: [
+    UserModule,
+    TariffModule,
+    PrismaModule,
     //MongooseModule.forFeature([{ name: Payment.name, schema: PaymentSchema }]),
-    //UserModule,
-    //TariffModule,
     YooMoneyClientModule,
     forwardRef(() => BotModule),
   ],
-providers: [PaymentService/*, PaymentStrategyFactory, PaymentScheduler*/],
+  providers: [PaymentService, PaymentStrategyFactory],
   controllers: [PaymentController],
   exports: [PaymentService],
 })

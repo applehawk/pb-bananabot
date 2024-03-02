@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { User, Connection } from '@prisma/client';
 import { ConnectionService } from 'src/prisma/connection.service';
-import { UserService } from 'src/prisma/user.service';
+import { UserService } from 'src/user/user.service';
 
 interface OutlineSSConnection {
     serverAddress: string,

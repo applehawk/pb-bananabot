@@ -1,7 +1,7 @@
 import { Controller, Post, Get, Req, Res, Query, HttpStatus, Body, Param } from '@nestjs/common';
 import { Response } from 'express';
 import { ConnectionService } from 'src/prisma/connection.service';
-import { UserService } from 'src/prisma/user.service';
+import { UserService } from 'src/user/user.service';
 import { OutlineService } from 'src/outline/outline.service';
 
 const CONNLIMIT = 1
