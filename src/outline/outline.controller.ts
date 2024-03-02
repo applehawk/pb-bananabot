@@ -19,23 +19,24 @@ export class OutlineController {
         @Param('userId') userIdStr: string, 
         @Query('firstname') firstname: string,
         @Query('lastname') lastname?: string,
-        @Query('nickname') nickname?: string) 
+        @Query('username') username?: string) 
     {
         const userId = parseInt(userIdStr)
         return this.userService.upsert({
             userId: userId,
             firstname: firstname, 
             lastname: lastname,
-            nickname: nickname,
+            username: username,
             chatId: 0,
-            connLimit: CONNLIMIT
+            connLimit: CONNLIMIT,
+            balance: 0,
         }).then(user => {
             res.status(HttpStatus.OK).json({
                 "id": user.userId,
                 "firstname": user.firstname,
                 "lastname": user.lastname,
-                "nickname": user.nickname,
-                "connLimit": user.connLimit
+                "username": user.username,
+                "connLimit": user.connLimit,
             });
         })
     }

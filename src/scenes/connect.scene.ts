@@ -8,8 +8,8 @@ import { Markup } from 'telegraf';
 import { OutlineService } from 'src/outline/outline.service';
 import { ConnectionService } from 'src/prisma/connection.service';
 
-@Scene(CommandEnum.GET_CONNECT)
-export class GetConnectScene extends AbstractScene {
+@Scene(CommandEnum.CONNECT)
+export class ConnectScene extends AbstractScene {
     constructor(private readonly outlineService: OutlineService,
                 private readonly connService: ConnectionService) {
         super()
@@ -30,7 +30,7 @@ export class GetConnectScene extends AbstractScene {
         const outlineLink = this.outlineService.getOutlineDynamicLink(connection)
         const fastRedirectLink = this.outlineService.getConnectionRedirectLink(connection)
 
-        const scene = SCENES.GET_CONNECT(outlineLink);
+        const scene = SCENES.CONNECT(outlineLink);
 
         scene.buttons = [
             [Markup.button.url('для iOS 🍏', fastRedirectLink)],

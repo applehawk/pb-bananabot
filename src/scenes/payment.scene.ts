@@ -7,11 +7,15 @@ import { Context } from 'src/interfaces/context.interface';
 import { Markup } from 'telegraf';
 import { replyOrEdit } from 'src/utils/reply-or-edit';
 import { SCENES } from 'src/constants/scenes.const';
+import { TariffService } from 'src/tariff/tariff.service';
 
 
-@Scene(CommandEnum.TOPUP_BALANCE)
-export class TopupBalanceScene extends AbstractScene {
-    constructor(private readonly paymentService: PaymentService) {
+@Scene(CommandEnum.PAYMENT)
+export class PaymentScene extends AbstractScene {
+    constructor(
+      private readonly paymentService: PaymentService,
+      private readonly tariffService: TariffService
+      ) {
         super();
       }
 
@@ -25,18 +29,10 @@ export class TopupBalanceScene extends AbstractScene {
 
     @Action(CommandEnum.PAY_WITH_YOOMONEY)
     async payWithYoomoney(@Ctx() ctx: Context) {
-      /**
-       *     this.logger.log(ctx.scene.session.current);
-    const tariff = await this.tariffService.getOneByName(ctx.scene.session.current.split('_')[0]);
-    ctx.session.tariffId = tariff._id.toString();
-       */
-      ctx.session.tariffId = 'FREE';
+      this.logger.log(ctx.scene.session.current);
+      const tariff = await this.tariffService.getOneByName(ctx.scene.session.current.split('_')[0]);
+      ctx.session.tariffId = tariff.id.toString();
       await this.createPaymentAndReply(ctx, PaymentSystemEnum.YOOMONEY);
-    }
-
-    @Action([CommandEnum.TARIF_1, CommandEnum.TARIF_2, CommandEnum.TARIF_3])
-    async choosedTarif(@Ctx() ctx: Context) {
-        await replyOrEdit(ctx, `Вы выбрали тариф ${ctx.state}`, Markup.inlineKeyboard([]))
     }
   
     private async createPaymentAndReply(ctx: Context, paymentSystem: PaymentSystemEnum, email?: string) {

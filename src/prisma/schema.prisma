@@ -17,8 +17,9 @@ model User {
   chatId      Int?
   firstname   String?
   lastname    String?
-  nickname    String?
+  username    String?
   connLimit   Int
+  balance     Int
   connections Connection[]
 }
 
@@ -64,9 +65,10 @@ model Payment {
 model Tariff {
   id String @id @unique
   name String
-  connectionsLimit Int
   price Int
-  @@index([price, connectionsLimit])
+  period Int
+  caption String
+  @@index([price])
 }
 
 model SceneStep {

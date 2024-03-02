@@ -45,8 +45,8 @@ export class BotService {
       chatId: ctx.chat.id,
       firstname: ctx.from.first_name,
       lastname: ctx.from.last_name,
-      nickname: ctx.from.username,
-      connLimit: 1
+      username: ctx.from.username,
+      connLimit: 1, balance: 0.0,
     }
     this.userService.upsert(newUser)
   }
