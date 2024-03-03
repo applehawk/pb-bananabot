@@ -10,6 +10,7 @@ import { replyOrEdit } from './utils/reply-or-edit';
 import { UserService } from './user/user.service';
 import { PrismaClient } from '@prisma/client';
 import { User } from '@prisma/client';
+import { PaymentSystemEnum } from './payment/enum/payment-system.enum';
 
 @Injectable()
 export class BotService {
@@ -49,5 +50,28 @@ export class BotService {
       connLimit: 1, balance: 0.0,
     }
     this.userService.upsert(newUser)
+  }
+
+  async sendMessage(chatId: number, message: string): Promise<void> {
+    await this.bot.telegram.sendMessage(chatId, message);
+  }
+
+  async sendPaymentSuccessMessage(chatId: number, balance: number): Promise<void> {
+    await this.sendMessage(
+      chatId,
+      `Баланс успешно пополнен до ${balance} 🎉 \n\n`,
+    );
+  }
+
+  async sendPaymentSuccessMessageToAdmin(
+    username: string,
+    balance: number,
+    amount: number,
+    paymentSystem: PaymentSystemEnum,
+  ): Promise<void> {
+    await this.bot.telegram.sendMessage(
+      this.adminChatId,
+      `Пользователь ${username} оплатил, его баланс ${balance}. Оплаченная сумма: ${amount}. Платежная система ${paymentSystem}  🎉`,
+    );
   }
 }

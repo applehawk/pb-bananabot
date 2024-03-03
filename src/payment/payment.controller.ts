@@ -8,17 +8,17 @@ import { YooMoneyNotification } from '@app/yoomoney-client/types/notification.ty
 
 @Controller('/payment')
 export class PaymentController {
-    botUrl?: string
+    successRedirectUrl?: string
 
     constructor(private readonly paymentService: PaymentService,
         private readonly yooMoney: YooMoneyClient,
         private readonly configService: ConfigService) {
-            this.botUrl = configService.get("BOT_URL");
+            this.successRedirectUrl = configService.get("YOOMONEY_SUCCESS_URL");
         }
 
     @Get('yoomoney/success')
     success(@Res() res: Response) {
-        return res.redirect(this.botUrl);
+        return res.redirect(this.successRedirectUrl);
         //return { data: 'success' };
     }
 
@@ -27,6 +27,7 @@ export class PaymentController {
         const isValid = await this.paymentService.yooMoneyWebHook(body);
 
         if (isValid) {
+            await this.paymentService.validatePayment(body.label)
             return { data: 'success' };
         } else {
             return { data: 'invalid' };

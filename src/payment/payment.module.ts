@@ -21,7 +21,6 @@ import { PaymentStrategyFactory } from './strategies/factory/payment-strategy.fa
     UserModule,
     TariffModule,
     PrismaModule,
-    //MongooseModule.forFeature([{ name: Payment.name, schema: PaymentSchema }]),
     YooMoneyClientModule,
     forwardRef(() => BotModule),
   ],

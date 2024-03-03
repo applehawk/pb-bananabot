@@ -37,9 +37,14 @@ export class PaymentScene extends AbstractScene {
     @Action(CommandEnum.PAY_WITH_YOOMONEY)
     async payWithYoomoney(@Ctx() ctx: Context) {
       this.logger.log(ctx.scene.session.current);
-      console.log('Pay with Yoomoney')
-      
       await this.createPaymentAndReply(ctx, PaymentSystemEnum.YOOMONEY);
+    }
+
+    @Action(CommandEnum.CONFIRM_PAYMENT)
+    async confirmPayment(@Ctx() ctx: Context) {
+      this.logger.log(ctx.scene.session.current)
+
+     // this.paymentService.validatePayment().then()
     }
   
     private async createPaymentAndReply(ctx: Context, paymentSystem: PaymentSystemEnum, email?: string) {
