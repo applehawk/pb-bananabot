@@ -66,18 +66,20 @@ export const SCENES = {
       [BUTTONS[CommandEnum.CONFIRM_PAYMENT]]
     ]
   },
-  [CommandEnum.CONNECT]: (connectionLink: string ) => ({
-    text: `Подключение к Outline:  
+  [CommandEnum.CONNECT]: {
+    balancePositive: (connectionLink: string ) => ({
+      text: `Подключение к Outline:  
 
-    Ваша ссылка:
-    └ <code>${connectionLink}</code>
-    Нажмите чтобы скопировать (тапните) и добавьте в приложение
-    
-    Если приложение уже установлено - воспользуйтесь быстрым подключением
-    - Outline - для iOS 🍏
-    - Outline - для Android 🤖`,
-    buttons: []
-  }),
+      Ваша ссылка:
+      └ <code>${connectionLink}</code>
+      Нажмите чтобы скопировать (тапните) и добавьте в приложение
+      
+      Если приложение уже установлено - воспользуйтесь быстрым подключением
+      - Outline - для iOS 🍏
+      - Outline - для Android 🤖`,
+      buttons: []
+    })
+  },
   [CommandEnum.STATUS]: {
     text: (balance: string, connectionsNumber: number) => `Ваш баланс: ${balance}\n\nЧисло подключений: ${connectionsNumber}`,
     buttons: [BUTTONS[CommandEnum.HOME]],
