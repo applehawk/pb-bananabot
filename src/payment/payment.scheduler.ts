@@ -5,7 +5,7 @@ import { BotService } from 'src/bot.service';
 import { PaymentService } from './payment.service';
 import { UserService } from 'src/user/user.service';
 import { PaymentStatusEnum } from './enum/payment-status.enum';
-
+import { PaymentSystemEnum } from './enum/payment-system.enum';
 @Injectable()
 export class PaymentScheduler {
   private readonly logger = new Logger(PaymentScheduler.name);
@@ -18,7 +18,7 @@ export class PaymentScheduler {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleMidnight() {
-    
+
   }
 
   @Cron(CronExpression.EVERY_10_SECONDS)
@@ -43,7 +43,7 @@ export class PaymentScheduler {
               user.username,
               user.balance,
               payment.amount,
-              PaymentStatusEnum[payment.paymentSystem],
+              PaymentSystemEnum[payment.paymentSystem],
             );
           }
         } catch (error) {
