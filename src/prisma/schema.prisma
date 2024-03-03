@@ -75,7 +75,7 @@ model BalanceChange {
   id String @id @unique
   changeAmount Int
   userId Int
-  type Int @default("PAYMENT") // "MANUALLY", "SCHEDULER"
+  type Int @default(0) // "PAYMENT", "MANUALLY", "SCHEDULER"
 }
 
 model SceneStep {

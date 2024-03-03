@@ -6,3 +6,5 @@ src/prisma/data/
 dist
 dist/tsconfig.build.tsbuildinfo
 src/prisma/data/dev.db
+src/prisma/migrations/20240303190039_/migration.sql
+src/prisma/data/dev.db
