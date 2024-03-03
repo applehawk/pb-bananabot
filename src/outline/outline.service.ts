@@ -47,7 +47,7 @@ export class OutlineService {
         let connIdHex: string = (+connection.id).toString(16)
         let connName: string = connection.name
 
-        return `https://${this.outlineUsersGateway}/redirect/${this.version}/${tgIdHex}/${connIdHex}/${connName}`
+        return `https://${this.outlineUsersGateway}/redirect/${this.version}/${connIdHex}/${connName}`
     }
 
     async createConnection(userId: number, connName: string) : Promise<Connection> {
