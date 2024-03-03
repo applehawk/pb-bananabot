@@ -50,9 +50,11 @@ export class OutlineController {
         let connId = parseInt(connIdHex)
                 
         return this.connService.connection( {id: connId} )
-        .then( connection => {
-            return {"url": `${this.outlineService.getOutlineDynamicLink(connection)}`, "statusCode": 302};
-        })
+            .then( connection => {
+                return res.redirect(`${this.outlineService.getOutlineDynamicLink(connection)}`);
+            }).catch( (reason) => {
+                return res.status(HttpStatus.NOT_FOUND)
+            })
     }
 
     @Post('/user/:userId/conn/:connName')
