@@ -1,7 +1,6 @@
 import { Controller, Post, Get, Req, Res, Query, HttpStatus, Body, Param } from '@nestjs/common';
 import { Response } from 'express';
 import { ConnectionService } from 'src/prisma/connection.service';
-import { UserService } from 'src/user/user.service';
 import { OutlineService } from 'src/outline/outline.service';
 
 const CONNLIMIT = 1
@@ -10,35 +9,7 @@ const CONNLIMIT = 1
 export class OutlineController {
     constructor(
         private connService: ConnectionService,
-        private outlineService: OutlineService,
-        private userService: UserService) {   
-    }
-
-    @Post('/user/:userId') //name = telegramId
-    async createUser(@Res() res: Response, 
-        @Param('userId') userIdStr: string, 
-        @Query('firstname') firstname: string,
-        @Query('lastname') lastname?: string,
-        @Query('username') username?: string) 
-    {
-        const userId = parseInt(userIdStr)
-        return this.userService.upsert({
-            userId: userId,
-            firstname: firstname, 
-            lastname: lastname,
-            username: username,
-            chatId: 0,
-            connLimit: CONNLIMIT,
-            balance: 0,
-        }).then(user => {
-            res.status(HttpStatus.OK).json({
-                "id": user.userId,
-                "firstname": user.firstname,
-                "lastname": user.lastname,
-                "username": user.username,
-                "connLimit": user.connLimit,
-            });
-        })
+        private outlineService: OutlineService) {   
     }
 
     @Get('/redirect/:version/:connIdHex/:connName')
@@ -55,37 +26,6 @@ export class OutlineController {
             }).catch( (reason) => {
                 return res.status(HttpStatus.NOT_FOUND)
             })
-    }
-
-    @Post('/user/:userId/conn/:connName')
-    async createConnection(@Res() res: Response,
-        @Param('userId') userIdStr: string, 
-        @Param('connName') connName: string,
-        @Query('lastConn') lastConn: boolean) {
-        const userId = parseInt(userIdStr)
-        return this.userService.findOneByUserId(userId)
-        .then(user => {
-            console.log(`User found: ${user}`)
-            return user !== null ? user : Promise.reject("UserNotFound")
-        })
-        .then( user => this.outlineService.createConnection(userId, connName))
-        .then( newConn => {
-            res.status(HttpStatus.OK).json(
-                {
-                    "link": `${this.outlineService.getOutlineDynamicLink(newConn)}`
-                }
-            )
-        })
-        .catch( (reason) => {
-            return this.connService.connections({where: {userId: userId}})
-            .then( connections => connections.reduce((acc, curr) => curr, null) )
-            .then( lastConnection => {
-                const outlineLink = this.outlineService.getOutlineDynamicLink(lastConnection)
-                console.log(`Reason: ${reason}`)
-                var jsonResponse = Object.assign({}, {"warning": reason}, lastConn ? {"link": outlineLink} : {})
-                res.status(HttpStatus.NOT_FOUND).json(jsonResponse)
-            })
-        })
     }
 
     @Get('/conf/:version/:connIdHex/:connName')

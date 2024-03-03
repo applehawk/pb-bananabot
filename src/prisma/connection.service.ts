@@ -69,7 +69,6 @@ export class ConnectionService {
 
     async createConnectionEntryWithOutlineConn(user: User, connName: string, outlineConnKey: OutlineSSConnection) {
       const newKey = outlineConnKey
-      console.log('createConnectionWithOutlineConn')
       return this.createConnectionEntry({
           name: connName,
           server: newKey.serverAddress,

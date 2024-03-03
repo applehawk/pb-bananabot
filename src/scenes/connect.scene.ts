@@ -25,7 +25,6 @@ export class ConnectScene extends AbstractScene {
                 return this.connService.connections({where: {userId: userId }})
                 .then( connections => connections.reduce((acc, curr) => curr, null) )
             })
-        console.log(connection)
         
         const outlineLink = this.outlineService.getOutlineDynamicLink(connection)
         const fastRedirectLink = this.outlineService.getConnectionRedirectLink(connection)

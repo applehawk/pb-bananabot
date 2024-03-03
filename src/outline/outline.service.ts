@@ -29,9 +29,6 @@ export class OutlineService {
         this.apiUrl = this.configService.get<string>('OUTLINE_API_URL')
         this.vpnDomain = this.configService.get<string>('DOMAIN')
         this.outlineUsersGateway = this.vpnDomain
-
-        console.log('OUTLINE_API_URL: ' + this.apiUrl)
-        console.log('DOMAIN: ' + this.vpnDomain)
     }
 
     getOutlineDynamicLink(connection: Connection) {
@@ -57,7 +54,6 @@ export class OutlineService {
             user => this.userService.limitExceedWithUser(user)
             .then(
                 isExceed => {
-                    console.log(`isExceed = ${isExceed}`)
                     return isExceed == false ? 
                     this.createNewKey(userId)
                         .then(newKey => this.parseOutlineAccessUrl(newKey.accessUrl))
@@ -69,10 +65,8 @@ export class OutlineService {
     }
     
     private parseOutlineAccessUrl(accessUrl: string) : OutlineSSConnection {
-        console.log(accessUrl)
         let regexKey = /ss:\/\/(\w+)@(\d{1,3}.\d{1,3}.\d{1,3}.\d{1,3}):(\w+)\//g
         let [ regexKeyMatch, encodedBase64Key, serverAddress, port ] = [...accessUrl.matchAll(regexKey)][0]
-        console.log(`url64code: ${encodedBase64Key}, serverAddress: ${serverAddress}, port: ${port}`)
         let decodedBase64Key: string = atob(encodedBase64Key);
         let regexBase64Key = /(.+):(.+)/g
         let [ regexBase64KeyMatch, encrypt_method, password ] = [...decodedBase64Key.matchAll(regexBase64Key)][0]
