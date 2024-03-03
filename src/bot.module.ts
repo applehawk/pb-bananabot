@@ -28,6 +28,7 @@ import { TariffModule } from './tariff/tariff.module';
 import { MonthTariffScene } from './scenes/month-tariff.scene';
 import { ThreeMonthTariffScene } from './scenes/threemonth-tariff.scene';
 import { SixMonthTariffScene } from './scenes/sixmonth-tariff.scene';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { SixMonthTariffScene } from './scenes/sixmonth-tariff.scene';
         include: [BotModule],
       }),
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     HttpModule,
     PaymentModule,
