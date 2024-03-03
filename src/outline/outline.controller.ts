@@ -51,11 +51,7 @@ export class OutlineController {
                 
         return this.connService.connection( {id: connId} )
         .then( connection => {
-            res.status(HttpStatus.FOUND).json(
-                {
-                    "url": `${this.outlineService.getOutlineDynamicLink(connection)}`
-                }
-            )
+            return {"url": `${this.outlineService.getOutlineDynamicLink(connection)}`, "statusCode": 302};
         })
     }
 
