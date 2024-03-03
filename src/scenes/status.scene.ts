@@ -23,6 +23,7 @@ export class StatusScene extends AbstractScene {
         const balance = user.balance.toString()
         const connCount = await this.connService.count()
         const scene = SCENES[CommandEnum.STATUS];
-        await replyOrEdit(ctx, scene.text(balance, connCount), Markup.inlineKeyboard(scene.buttons));
+        //await replyOrEdit(ctx, scene.text(balance, connCount), Markup.inlineKeyboard(scene.buttons));
+        await ctx.replyWithHTML(scene.text(balance, connCount), Markup.inlineKeyboard(scene.buttons));
     }
 }

@@ -15,7 +15,7 @@ import { TariffModule } from 'src/tariff/tariff.module';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { UserModule } from 'src/user/user.module';
 import { PaymentStrategyFactory } from './strategies/factory/payment-strategy.factory';
-
+import { PaymentScheduler } from './payment.scheduler';
 @Module({
   imports: [
     UserModule,
@@ -24,7 +24,7 @@ import { PaymentStrategyFactory } from './strategies/factory/payment-strategy.fa
     YooMoneyClientModule,
     forwardRef(() => BotModule),
   ],
-  providers: [PaymentService, PaymentStrategyFactory],
+  providers: [PaymentService, PaymentStrategyFactory, PaymentScheduler],
   controllers: [PaymentController],
   exports: [PaymentService],
 })
