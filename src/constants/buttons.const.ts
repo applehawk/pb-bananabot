@@ -19,7 +19,7 @@ export const BUTTONS = {
   [CommandEnum.OUTLINE_ANDROID]: Markup.button.url('🤖 для Android','https://play.google.com/store/apps/details?id=org.outline.android.client'),
   [CommandEnum.OUTLINE_DOWNLOADED]: Markup.button.callback('Уже скачал', CommandEnum.OUTLINE_DOWNLOADED),
 
-  [CommandEnum.GET_ACCESS]: Markup.button.callback('получить доступ 🚀', CommandEnum.GET_ACCESS),
+  [CommandEnum.GET_ACCESS]: Markup.button.callback('🔥 Купить', CommandEnum.GET_ACCESS),
   [CommandEnum.JOIN_CHAT]: Markup.button.url('Открыть чат', 'https://t.me/openvpnbot'),
   //[CommandEnum.PAY_WITH_YOOMONEY_2]: Markup.button.callback('🔥 3 месяц', CommandEnum.PAY_WITH_YOOMONEY_2),
   //[CommandEnum.PAY_WITH_YOOMONEY_3]: Markup.button.callback('🚀 6 месяц', CommandEnum.PAY_WITH_YOOMONEY_3),
