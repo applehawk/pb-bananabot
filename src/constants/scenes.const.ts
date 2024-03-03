@@ -7,7 +7,7 @@ import { Command } from 'nestjs-telegraf';
 import { splitArrayIntoPairs } from 'src/utils/split-array-into-pairs';
 
 export const SCENES = {
-  [CommandEnum.START]: {
+  [CommandEnum.HOME]: {
     navigateText:
       `👋🏻 Привет!  
 
@@ -19,7 +19,7 @@ export const SCENES = {
     [BUTTONS[CommandEnum.STATUS], BUTTONS[CommandEnum.CONNECT]],
     [BUTTONS[CommandEnum.GET_ACCESS], BUTTONS[CommandEnum.QUESTION]]
   ]},
-  [CommandEnum.HOME]: {
+  [CommandEnum.START]: {
     text: `Чтобы подключиться к VPN нужно:
     Скачать приложение Outline на свой телефон:
       Apple: https://apps.apple.com/us/app/outline-app/id1356177741
@@ -27,9 +27,19 @@ export const SCENES = {
       Android (ссылка 2): https://s3.amazonaws.com/outline-releases/client/android/stable/Outline-Client.apk
     ‌если не работает для Android ссылка 1, используйте ссылку 2.`,  
     buttons: [
-      [BUTTONS[CommandEnum.OUTLINE_APPLE], BUTTONS[CommandEnum.OUTLINE_ANDROID]],
-      [BUTTONS[CommandEnum.GET_ACCESS]]
+      [BUTTONS[CommandEnum.OUTLINE_APPLE], BUTTONS[CommandEnum.OUTLINE_ANDROID]]
     ],
+    navigateText:
+      `👋🏻 Привет!  
+
+      Это Telegram-бот для подключения к VPN.
+
+      Доступны локации: 
+├ 🇦🇪 ОАЭ`,
+  navigateButtons: [
+    [BUTTONS[CommandEnum.STATUS], BUTTONS[CommandEnum.CONNECT]],
+    [BUTTONS[CommandEnum.GET_ACCESS], BUTTONS[CommandEnum.QUESTION]]
+    ]
   },
   [CommandEnum.GET_ACCESS]: {
     navigateText: 'Для получения доступа к VPN тебе нужно пополнить баланс по количеству дней использования.',

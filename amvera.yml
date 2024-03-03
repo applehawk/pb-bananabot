@@ -8,3 +8,4 @@ build:
   skip: false
 run:
   persistenceMount: /data
+  containerPort: 80
