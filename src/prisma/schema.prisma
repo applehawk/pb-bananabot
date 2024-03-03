@@ -31,7 +31,7 @@ model Connection {
   password    String
   method      String
   access_url  String
-  //many-to-one
+  //many-to-one, but not necessary relations
   user        User?  @relation(fields: [userId], references: [userId])
   userId      Int?
 }
@@ -69,6 +69,13 @@ model Tariff {
   period Int
   caption String
   @@index([price])
+}
+
+model BalanceChange {
+  id String @id @unique
+  changeAmount Int
+  userId Int
+  type Int @default("PAYMENT") // "MANUALLY", "SCHEDULER"
 }
 
 model SceneStep {

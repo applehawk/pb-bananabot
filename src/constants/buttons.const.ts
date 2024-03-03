@@ -8,7 +8,7 @@ export const BUTTONS = {
 
   [CommandEnum.STATUS]: Markup.button.callback('ℹ️ Статус', CommandEnum.STATUS),
   [CommandEnum.CONNECT]: Markup.button.callback('⚡ Подключиться', CommandEnum.CONNECT),
-  [CommandEnum.PAYMENT]: Markup.button.callback('🔥 Купить', CommandEnum.PAYMENT),
+  [CommandEnum.PAYMENT]: Markup.button.callback('Купить', CommandEnum.PAYMENT),
   [CommandEnum.QUESTION]: Markup.button.callback('❓ Помощь', CommandEnum.QUESTION),
 
   [CommandEnum.MONTH_TARIFF]: Markup.button.callback('30 дней', CommandEnum.MONTH_TARIFF),

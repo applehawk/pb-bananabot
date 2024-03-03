@@ -53,7 +53,7 @@ export const SCENES = {
     buttons: (tariffs: Tariff[]) =>
       splitArrayIntoPairs(tariffs.map((tariff) => BUTTONS[CommandEnum[tariff.name + '_TARIFF']])),
   },
-  [CommandEnum.PAYMENT]: {
+  [CommandEnum.PAYMENT]: { //попадаем только через GET_ACCESS, чтобы был выбран Тариф
     text: (balance: string, currentTariff: string) =>
     `
     Текущий баланс: ${balance}\n
