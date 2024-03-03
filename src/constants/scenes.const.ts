@@ -34,28 +34,20 @@ export const SCENES = {
   [CommandEnum.GET_ACCESS]: {
     navigateText: 'Для получения доступа к VPN тебе нужно пополнить баланс по количеству дней использования.',
     navigateButtons: [BUTTONS[CommandEnum.HOME]],
-    text: (tariffs: Tariff[], currentTariff: string) =>
-    `Периоды пополнения:\n\n`+
-    tariffs
-    .map(
-      (tariff) =>
+    text: (tariffs: Tariff[], currentBalance: string) =>
+      `Периоды пополнения:\n`+
+      tariffs.map((tariff) =>
         `<b>${BUTTONS[CommandEnum[tariff.name + '_TARIFF']].text}</b>: <i>${
           tariff.period > 99999999990 ? '∞' : tariff.period
-        }</i> дней. <b>${tariff.price + 'руб.'}</b>.\n`,).join(''),
+        }</i> дней. <b>${tariff.price + 'руб.'}</b>.\n`,).join('') + `\nТекущий баланс: ${currentBalance}\n\n`,
     buttons: (tariffs: Tariff[]) =>
       splitArrayIntoPairs(tariffs.map((tariff) => BUTTONS[CommandEnum[tariff.name + '_TARIFF']])),
   },
   [CommandEnum.PAYMENT]: {
-    text: (tariffs: Tariff[], currentTariff: string) =>
-    `Для доступа пополните баланс на 90 рублей:\n\n`+
-    tariffs
-    .map(
-      (tariff) =>
-        `<b>${BUTTONS[CommandEnum[tariff.name + '_TARIFF']].text}</b>: <i>${
-          tariff.period > 99999999990 ? '∞' : tariff.period
-        }</i> дней. <b>${tariff.price + 'руб.'}</b>.\n`,
-    )
-    .join('') + `
+    text: (balance: string, currentTariff: string) =>
+    `
+    Текущий баланс: ${balance}\n
+    Выбран тариф: ${currentTariff}\n\n
 
     💳 К оплате принимаются карты РФ:
     Visa, MasterCard, МИР.`,

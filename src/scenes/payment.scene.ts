@@ -8,13 +8,15 @@ import { Markup } from 'telegraf';
 import { replyOrEdit } from 'src/utils/reply-or-edit';
 import { SCENES } from 'src/constants/scenes.const';
 import { TariffService } from 'src/tariff/tariff.service';
+import { UserService } from 'src/user/user.service';
 
 
 @Scene(CommandEnum.PAYMENT)
 export class PaymentScene extends AbstractScene {
     constructor(
       private readonly paymentService: PaymentService,
-      private readonly tariffService: TariffService
+      private readonly tariffService: TariffService,
+      private readonly userService: UserService
       ) {
         super();
       }
@@ -23,15 +25,20 @@ export class PaymentScene extends AbstractScene {
     async onSceneEnter(@Ctx() ctx: Context) {
       this.logger.log(ctx.scene.session.current);
       const scene = SCENES[ctx.scene.session.current];
-  
-      await replyOrEdit(ctx, scene.text, Markup.inlineKeyboard(scene.buttons));
+
+      const user = await this.userService.user({ userId: ctx.from.id })
+      const balance = user.balance.toString()
+      const tariff = await this.tariffService.getOneById(ctx.session.tariffId)
+      const text = scene.text(balance, tariff.name)
+     // await replyOrEdit(ctx, text, Markup.inlineKeyboard(scene.buttons))
+      await ctx.replyWithHTML(scene.text(balance, tariff.name), Markup.inlineKeyboard(scene.buttons));
     }
 
     @Action(CommandEnum.PAY_WITH_YOOMONEY)
     async payWithYoomoney(@Ctx() ctx: Context) {
       this.logger.log(ctx.scene.session.current);
-      const tariff = await this.tariffService.getOneByName(ctx.scene.session.current.split('_')[0]);
-      ctx.session.tariffId = tariff.id.toString();
+      console.log('Pay with Yoomoney')
+      
       await this.createPaymentAndReply(ctx, PaymentSystemEnum.YOOMONEY);
     }
   

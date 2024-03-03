@@ -13,7 +13,9 @@ import { UserService } from 'src/user/user.service';
 export class GetAccessScene extends AbstractScene {
   public logger = new Logger(AbstractScene.name);
 
-  constructor(private readonly tariffService: TariffService, private readonly userService: UserService) {
+  constructor(
+    private readonly tariffService: TariffService, 
+    private readonly userService: UserService) {
     super();
   }
 
@@ -23,8 +25,8 @@ export class GetAccessScene extends AbstractScene {
     const tariffs = await this.tariffService.getAllTariffs();
     const scene = SCENES[ctx.scene.session.current];
 
+    const user = await this.userService.findOneByUserId(ctx.from.id);
     try {
-      const user = await this.userService.findOneByUserId(ctx.from.id);
       if (!user)
         await this.userService.createUser({
           userId: ctx.from.id,
@@ -39,6 +41,6 @@ export class GetAccessScene extends AbstractScene {
     }
 
     await ctx.replyWithHTML(scene.navigateText, Markup.keyboard(scene.navigateButtons).resize());
-    await ctx.replyWithHTML(scene.text(tariffs), Markup.inlineKeyboard(scene.buttons(tariffs)));
+    await ctx.replyWithHTML(scene.text(tariffs, user.balance), Markup.inlineKeyboard(scene.buttons(tariffs)));
   }
 }

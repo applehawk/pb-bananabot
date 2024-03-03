@@ -7,6 +7,9 @@ import { PaymentStrategy, CreatePaymentData, PaymentProxy } from './payment-stra
 import { v4 as uuidv4 } from 'uuid';
 import { ConfigService } from '@nestjs/config';
 
+//https://yoomoney.ru/transfer/myservices/http-notification?lang=ru
+//https://yoomoney.ru/settings/oauth-services
+
 @Injectable()
 export class YooMoneyPaymentStrategy implements PaymentStrategy {
   constructor(private readonly yooMoneyClient: YooMoneyClient, private readonly configService: ConfigService) {}
