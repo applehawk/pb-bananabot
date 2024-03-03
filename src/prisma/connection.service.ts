@@ -57,6 +57,9 @@ export class ConnectionService {
         });
       }
     
+    async count(): Promise<number> {
+      return this.prisma.connection.count()
+    }
 
     async createConnectionEntry(data: Prisma.ConnectionCreateInput): Promise<Connection> {
     return this.prisma.connection.create({

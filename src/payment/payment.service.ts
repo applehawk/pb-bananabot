@@ -92,9 +92,23 @@ export class PaymentService {
     const paymentStatus = await paymentStrategy.validateTransaction(payment.paymentId);
     const isPaid = paymentStatus === PaymentStatusEnum.PAID;
 
-    if (paymentStatus !== payment.status) {
-      this.logger.debug(`Change status for ${paymentId} on ${paymentStatus}, IsPaid: ${isPaid}`);
-      await this.updatePaymentStatus(paymentId, paymentStatus, isPaid);
+    if(isPaid) {
+      if(paymentStatus !== payment.status) { //going to PAID status
+        const user = await this.userService.findOneByUserId(payment.userId);
+        const tariff = await this.tariffService.getOneById(payment.tariffId);
+        if(user) {
+          await this.userService.updateUser({where: {userId: user.userId}, data: {
+            balance: user.balance + tariff.price
+          }})
+        }
+      }
+      this.logger.debug(`Change status for ${paymentId} on ${paymentStatus}. IsPaid: ${isPaid}`);
+      await this.updatePaymentStatus(paymentId, PaymentStatusEnum.PAID, isPaid);
+    } else {
+      if (paymentStatus !== payment.status) {
+        this.logger.debug(`Change status for ${paymentId} on ${paymentStatus}, IsPaid: ${isPaid}`);
+        await this.updatePaymentStatus(paymentId, paymentStatus, isPaid);
+      }
     }
 
     return isPaid;

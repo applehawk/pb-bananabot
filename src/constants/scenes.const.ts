@@ -77,7 +77,8 @@ export const SCENES = {
     buttons: []
   }),
   [CommandEnum.STATUS]: {
-    text: `Ваш статус`,
+    text: (balance: string, connectionsNumber: number) => `Ваш баланс: ${balance}\n\nЧисло подключений: ${connectionsNumber}`,
+    buttons: [BUTTONS[CommandEnum.HOME]],
   },
   [CommandEnum.QUESTION]: {
     text: `Если у тебя есть вопрос, то ты можешь, посмотреть в документацию или задать его в нашем чате.`,
