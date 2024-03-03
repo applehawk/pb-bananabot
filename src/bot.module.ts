@@ -51,6 +51,7 @@ import { SixMonthTariffScene } from './scenes/sixmonth-tariff.scene';
     TariffModule
   ],
   controllers: [
+    BotController,
     OutlineController
   ],
   providers: [
