@@ -16,6 +16,11 @@ export class PaymentScheduler {
     private readonly botService: BotService,
   ) {}
 
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async handleMidnight() {
+    
+  }
+
   @Cron(CronExpression.EVERY_10_SECONDS)
   async handlePendingPayments() {
     const pendingPayments = await this.paymentService.getPendingPayments();
