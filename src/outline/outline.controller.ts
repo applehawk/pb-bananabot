@@ -2,6 +2,7 @@ import { Controller, Post, Get, Req, Res, Query, HttpStatus, Body, Param } from 
 import { Response } from 'express';
 import { ConnectionService } from 'src/prisma/connection.service';
 import { OutlineService } from 'src/outline/outline.service';
+import { UserService } from 'src/user/user.service';
 
 const CONNLIMIT = 1
 
@@ -9,7 +10,8 @@ const CONNLIMIT = 1
 export class OutlineController {
     constructor(
         private connService: ConnectionService,
-        private outlineService: OutlineService) {   
+        private outlineService: OutlineService,
+        private userService: UserService) {   
     }
 
     @Get('/redirect/:version/:connIdHex/:connName')
@@ -35,14 +37,16 @@ export class OutlineController {
 
         let connId = parseInt(connIdHex, 16)
 
-        this.connService.connectionFirst({
+        return this.connService.connectionFirst({
             where:{ id: connId }
         }).then( connection => {
-            res.status(HttpStatus.OK).json({
-                "server": connection.server,
-                "server_port": connection.server_port,
-                "password": connection.password,
-                "method": connection.method
+            return this.userService.findOneByUserId(connection.userId).then( user => {
+                res.status(HttpStatus.OK).json({
+                    "server": connection.server,
+                    "server_port": connection.server_port,
+                    "password": connection.password,
+                    "method": connection.method
+                })
             })
         }).catch( error => {
             res.status(HttpStatus.NOT_FOUND);

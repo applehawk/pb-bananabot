@@ -72,10 +72,12 @@ model Tariff {
 }
 
 model BalanceChange {
-  id String @id @unique
-  changeAmount Int
+  id Int @id @default(autoincrement())
   userId Int
-  type Int @default(0) // "PAYMENT", "MANUALLY", "SCHEDULER"
+  paymentId String?
+  balance Int
+  changeAmount Int
+  type String @default("PAYMENT") // "PAYMENT", "MANUALLY", "SCHEDULER"
 }
 
 model SceneStep {

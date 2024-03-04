@@ -3,5 +3,11 @@ export enum PaymentStatusEnum {
     PAID = 'PAID',
     FAILED = 'FAILED',
     CANCELED = 'CANCELED',
-  }
+}
   
+
+export enum BalanceChangeType {
+  PAYMENT = 'PAYMENT',
+  MANUALLY = 'MANUALLY',
+  SCHEDULER = 'SCHEDULER'
+}

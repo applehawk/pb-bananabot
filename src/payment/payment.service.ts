@@ -9,7 +9,7 @@ import { Tariff } from '@prisma/client';
 import { TariffService } from 'src/tariff/tariff.service';
 import { Payment } from '@prisma/client';
 import { PaymentSystemEnum } from './enum/payment-system.enum';
-import { PaymentStatusEnum } from './enum/payment-status.enum';
+import { BalanceChangeType, PaymentStatusEnum } from './enum/payment-status.enum';
 import { DateTime } from 'luxon';
 import { YooMoneyNotification } from '@app/yoomoney-client/types/notification.type';
 import { createHash } from 'crypto';
@@ -96,9 +96,7 @@ export class PaymentService {
         const user = await this.userService.findOneByUserId(payment.userId);
         const tariff = await this.tariffService.getOneById(payment.tariffId);
         if(user) {
-          await this.userService.updateUser({where: {userId: user.userId}, data: {
-            balance: user.balance + tariff.price
-          }})
+          await this.userService.commitBalanceChange(user, tariff.price, BalanceChangeType.PAYMENT, paymentId)
         }
       }
       this.logger.debug(`Change status for ${paymentId} on ${paymentStatus}. IsPaid: ${isPaid}`);

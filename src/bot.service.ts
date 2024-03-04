@@ -11,11 +11,13 @@ import { UserService } from './user/user.service';
 import { PrismaClient } from '@prisma/client';
 import { User } from '@prisma/client';
 import { PaymentSystemEnum } from './payment/enum/payment-system.enum';
+import { create } from 'domain';
 
 @Injectable()
 export class BotService {
   private readonly adminChatId: string;
   private readonly isProd: boolean;
+  readonly minimumBalance: number
 
   private readonly logger = new Logger(BotService.name);
   constructor(
@@ -26,6 +28,7 @@ export class BotService {
   ) {
     
     Logger.log("constructor BotService")
+    this.minimumBalance = configService.get('MINIMUM_BALANCE');
     this.adminChatId = configService.get('ADMIN_CHAT_ID');
     this.isProd = configService.get('NODE_ENV') === 'production';
   }
@@ -39,15 +42,15 @@ export class BotService {
   }
 
   async upsertUser(ctx: Context) {
-    const newUser: User = {
+    const upsertUser: User = {
       userId: ctx.from.id,
       chatId: ctx.chat.id,
       firstname: ctx.from.first_name,
       lastname: ctx.from.last_name,
       username: ctx.from.username,
-      connLimit: 1, balance: 0.0,
+      balance: 0.0, connLimit: 1
     }
-    this.userService.upsert(newUser)
+    this.userService.upsert(upsertUser)
   }
 
   async sendMessage(chatId: number, message: string): Promise<void> {

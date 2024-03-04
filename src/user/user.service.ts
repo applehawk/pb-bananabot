@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { User, Prisma } from '@prisma/client';
+import { User, Prisma, BalanceChange } from '@prisma/client';
+import { BalanceChangeType } from 'src/payment/enum/payment-status.enum';
 
 @Injectable()
 export class UserService {
@@ -53,6 +54,31 @@ export class UserService {
         })
       }
 
+      async commitBalanceChange(user: User, change: number, type: BalanceChangeType, paymentId?: string): Promise<User> {
+        const balanceEntry: Prisma.BalanceChangeCreateInput = {
+          userId: user.userId,
+          changeAmount: change,
+          paymentId: paymentId,
+          balance: user.balance,
+          type: BalanceChangeType[type]
+        }
+        return this.prisma.balanceChange.create({data: balanceEntry}).then( balanceChange => {
+          return this.updateUser({where: {userId: user.userId}, data: {
+            balance: user.balance + balanceChange.changeAmount
+          }})
+        })
+      }
+
+      async usersWithBalance(greaterOrEqual: number): Promise<User[]> {
+        return this.prisma.user.findMany({
+          where: {
+            balance: {
+              gte: greaterOrEqual
+            }
+          }
+        })
+      }
+
       async users(params: {
         skip?: number;
         take?: number;
@@ -77,9 +103,24 @@ export class UserService {
       });
     }
 
-    async upsert(data: User): Promise<User | null> {
+    async upsert(user: User): Promise<User | null> {
+      const createUser: Prisma.UserCreateInput = {
+        userId: user.userId,
+        chatId: user.chatId,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        username: user.username,
+        balance: user.balance, connLimit: user.connLimit
+      }
+      const updateUser: Prisma.UserUpdateInput = {
+        userId: user.userId,
+        chatId: user.chatId,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        username: user.username, //exclude balance and connLimit
+      }
       return this.prisma.user.upsert( {
-        where: {userId: data.userId}, create: data, update: data
+        where: {userId: user.userId}, create: createUser, update: updateUser
       })
     }
 

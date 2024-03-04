@@ -4,8 +4,9 @@ import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { BotService } from 'src/bot.service';
 import { PaymentService } from './payment.service';
 import { UserService } from 'src/user/user.service';
-import { PaymentStatusEnum } from './enum/payment-status.enum';
+import { BalanceChangeType, PaymentStatusEnum } from './enum/payment-status.enum';
 import { PaymentSystemEnum } from './enum/payment-system.enum';
+
 @Injectable()
 export class PaymentScheduler {
   private readonly logger = new Logger(PaymentScheduler.name);
@@ -18,7 +19,11 @@ export class PaymentScheduler {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleMidnight() {
-
+    const serviceFee = this.botService.minimumBalance
+    const users = await this.userService.usersWithBalance(serviceFee)
+    for (const user of users) {
+       await this.userService.commitBalanceChange(user, -serviceFee, BalanceChangeType.SCHEDULER)
+    }
   }
 
   @Cron(CronExpression.EVERY_10_SECONDS)

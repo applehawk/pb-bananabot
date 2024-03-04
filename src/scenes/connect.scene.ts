@@ -8,14 +8,17 @@ import { Markup } from 'telegraf';
 import { OutlineService } from 'src/outline/outline.service';
 import { ConnectionService } from 'src/prisma/connection.service';
 import { UserService } from 'src/user/user.service';
+import { BotService } from 'src/bot.service';
 
 const MINIMUM_BALANCE = 3.0
 
 @Scene(CommandEnum.CONNECT)
 export class ConnectScene extends AbstractScene {
+
     constructor(private readonly outlineService: OutlineService,
                 private readonly connService: ConnectionService,
-                private readonly userService: UserService) {
+                private readonly userService: UserService,
+                private readonly botService: BotService) {
         super()
     }
 
@@ -25,7 +28,7 @@ export class ConnectScene extends AbstractScene {
         this.logger.log(ctx.scene.session.current);
 
         const user = await this.userService.findOneByUserId(ctx.from.id);
-        if(user.balance <= MINIMUM_BALANCE) {
+        if(user.balance <= this.botService.minimumBalance) {
             ctx.scene.enter(CommandEnum.GET_ACCESS)
             return
         }
