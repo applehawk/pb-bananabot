@@ -27,7 +27,10 @@ export class PaymentScene extends AbstractScene {
       const scene = SCENES[ctx.scene.session.current];
 
       const user = await this.userService.user({ userId: ctx.from.id })
-      const balance = user.balance.toString()
+      const balance = user.balance.toLocaleString('ru-RU', {
+        style: 'currency',
+        currency: 'RUB',
+      });
       const tariff = await this.tariffService.getOneById(ctx.session.tariffId)
       const text = scene.text(balance, tariff.name)
      // await replyOrEdit(ctx, text, Markup.inlineKeyboard(scene.buttons))

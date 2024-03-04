@@ -40,7 +40,12 @@ export class GetAccessScene extends AbstractScene {
       this.logger.log(e);
     }
 
+    const balance = user.balance.toLocaleString('ru-RU', {
+      style: 'currency',
+      currency: 'RUB',
+    });
+
     await ctx.replyWithHTML(scene.navigateText, Markup.keyboard(scene.navigateButtons).resize());
-    await ctx.replyWithHTML(scene.text(tariffs, user.balance), Markup.inlineKeyboard(scene.buttons(tariffs)));
+    await ctx.replyWithHTML(scene.text(tariffs, balance), Markup.inlineKeyboard(scene.buttons(tariffs)));
   }
 }

@@ -20,7 +20,7 @@ export const BUTTONS = {
   [CommandEnum.OUTLINE_DOWNLOADED]: Markup.button.callback('Уже скачал', CommandEnum.OUTLINE_DOWNLOADED),
 
   [CommandEnum.GET_ACCESS]: Markup.button.callback('🔥 Купить', CommandEnum.GET_ACCESS),
-  [CommandEnum.JOIN_CHAT]: Markup.button.url('Открыть чат', 'https://t.me/openvpnbot'),
+  [CommandEnum.JOIN_CHAT]: Markup.button.url('Открыть чат', 'https://t.me/openpnbot'),
   //[CommandEnum.PAY_WITH_YOOMONEY_2]: Markup.button.callback('🔥 3 месяц', CommandEnum.PAY_WITH_YOOMONEY_2),
   //[CommandEnum.PAY_WITH_YOOMONEY_3]: Markup.button.callback('🚀 6 месяц', CommandEnum.PAY_WITH_YOOMONEY_3),
   //[CommandEnum.PAY_WITH_YOOKASSA]: Markup.button.callback('💳 картой РФ', CommandEnum.PAY_WITH_YOOKASSA),

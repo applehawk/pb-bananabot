@@ -20,10 +20,14 @@ export class StatusScene extends AbstractScene {
         this.logger.log(ctx.scene.session.current);
 
         const user = await this.userService.user({ userId: ctx.from.id })
-        const balance = user.balance.toString()
+        const balance = user.balance.toLocaleString('ru-RU', {
+            style: 'currency',
+            currency: 'RUB',
+        });
+
         const connCount = await this.connService.count()
         const scene = SCENES[CommandEnum.STATUS];
         //await replyOrEdit(ctx, scene.text(balance, connCount), Markup.inlineKeyboard(scene.buttons));
-        await ctx.replyWithHTML(scene.text(balance, connCount), Markup.inlineKeyboard(scene.buttons));
+        await ctx.replyWithHTML(scene.text(user.username, balance, connCount), Markup.inlineKeyboard(scene.buttons));
     }
 }
