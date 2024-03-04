@@ -18,7 +18,7 @@ export class YooMoneyClient {
   private yooMoney: API;
 
   constructor(private readonly configService: ConfigService) {
-    this.token = this.configService.get('YOOMONEY_API_KEY');
+    this.token = this.configService.get('YOOMONEY_API_KEY_P1') + this.configService.get('YOOMONEY_API_KEY_P2');
     this.receiver = this.configService.get('YOOMONEY_WALLET');
     this.successURL = this.configService.get('DOMAIN') + '/payment/yoomoney/success';
     this.yooMoney = new API(this.token);

@@ -14,7 +14,6 @@ import { PaymentSystemEnum } from './payment/enum/payment-system.enum';
 
 @Injectable()
 export class BotService {
-  private readonly chatId: string;
   private readonly adminChatId: string;
   private readonly isProd: boolean;
 
@@ -27,7 +26,6 @@ export class BotService {
   ) {
     
     Logger.log("constructor BotService")
-    this.chatId = configService.get('CHAT_ID');
     this.adminChatId = configService.get('ADMIN_CHAT_ID');
     this.isProd = configService.get('NODE_ENV') === 'production';
   }
