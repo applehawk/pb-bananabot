@@ -12,7 +12,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main",
-    "start:migrate:prod": "prisma migrate resolve --applied \"20240303190039_\" && prisma migrate deploy && npm run start:prod",
+    "start:migrate:prod": "prisma migrate resolve --roller-back \"20240304194835_\" && prisma migrate resolve --roller-back \"20240304192540_\" && prisma migrate resolve --roller-back \"20240303190039_\" && prisma migrate deploy && npm run start:prod",
     "prisma:migrate": "prisma migrate dev",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
