@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, Prisma, BalanceChange } from '@prisma/client';
-import { BalanceChangeType } from 'src/payment/enum/payment-status.enum';
+import { BalanceChangeTypeEnum } from 'src/payment/enum/balancechange-type.enum';
+import { BalanceChangeStatusEnum } from 'src/payment/enum/balancechange-status.enum';
 
 @Injectable()
 export class UserService {
@@ -54,18 +55,30 @@ export class UserService {
         })
       }
 
-      async commitBalanceChange(user: User, change: number, type: BalanceChangeType, paymentId?: string): Promise<User> {
+      async commitBalanceChange(user: User, change: number, 
+        type: BalanceChangeTypeEnum, paymentId?: string): Promise<BalanceChange> {
+        
+        const status: BalanceChangeStatusEnum = 
+        (user.balance + change)  <= 0 ? 
+          BalanceChangeStatusEnum.INSUFFICIENT : 
+          BalanceChangeStatusEnum.DONE
+
         const balanceEntry: Prisma.BalanceChangeCreateInput = {
           userId: user.userId,
           changeAmount: change,
           paymentId: paymentId,
           balance: user.balance,
-          type: BalanceChangeType[type]
+          type: BalanceChangeTypeEnum[type],
+          status: status,
         }
-        return this.prisma.balanceChange.create({data: balanceEntry}).then( balanceChange => {
-          return this.updateUser({where: {userId: user.userId}, data: {
-            balance: user.balance + balanceChange.changeAmount
-          }})
+
+        return this.prisma.balanceChange.create({data: balanceEntry}).then( async balanceChange => {
+          if (status == BalanceChangeStatusEnum.DONE) { //we change balance only if balanceChange is DONE
+            await this.updateUser({where: {userId: user.userId}, data: {
+              balance: user.balance + balanceChange.changeAmount
+            }})
+          }
+          return balanceChange
         })
       }
 

@@ -78,6 +78,7 @@ model BalanceChange {
   balance Int
   changeAmount Int
   type String @default("PAYMENT") // "PAYMENT", "MANUALLY", "SCHEDULER"
+  status String // "DONE" / "INSUFFICIENT"
 }
 
 model SceneStep {

@@ -4,8 +4,11 @@ import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 import { BotService } from 'src/bot.service';
 import { PaymentService } from './payment.service';
 import { UserService } from 'src/user/user.service';
-import { BalanceChangeType, PaymentStatusEnum } from './enum/payment-status.enum';
+import { PaymentStatusEnum } from './enum/payment-status.enum';
 import { PaymentSystemEnum } from './enum/payment-system.enum';
+import { BalanceChangeStatusEnum } from './enum/balancechange-status.enum';
+import { BalanceChangeTypeEnum } from './enum/balancechange-type.enum';
+import { BalanceChange } from '@prisma/client';
 
 @Injectable()
 export class PaymentScheduler {
@@ -22,7 +25,15 @@ export class PaymentScheduler {
     const serviceFee = this.botService.minimumBalance
     const users = await this.userService.usersWithBalance(serviceFee)
     for (const user of users) {
-       await this.userService.commitBalanceChange(user, -serviceFee, BalanceChangeType.SCHEDULER)
+      await this.userService.commitBalanceChange(user, -serviceFee, BalanceChangeTypeEnum.SCHEDULER)
+      .then(async balanceChange => {
+          if(balanceChange.status == BalanceChangeStatusEnum.INSUFFICIENT) {
+            await this.botService.sendInsufficientChargeMessage(
+              user.chatId,
+              user.balance, balanceChange.changeAmount
+            )
+          }
+        })
     }
   }
 

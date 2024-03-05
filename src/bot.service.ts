@@ -57,6 +57,16 @@ export class BotService {
     await this.bot.telegram.sendMessage(chatId, message);
   }
 
+
+  async sendInsufficientChargeMessage(chatId: number, balance: number, change: number): Promise<void> {
+    const balanceCurrency = balance.toLocaleString('ru-RU', {style: 'currency',currency: 'RUB',});
+    const changeCurrency = change.toLocaleString('ru-RU', {style: 'currency',currency: 'RUB',});
+    await this.sendMessage(
+      chatId,
+      `Требуется пополнить баланс для списания ${changeCurrency}\n\nТекущий баланс: ${balanceCurrency}\n\n`,
+    );
+  }
+
   async sendPaymentSuccessMessage(chatId: number, balance: number): Promise<void> {
     await this.sendMessage(
       chatId,
