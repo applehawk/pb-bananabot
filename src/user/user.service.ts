@@ -38,6 +38,10 @@ export class UserService {
         return this.userFirst({where: { userId: userId } })
       }
 
+      async findUserByUsername(username: string): Promise<User | null> {
+        return this.userFirst({where: { username: username } })
+      }
+
       async userFirst(params: {
         skip?: number;
         take?: number;

@@ -11,6 +11,7 @@ import { CommandEnum } from './enum/command.enum';
 import { BUTTONS } from './constants/buttons.const';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from './user/user.service';
+import { BalanceChangeTypeEnum } from './payment/enum/balancechange-type.enum';
 @UseInterceptors(ResponseTimeInterceptor)
 @UseFilters(AllExceptionFilter)
 @Update()
@@ -79,6 +80,29 @@ export class BotUpdate {
     }
   }
 
+  @Hears(/set/)
+  async onSet(@Ctx() ctx: Context & { update: any }) {
+    if (this.isAdmin(ctx)) {
+      //const args = ctx.state.command.args
+      await this.botService.sendMessage(ctx.chat.id, `Тест Set и Аргументы`)
+    }
+  }
+
+  @Command('up')
+  async onBalanceUpCommand(@Ctx() ctx: Context & { update: any }) {
+    if (this.isAdmin(ctx)) {
+      const [username, change] = ctx.state.command.args;
+      if (!(username && change) || Number.isNaN(parseInt(change))) 
+        throw new Error('Не указан один из обязательных параметров или изменение баланса не число!');
+      const changeInt = parseInt(change)
+      
+      const balanceChange = await this.userService.findUserByUsername(username).then( user => {
+        return this.userService.commitBalanceChange(user, changeInt, BalanceChangeTypeEnum.MANUALLY)
+      })
+      await this.bot.telegram.sendMessage(this.adminChatId, `Пополнен баланс на ${balanceChange.changeAmount}, статус пополнения: ${balanceChange.status}`);
+    }
+  }
+
   @Hears(/.*/)
   async onHears(@Ctx() ctx: Context & { update: any }) {
     this.logger.log("onHears")
@@ -97,6 +121,7 @@ export class BotUpdate {
       this.logger.log(e);
     }
   }
+
   private isAdmin(ctx: Context): boolean {
     return ctx.chat.id === this.adminChatId;
   }
