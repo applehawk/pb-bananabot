@@ -17,4 +17,11 @@ export class TariffService {
     async getAllTariffs(): Promise<Tariff[]> {
         return this.prisma.tariff.findMany({ orderBy: { price: 'desc'} })
     }
+
+    async updateTariffPrice(name: string, price: number): Promise<Tariff> {
+        return this.prisma.tariff.update({
+            data: { price: price }, 
+            where: { id: name }
+        })
+    }
 }

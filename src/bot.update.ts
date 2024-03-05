@@ -12,6 +12,7 @@ import { BUTTONS } from './constants/buttons.const';
 import { ConfigService } from '@nestjs/config';
 import { UserService } from './user/user.service';
 import { BalanceChangeTypeEnum } from './payment/enum/balancechange-type.enum';
+import { TariffService } from './tariff/tariff.service';
 @UseInterceptors(ResponseTimeInterceptor)
 @UseFilters(AllExceptionFilter)
 @Update()
@@ -24,7 +25,8 @@ export class BotUpdate {
     private readonly bot: Telegraf<Context>,
     private readonly botService: BotService,
     private readonly configService: ConfigService,
-    private readonly userService: UserService
+    private readonly userService: UserService,
+    private readonly tariffService: TariffService
   ) {
     this.adminChatId = Number(configService.get('ADMIN_CHAT_ID'));
   }
@@ -80,11 +82,13 @@ export class BotUpdate {
     }
   }
 
-  @Hears(/set/)
-  async onSet(@Ctx() ctx: Context & { update: any }) {
+  @Command('tariff')
+  async changeTariff(@Ctx() ctx: Context & { update: any}) {
     if (this.isAdmin(ctx)) {
-      //const args = ctx.state.command.args
-      await this.botService.sendMessage(ctx.chat.id, `Тест Set и Аргументы`)
+      const [tariffName, price] = ctx.state.command.args;
+      if (!(tariffName && price) || Number.isNaN(parseInt(price))) 
+      throw new Error('Не указан один из обязательных параметров или указан неверно!');
+      await this.tariffService.updateTariffPrice(tariffName, parseInt(price))
     }
   }
 
@@ -93,8 +97,8 @@ export class BotUpdate {
     if (this.isAdmin(ctx)) {
       const [username, change] = ctx.state.command.args;
       if (!(username && change) || Number.isNaN(parseInt(change))) 
-        throw new Error('Не указан один из обязательных параметров или изменение баланса не число!');
-      const changeInt = parseInt(change)
+        throw new Error('Не указан один из обязательных параметров или указан неверно!');
+      const changeInt: number = parseInt(change)
       
       const balanceChange = await this.userService.findUserByUsername(username).then( user => {
         return this.userService.commitBalanceChange(user, changeInt, BalanceChangeTypeEnum.MANUALLY)
