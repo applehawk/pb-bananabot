@@ -7,3 +7,4 @@ dist
 dist/tsconfig.build.tsbuildinfo
 src/prisma/data/dev.db
 src/prisma/dev.db-journal
+src/prisma/dev.db
