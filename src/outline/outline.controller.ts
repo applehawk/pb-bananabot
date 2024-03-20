@@ -20,7 +20,7 @@ export class OutlineController {
         @Param('connIdHex') connIdHex: string,
         @Param('connName') connName: string) 
     {           
-        return this.connService.connection( {hashId: connIdHex} )
+        return this.connService.connectionByHashId(connIdHex)
             .then( connection => {
                 return res.redirect(`${this.outlineService.getOutlineDynamicLink(connection)}`);
             }).catch( (reason) => {
