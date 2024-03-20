@@ -21,6 +21,7 @@ model User {
   connLimit   Int
   balance     Int
   connections Connection[]
+  createdAt DateTime @default(now())
 }
 
 model Connection {
@@ -35,6 +36,7 @@ model Connection {
   //many-to-one, but not necessary relations
   user        User?  @relation(fields: [userId], references: [userId])
   userId      Int?
+  createdAt DateTime @default(now())
 }
 
 model Payment {
@@ -80,6 +82,7 @@ model BalanceChange {
   changeAmount Int
   type String @default("PAYMENT") // "PAYMENT", "MANUALLY", "SCHEDULER"
   status String // "DONE" / "INSUFFICIENT"
+  changeAt DateTime @default(now())
 }
 
 model SceneStep {
