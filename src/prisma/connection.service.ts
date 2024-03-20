@@ -2,8 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma.service';
 import { Connection, Prisma } from '@prisma/client';
 import { User } from '@prisma/client';
+import { createHmac } from 'crypto';
 
-interface OutlineSSConnection {
+export interface OutlineSSConnection {
   serverAddress: string,
   port: string,
   encrypt_method: string,
@@ -67,8 +68,14 @@ export class ConnectionService {
     });
     }
 
+    async connectionByHashId(hashId: string): Promise<Connection> {
+      return this.prisma.connection.findFirst({where: {hashId: hashId}})
+    }
+
     async createConnectionEntryWithOutlineConn(user: User, connName: string, outlineConnKey: OutlineSSConnection) {
       const newKey = outlineConnKey
+      var hasher = createHmac('sha256', 'secret vpnssconf');
+      var hashId = hasher.update(`${user.userId}+${newKey.accessUrl}+${newKey.password}`).digest('hex')
       return this.createConnectionEntry({
           name: connName,
           server: newKey.serverAddress,
@@ -78,7 +85,8 @@ export class ConnectionService {
           password: newKey.password,
           user: {
               connect: { userId: user.userId }
-          }
+          },
+          hashId: hashId
       });
   }
 

@@ -2,16 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { User, Connection } from '@prisma/client';
-import { ConnectionService } from 'src/prisma/connection.service';
+import { ConnectionService, OutlineSSConnection } from 'src/prisma/connection.service';
 import { UserService } from 'src/user/user.service';
-
-interface OutlineSSConnection {
-    serverAddress: string,
-    port: string,
-    encrypt_method: string,
-    password: string,
-    accessUrl: string
-}
 
 @Injectable()
 export class OutlineService {
@@ -33,7 +25,7 @@ export class OutlineService {
 
     getOutlineDynamicLink(connection: Connection) {
         //telegramId: string | number, connName: string, connId: number
-        let connIdHex: string = (+connection.id).toString(16)
+        let connIdHex: string = connection.hashId
         let connName: string = connection.name
   
         return `ssconf://${this.outlineUsersGateway}/conf/${this.version}/${connIdHex}/${connName}`
@@ -41,7 +33,7 @@ export class OutlineService {
 
     getConnectionRedirectLink(connection: Connection) {
         let tgIdHex: string = (+connection.userId).toString(16)
-        let connIdHex: string = (+connection.id).toString(16)
+        let connIdHex: string = connection.hashId
         let connName: string = connection.name
 
         return `https://${this.outlineUsersGateway}/redirect/${this.version}/${connIdHex}/${connName}`

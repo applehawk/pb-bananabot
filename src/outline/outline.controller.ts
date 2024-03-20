@@ -19,10 +19,8 @@ export class OutlineController {
         @Param('version') version: string,
         @Param('connIdHex') connIdHex: string,
         @Param('connName') connName: string) 
-    {
-        let connId = parseInt(connIdHex)
-                
-        return this.connService.connection( {id: connId} )
+    {           
+        return this.connService.connection( {hashId: connIdHex} )
             .then( connection => {
                 return res.redirect(`${this.outlineService.getOutlineDynamicLink(connection)}`);
             }).catch( (reason) => {
@@ -35,10 +33,8 @@ export class OutlineController {
     @Param('version') version: string,
     @Param('connIdHex') connIdHex: string) {
 
-        let connId = parseInt(connIdHex, 16)
-
         return this.connService.connectionFirst({
-            where:{ id: connId }
+            where:{ hashId: connIdHex }
         }).then( connection => {
             return this.userService.findOneByUserId(connection.userId).then( user => {
                 res.status(HttpStatus.OK).json({
