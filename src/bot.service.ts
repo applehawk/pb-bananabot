@@ -50,7 +50,8 @@ export class BotService {
       firstname: ctx.from.first_name,
       lastname: ctx.from.last_name,
       username: ctx.from.username,
-      balance: 0.0, connLimit: 1
+      balance: 0.0, connLimit: 1,
+      createdAt: new Date(),
     }
     this.userService.upsert(upsertUser)
   }
