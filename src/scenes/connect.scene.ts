@@ -35,8 +35,7 @@ export class ConnectScene extends AbstractScene {
 
         const connection = await this.outlineService.createConnection(userId, "OpenPNBot")
             .catch( reason => {
-                return this.connService.connections({where: {userId: userId }})
-                .then( connections => connections.reduce((acc, curr) => curr, null) )
+                return this.connService.connections({where: {userId: userId }}).then( connections => connections.reduce((acc, curr) => curr, null) )
             })
         
         const outlineLink = this.outlineService.getOutlineDynamicLink(connection)
