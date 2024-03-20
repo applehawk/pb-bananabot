@@ -35,7 +35,7 @@ export const SCENES = {
       Это Telegram-бот для подключения к VPN.
 
       Доступны локации: 
-├ 🇦🇪 ОАЭ`,
+├ 🇳🇱 Нидерланды`,
   navigateButtons: [
     [BUTTONS[CommandEnum.STATUS], BUTTONS[CommandEnum.CONNECT]],
     [BUTTONS[CommandEnum.GET_ACCESS], BUTTONS[CommandEnum.QUESTION]]
