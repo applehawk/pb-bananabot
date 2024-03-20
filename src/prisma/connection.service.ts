@@ -75,7 +75,7 @@ export class ConnectionService {
     async createConnectionEntryWithOutlineConn(user: User, connName: string, outlineConnKey: OutlineSSConnection) {
       const newKey = outlineConnKey
       var hasher = createHmac('sha256', 'secret vpnssconf');
-      var hashId = hasher.update(`${user.userId}+${newKey.accessUrl}+${newKey.password}`).digest('hex')
+      var hashId = hasher.update(`${user.userId}+${newKey.accessUrl}`).digest('hex')
       return this.createConnectionEntry({
           name: connName,
           server: newKey.serverAddress,
