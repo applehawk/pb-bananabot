@@ -16,6 +16,7 @@ import { create } from 'domain';
 @Injectable()
 export class BotService {
   private readonly adminChatId: string;
+  private readonly adminChatId2: string;
   private readonly isProd: boolean;
   readonly minimumBalance: number
 
@@ -30,6 +31,7 @@ export class BotService {
     Logger.log("constructor BotService")
     this.minimumBalance = configService.get('MINIMUM_BALANCE');
     this.adminChatId = configService.get('ADMIN_CHAT_ID');
+    this.adminChatId2 = configService.get('ADMIN_CHAT_ID_2');
     this.isProd = configService.get('NODE_ENV') === 'production';
   }
 
@@ -80,9 +82,11 @@ export class BotService {
     amount: number,
     paymentSystem: PaymentSystemEnum,
   ): Promise<void> {
-    await this.bot.telegram.sendMessage(
-      this.adminChatId,
-      `Пользователь ${username} оплатил, его баланс ${balance}. Оплаченная сумма: ${amount}. Платежная система ${paymentSystem}  🎉`,
-    );
+     [this.adminChatId, this.adminChatId2].map(async adminId => {
+      await this.bot.telegram.sendMessage(
+        adminId,
+        `Пользователь ${username} оплатил, его баланс ${balance}. Оплаченная сумма: ${amount}. Платежная система ${paymentSystem}  🎉`,
+      );
+    })
   }
 }
