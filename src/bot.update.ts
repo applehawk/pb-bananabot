@@ -92,6 +92,19 @@ export class BotUpdate {
     }
   }
 
+  @Command('setmenu')
+  async setMenu(@Ctx() ctx: Context & { update: any }) {
+    const WEB_APP_URL = "https://feathers.studio/telegraf/webapp/example";
+
+    // sets Web App as the menu button for current chat
+    ctx.setChatMenuButton({
+      text: "Launch",
+      type: "web_app",
+      web_app: { url: WEB_APP_URL },
+    })
+    
+  }
+
   @Command('up')
   async onBalanceUpCommand(@Ctx() ctx: Context & { update: any }) {
     if (this.isAdmin(ctx)) {
