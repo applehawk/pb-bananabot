@@ -1,73 +1,305 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
-</p>
+# 🍌 BananaBot - Telegram VPN Bot
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> **Telegram bot для управления VPN доступом с интеграцией Outline VPN и платёжной системой YooMoney**
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+[![NestJS](https://img.shields.io/badge/NestJS-10.x-red.svg)](https://nestjs.com/)
+[![Telegraf](https://img.shields.io/badge/Telegraf-4.15.3-blue.svg)](https://telegraf.js.org/)
+[![grammY](https://img.shields.io/badge/grammY-1.21.1-green.svg)](https://grammy.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 
-## Description
+## 📋 Содержание
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [Обзор](#-обзор)
+- [Быстрый старт](#-быстрый-старт)
+- [Документация](#-документация)
+  - [Начало работы](#-начало-работы)
+  - [Архитектура](#️-архитектура)
+  - [Миграция](#-миграция)
+  - [Разработка](#-разработка)
+- [Возможности](#-возможности)
+- [Технологии](#-технологии)
+- [Структура проекта](#-структура-проекта)
+- [Команды](#-команды)
+- [Переменные окружения](#-переменные-окружения)
+- [Лицензия](#-лицензия)
 
-## Installation
+---
+
+## 🎯 Обзор
+
+**BananaBot** — это Telegram бот для автоматизации продажи и управления VPN доступом на базе Outline VPN. Бот поддерживает две параллельные реализации на разных фреймворках:
+
+- **🔵 Telegraf** (legacy) - стабильная версия в `src/telegraf/`
+- **🟢 grammY** (modern) - современная версия в `src/grammy/`
+
+Обе версии используют общие бизнес-модули и базу данных, что позволяет легко переключаться между ними.
+
+### Ключевые особенности:
+
+✅ Автоматическое создание VPN подключений
+✅ Интеграция с платёжной системой YooMoney
+✅ Управление тарифами и балансом пользователей
+✅ Административные команды для управления ботом
+✅ Две параллельные реализации (Telegraf + grammY)
+✅ Полная типизация на TypeScript
+✅ База данных SQLite с Prisma ORM
+
+---
+
+## ⚡ Быстрый старт
 
 ```bash
-$ npm install
+# 1. Клонировать репозиторий
+git clone <repo-url>
+cd bananabot_rewriting_vpnssconf
+
+# 2. Установить зависимости
+npm install
+
+# 3. Настроить переменные окружения
+cp .env.example .env  # и отредактировать
+
+# 4. Применить миграции БД
+npm run prisma:migrate
+
+# 5. Запустить нужную версию
+npm run start:telegraf:dev   # Telegraf версия
+# или
+npm run start:grammy:dev     # grammY версия
 ```
 
-## Running the app
+**Готово!** 🎉 Бот запущен и готов к работе.
+
+---
+
+## 📚 Документация
+
+### 🚀 Начало работы
+
+| Документ | Описание |
+|----------|----------|
+| **[Quick Start](docs/setup/QUICK-START.md)** | Быстрая установка и запуск бота. Команды для Telegraf и grammY версий |
+| **[Getting Started with grammY](docs/setup/GETTING-STARTED-GRAMMY.md)** | Детальная инструкция по настройке и запуску grammY версии |
+| **[Switching Versions](docs/setup/SWITCHING-VERSIONS.md)** | Как переключаться между Telegraf и grammY версиями |
+
+### 🏗️ Архитектура
+
+| Документ | Описание |
+|----------|----------|
+| **[Project Structure](docs/PROJECT-STRUCTURE.md)** | Полная структура проекта, описание модулей и директорий |
+| **[grammY Architecture](docs/README-GRAMMY.md)** | Архитектура grammY версии: модули, conversations, сервисы |
+| **[Refactoring Summary](docs/REFACTORING-SUMMARY.md)** | Подробный отчёт о разделении Telegraf и grammY на отдельные папки |
+
+### 🔄 Миграция
+
+| Документ | Описание |
+|----------|----------|
+| **[Migration Summary](docs/migration/MIGRATION-SUMMARY.md)** | Краткая сводка миграции с Telegraf на grammY |
+| **[Migration Guide](docs/migration/MIGRATION-GUIDE.md)** | Полное руководство по миграции: сравнение API, примеры кода |
+| **[Migration Plan](docs/migration/migration-plan.md)** | Детальный план миграции со всеми этапами и чек-листами |
+
+### 💻 Разработка
+
+| Документ | Описание |
+|----------|----------|
+| **[CLAUDE.md](docs/development/CLAUDE.md)** | Инструкции для AI-ассистента Claude по работе с проектом |
+| **[CLAUDE-UX.md](docs/development/CLAUDE-UX.md)** | UX guidelines и best practices для Claude |
+| **[Verify Migration](docs/development/VERIFY-MIGRATION.md)** | Чек-лист проверки корректности миграции, команды для тестирования |
+
+---
+
+## ✨ Возможности
+
+### Для пользователей:
+
+- 📱 **Простой интерфейс** - интуитивная навигация через inline-кнопки
+- 💳 **Оплата картой РФ** - интеграция с YooMoney (Visa, MasterCard, МИР)
+- ⚡ **Быстрое подключение** - автоматическое создание VPN ключей
+- 📊 **Управление балансом** - пополнение и списание по тарифам
+- 🌍 **Outline VPN** - стабильный и быстрый VPN протокол
+- 📲 **Мобильные приложения** - поддержка iOS и Android
+
+### Для администраторов:
+
+- 👨‍💼 **Admin команды** - управление тарифами и балансом пользователей
+- 📈 **Мониторинг** - отслеживание платежей и подключений
+- 🔧 **Гибкие тарифы** - настройка периодов и цен
+- 🔄 **Две версии бота** - выбор между Telegraf и grammY
+- 📝 **Полная документация** - детальные руководства для разработчиков
+
+---
+
+## 🛠 Технологии
+
+### Backend
+
+- **[NestJS](https://nestjs.com/)** - прогрессивный Node.js фреймворк
+- **[TypeScript](https://www.typescriptlang.org/)** - типизированный JavaScript
+- **[Prisma](https://www.prisma.io/)** - современный ORM для работы с БД
+- **[SQLite](https://www.sqlite.org/)** - встроенная база данных
+
+### Telegram Bot
+
+- **[Telegraf](https://telegraf.js.org/)** - мощный фреймворк для Telegram Bot API
+- **[grammY](https://grammy.dev/)** - современный фреймворк для Telegram Bot API
+- **[nestjs-telegraf](https://www.npmjs.com/package/nestjs-telegraf)** - интеграция Telegraf с NestJS
+
+### VPN & Payments
+
+- **[Outline VPN](https://getoutline.org/)** - безопасный VPN сервер
+- **[YooMoney SDK](https://yoomoney.ru/)** - платёжная система (бывший Яндекс.Деньги)
+
+---
+
+## 📂 Структура проекта
+
+```
+bananabot_rewriting_vpnssconf/
+├── src/
+│   ├── telegraf/              # 🔵 Telegraf implementation
+│   │   ├── bot.module.ts      # Главный модуль (Telegraf)
+│   │   ├── bot.service.ts     # Сервис бота
+│   │   ├── bot.update.ts      # Обработчики команд
+│   │   ├── scenes/            # Сцены (11 файлов)
+│   │   ├── constants/         # Константы и конфигурация
+│   │   └── ...
+│   │
+│   ├── grammy/                # 🟢 grammY implementation
+│   │   ├── bot.module.ts      # Главный модуль (grammY)
+│   │   ├── bot.service.ts     # Сервис бота
+│   │   ├── bot.update.ts      # Обработчики команд
+│   │   ├── grammy.module.ts   # Модуль grammY
+│   │   ├── conversations/     # Conversations (12 файлов)
+│   │   └── ...
+│   │
+│   ├── prisma/                # ⚙️ База данных (Shared)
+│   ├── payment/               # ⚙️ Платежи (Shared)
+│   ├── user/                  # ⚙️ Пользователи (Shared)
+│   ├── tariff/                # ⚙️ Тарифы (Shared)
+│   ├── outline/               # ⚙️ VPN управление (Shared)
+│   │
+│   ├── main-telegraf.ts       # Entry point Telegraf
+│   ├── main-grammy.ts         # Entry point grammY
+│   └── main.ts                # Default entry point
+│
+├── docs/                      # 📚 Документация
+│   ├── setup/                 # Инструкции по установке
+│   ├── migration/             # Документация миграции
+│   ├── development/           # Для разработчиков
+│   └── ...
+│
+├── libs/                      # Кастомные библиотеки
+│   └── yoomoney-client/       # YooMoney SDK wrapper
+│
+└── scripts/                   # Утилиты
+    └── set-webhook.ts         # Настройка webhook
+```
+
+**Детали**: См. [PROJECT-STRUCTURE.md](docs/PROJECT-STRUCTURE.md)
+
+---
+
+## 🎮 Команды
+
+### Telegraf версия
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run start:telegraf:dev          # Development режим
+npm run start:telegraf:prod         # Production режим
+npm run start:migrate:telegraf:prod # Production + DB migrations
 ```
 
-## Test
+### grammY версия
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm run start:grammy:dev            # Development режим
+npm run start:grammy:prod           # Production режим
+npm run start:migrate:grammy:prod   # Production + DB migrations
 ```
 
-## Support
+### Общие команды
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+npm run build                       # Сборка проекта
+npm run lint                        # Проверка кода
+npm run test                        # Запуск тестов
+npm run prisma:migrate             # Миграции БД
+npm run prisma:studio              # GUI для БД
+```
 
-## Stay in touch
+---
 
-- Author - [Kamil Myśliwiec](https://kamilmysliwiec.com)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 🔐 Переменные окружения
 
-## License
+Создайте файл `.env` в корне проекта:
 
-Nest is [MIT licensed](LICENSE).
+```bash
+# Telegram Bot
+BOT_TOKEN=your_telegram_bot_token
+ADMIN_CHAT_ID=your_telegram_chat_id
+ADMIN_CHAT_ID_2=optional_second_admin_chat_id
+
+# Database
+DATABASE_URL=file:./src/prisma/dev.db
+
+# Server
+PORT=80
+NODE_ENV=development
+
+# Outline VPN
+OUTLINE_API_URL=https://your-outline-server/api
+DOMAIN=your-domain.com
+
+# Payment
+YOOMONEY_SECRET=your_yoomoney_webhook_secret
+MINIMUM_BALANCE=3
+```
+
+**Примечание**: Не коммитьте `.env` файл в Git!
+
+---
+
+## 🤝 Вклад в проект
+
+Contributions приветствуются! Пожалуйста:
+
+1. Fork проекта
+2. Создайте feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit изменения (`git commit -m 'Add some AmazingFeature'`)
+4. Push в branch (`git push origin feature/AmazingFeature`)
+5. Откройте Pull Request
+
+---
+
+## 📞 Поддержка
+
+Если у вас возникли вопросы или проблемы:
+
+- 📖 Проверьте [документацию](docs/)
+- 🐛 Создайте Issue в GitHub
+- 💬 Напишите в Telegram: [@openpnbot](https://t.me/openpnbot)
+
+---
+
+## 📄 Лицензия
+
+Этот проект распространяется под лицензией MIT. См. файл `LICENSE` для деталей.
+
+---
+
+## 🙏 Благодарности
+
+- [NestJS](https://nestjs.com/) - за отличный фреймворк
+- [Telegraf](https://telegraf.js.org/) / [grammY](https://grammy.dev/) - за удобные bot фреймворки
+- [Outline VPN](https://getoutline.org/) - за открытый VPN протокол
+- [Prisma](https://www.prisma.io/) - за современный ORM
+
+---
+
+<div align="center">
+
+**Сделано с ❤️ для сообщества**
+
+[⬆ Наверх](#-bananabot---telegram-vpn-bot)
+
+</div>
