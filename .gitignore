@@ -1,10 +1,33 @@
+# Environment variables
 .env
-/node_modules
-package-lock.json
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
 .DS_Store
-src/prisma/data/
-dist
-dist/tsconfig.build.tsbuildinfo
-src/prisma/data/dev.db
-src/prisma/dev.db-journal
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# SQLite databases
 src/prisma/dev.db
+src/prisma/dev.db-journal
+src/prisma/data/
+*.db-journal
+
+# IDE
+.vscode/settings.json
+.idea/
