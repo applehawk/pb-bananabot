@@ -19,7 +19,6 @@ export class PaymentController {
     @Get('yoomoney/success')
     success(@Res() res: Response) {
         return res.redirect(this.successRedirectUrl);
-        //return { data: 'success' };
     }
 
     @Post('/yoomoney/notification')
