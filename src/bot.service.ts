@@ -18,7 +18,7 @@ export class BotService {
   private readonly adminChatId: string;
   private readonly adminChatId2: string;
   private readonly isProd: boolean;
-  readonly minimumBalance: number
+  readonly  gminimumBalance: number
 
   private readonly logger = new Logger(BotService.name);
   constructor(
