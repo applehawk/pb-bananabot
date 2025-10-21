@@ -34,15 +34,8 @@ model Payment {
   paymentAt DateTime
   paymentAmount Int
   paymentCurrency String
-  description String?
   url String
   transactionId String?
-  payerAmount String?
-  payerCurrency String?
-  network String?
-  address String?
-  from String?
-  txid String?
   form String
   isFinal Boolean?
   email String?
@@ -66,11 +59,4 @@ model BalanceChange {
   type String @default("PAYMENT") // "PAYMENT", "MANUALLY", "SCHEDULER"
   status String // "DONE" / "INSUFFICIENT"
   changeAt DateTime @default(now())
-}
-
-model SceneStep {
-  id Int @id @default(autoincrement())
-  scene String
-  nextScene String
-  date  DateTime @default(now())
 }

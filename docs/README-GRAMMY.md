@@ -1,34 +1,38 @@
-# BananaBot - grammY Version
+# BananaBot - Telegram Bot с платежами
 
-Telegram VPN Bot built with NestJS and grammY.
+Минимальная база для Telegram бота на NestJS + grammY с интеграцией платёжной системы YooMoney.
 
-## 🚀 Quick Start
+## Что это?
 
-### Prerequisites
+Готовый к использованию шаблон Telegram бота со следующими возможностями:
+
+- Автоматическая регистрация и запоминание пользователей
+- Управление балансом пользователей
+- Интеграция с платёжной системой YooMoney
+- Автоматическое списание баланса по расписанию
+- Проверка статуса баланса
+- Админ-панель для управления
+
+## Быстрый старт
+
+### Требования
 
 - Node.js >= 18.0.0
 - npm >= 9.0.0
-- Telegram Bot Token (from [@BotFather](https://t.me/BotFather))
-- Outline VPN Server
+- Telegram Bot Token от [@BotFather](https://t.me/BotFather)
+- YooMoney аккаунт (для приёма платежей)
 
-### Installation
+### Установка
 
-1. **Install dependencies using the grammY package.json:**
-
-```bash
-npm install --package-lock-only --package-lock=package-grammy.json
-npm ci
-```
-
-Or manually copy `package-grammy.json` to `package.json` and run:
+1. **Установите зависимости:**
 
 ```bash
 npm install
 ```
 
-2. **Configure environment variables:**
+2. **Настройте переменные окружения:**
 
-Copy `.env.example` to `.env` and fill in:
+Создайте файл `.env` в корне проекта:
 
 ```env
 # Telegram Bot
@@ -36,403 +40,559 @@ BOT_TOKEN=your_bot_token_here
 ADMIN_CHAT_ID=your_telegram_user_id
 ADMIN_CHAT_ID_2=optional_second_admin_id
 
-# Outline VPN
-OUTLINE_API_URL=https://your-outline-server.com:8080/your-api-key/
+# Database
+DATABASE_URL=file:./src/prisma/dev.db
 
 # Server
 DOMAIN=your-domain.com
 PORT=80
 NODE_ENV=development
 
-# Database
-DATABASE_URL=file:./src/prisma/dev.db
-
 # Payment (YooMoney)
 YOOMONEY_SECRET=your_yoomoney_secret
-YOOMONEY_SUCCESS_URL=https://your-domain.com/payment/yoomoney/success
-
-# App Settings
+YOOMONEY_SUCCESS_URL=https://your-domain.com/payment/success
 MINIMUM_BALANCE=3
 
-# Webhook (optional, for production)
+# Webhook (optional, для production)
 TELEGRAM_SECRET_TOKEN=your_random_secret_token
 ```
 
-3. **Generate Prisma client:**
+3. **Инициализируйте базу данных:**
 
 ```bash
+# Генерация Prisma client
 npm run prisma:generate
-```
 
-4. **Run database migrations:**
-
-```bash
+# Применение миграций
 npm run prisma:migrate
 ```
 
-### Development (Polling Mode)
+4. **Запустите бота:**
 
 ```bash
+# Development (polling mode)
 npm run start:dev
-```
 
-The bot will start in polling mode, suitable for local development.
-
-### Production (Webhook Mode)
-
-1. **Build the application:**
-
-```bash
+# Production (webhook mode)
 npm run build:grammy
-```
-
-2. **Set webhook URL:**
-
-```bash
-npm run webhook:set
-```
-
-This will configure Telegram to send updates to `https://your-domain.com/telegram/webhook`.
-
-3. **Start production server:**
-
-```bash
 npm run start:prod
 ```
 
-Or with database migrations:
+## Архитектура проекта
 
-```bash
-npm run start:migrate:prod
-```
-
----
-
-## 📁 Project Structure
+### Структура папок
 
 ```
 src/
-├── grammy/                         # grammY implementation
-│   ├── grammy.module.ts           # Core grammY module
-│   ├── grammy.service.ts          # Bot lifecycle management
-│   ├── grammy-context.interface.ts # Extended context
-│   ├── bot.module.ts              # Main application module
-│   ├── bot.service.ts             # High-level bot operations
-│   ├── bot.update.ts              # Command/message handlers
-│   ├── webhook.controller.ts      # Webhook endpoint
+├── grammy/                        # grammY bot implementation
+│   ├── bot.module.ts             # Главный модуль бота
+│   ├── bot.service.ts            # Высокоуровневые операции бота
+│   ├── bot.update.ts             # Обработчики команд и сообщений
+│   ├── grammy.module.ts          # Core grammY модуль
+│   ├── grammy.service.ts         # Управление жизненным циклом бота
+│   ├── grammy-context.interface.ts # Расширенный контекст
+│   ├── webhook.controller.ts     # Webhook endpoint
 │   ├── constants/
-│   │   ├── buttons.const.ts       # Button definitions
-│   │   └── scenes.const.ts        # Scene configurations
-│   └── conversations/              # Conversation handlers
-│       ├── base.conversation.ts
+│   │   ├── buttons.const.ts      # Определения кнопок
+│   │   └── scenes.const.ts       # Конфигурация сцен
+│   └── conversations/             # Conversation handlers
+│       ├── conversations-registry.service.ts
 │       ├── start.conversation.ts
 │       ├── home.conversation.ts
-│       ├── connect.conversation.ts
 │       ├── status.conversation.ts
 │       ├── question.conversation.ts
 │       ├── get-access.conversation.ts
 │       ├── payment.conversation.ts
 │       ├── month-tariff.conversation.ts
 │       ├── threemonth-tariff.conversation.ts
-│       ├── sixmonth-tariff.conversation.ts
-│       └── conversations-registry.service.ts
+│       └── sixmonth-tariff.conversation.ts
 │
-├── payment/                       # Payment processing
-├── user/                          # User management
-├── tariff/                        # Tariff management
-├── outline/                       # Outline VPN integration
-├── prisma/                        # Database layer
-└── main-grammy.ts                 # Application entry point
+├── payment/                      # Платёжная система
+│   ├── payment.module.ts
+│   ├── payment.service.ts
+│   ├── payment.controller.ts
+│   ├── payment.scheduler.ts     # Cron jobs
+│   ├── strategies/
+│   │   ├── payment-strategy.interface.ts
+│   │   ├── yoomoney-payment.strategy.ts
+│   │   └── factory/
+│   │       └── payment-strategy.factory.ts
+│   └── enum/
+│       ├── payment-status.enum.ts
+│       ├── payment-system.enum.ts
+│       ├── balancechange-type.enum.ts
+│       └── balancechange-status.enum.ts
+│
+├── user/                         # Управление пользователями
+│   ├── user.module.ts
+│   └── user.service.ts
+│
+├── tariff/                       # Управление тарифами
+│   ├── tariff.module.ts
+│   └── tariff.service.ts
+│
+├── prisma/                       # База данных
+│   ├── schema.prisma
+│   ├── prisma.module.ts
+│   └── prisma.service.ts
+│
+├── utils/                        # Утилиты
+│   └── split-array-into-pairs.ts
+│
+└── main-grammy.ts               # Точка входа
 ```
 
----
+## Основные возможности
 
-## 🤖 Bot Commands
+### Для пользователей
 
-### User Commands
+#### 1. Автоматическая регистрация
+При первом запуске `/start` бот автоматически создаёт профиль пользователя с балансом 0₽.
 
-- `/start` - Initialize bot and create user account
-- Navigation via inline keyboards
+#### 2. Просмотр статуса
+Команда "Статус" показывает:
+- Имя пользователя
+- Текущий баланс
 
-### Admin Commands
+#### 3. Пополнение баланса
+1. Пользователь выбирает тариф (1 месяц, 3 месяца, 6 месяцев)
+2. Получает ссылку на оплату через YooMoney
+3. После оплаты баланс автоматически пополняется
 
-- `/tariff <name> <price>` - Update tariff pricing
-  - Example: `/tariff MONTH_TARIFF 300`
-- `/up <username> <amount>` - Manually adjust user balance
-  - Example: `/up @username 100`
-- `/setmenu` - Configure web app menu button
+#### 4. Автоматическое списание
+Каждую полночь с пользователей с достаточным балансом списывается сумма `MINIMUM_BALANCE` (по умолчанию 3₽).
 
----
+### Для администраторов
 
-## 🎯 Features
-
-### User Features
-
-- **🔐 VPN Access Management**
-  - Automatic Outline VPN key creation
-  - Fast connection links for iOS and Android
-  - Connection limit enforcement
-
-- **💳 Payment Processing**
-  - YooMoney integration (Russian payment cards)
-  - Multiple tariff plans (30 days, 3 months, 6 months)
-  - Automatic balance updates
-  - Payment webhook validation
-
-- **📊 Status Tracking**
-  - Balance monitoring
-  - Connection count
-  - Payment history
-
-- **🌐 Conversation-Based Navigation**
-  - Intuitive scene-based flows
-  - Session persistence
-  - Error handling
-
-### Admin Features
-
-- **💰 Balance Management**
-  - Manual balance adjustments
-  - Balance change audit trail
-
-- **📈 Tariff Management**
-  - Dynamic price updates
-  - Multiple subscription periods
-
-- **📬 Notifications**
-  - Payment success alerts
-  - Insufficient balance warnings
-
----
-
-## 🔧 grammY Architecture
-
-### Context Flow
-
+#### 1. Управление балансом
 ```
-User Update → GrammYService → Bot Handlers → Conversations
-                     ↓
-              Session Management
-                     ↓
-              Service Injection
+/up <username> <amount>
 ```
+Пример: `/up @john 100` - добавит 100₽ к балансу пользователя @john
 
-### Conversation Pattern
+#### 2. Управление тарифами
+```
+/tariff <name> <price>
+```
+Пример: `/tariff MONTH_TARIFF 300` - изменит цену месячного тарифа на 300₽
+
+#### 3. Уведомления
+- Уведомление при успешной оплате пользователем
+- Информация о сумме платежа и текущем балансе
+
+## Conversations (сцены бота)
+
+### Что такое Conversations?
+
+В grammY вместо "сцен" используются **conversations** - это функции, которые управляют диалогом с пользователем.
+
+### Список conversations
+
+| Conversation | Назначение | Триггер |
+|--------------|------------|---------|
+| `start` | Приветствие нового пользователя | `/start` |
+| `home` | Главное меню | Кнопка "Назад" |
+| `status` | Отображение баланса и имени | Кнопка "Статус" |
+| `get-access` | Выбор тарифного плана | Кнопка "Получить доступ" |
+| `payment` | Процесс оплаты | После выбора тарифа |
+| `question` | Помощь и поддержка | Кнопка "Вопросы" |
+| `month-tariff` | Выбор тарифа на 30 дней | Кнопка "1 месяц" |
+| `threemonth-tariff` | Выбор тарифа на 90 дней | Кнопка "3 месяца" |
+| `sixmonth-tariff` | Выбор тарифа на 180 дней | Кнопка "6 месяцев" |
+
+### Пример conversation
 
 ```typescript
-export async function myConversation(
+export async function statusConversation(
   conversation: Conversation<MyContext>,
   ctx: MyContext
 ) {
-  // Send message
-  await ctx.reply('Hello!');
+  const userId = ctx.from?.id;
+  const username = ctx.from?.username || 'не указан';
 
-  // Wait for user response
-  const response = await conversation.waitForCallbackQuery();
+  if (!userId) return;
 
-  // Process and navigate
-  await conversation.external(() => ctx.conversation.enter('next'));
+  // Получаем сервисы из контекста
+  const userService: UserService = (ctx as any).userService;
+
+  // Получаем данные пользователя
+  const user = await userService.findOneByUserId(userId);
+  const balance = user.balance.toLocaleString('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+  });
+
+  await ctx.reply(`👤 Пользователь: ${username}\n💰 Баланс: ${balance}`, {
+    parse_mode: 'HTML',
+    reply_markup: keyboard,
+  });
 }
 ```
 
-### Middleware Stack
+## Платёжная система
 
-1. **Session** - Manages user session data
-2. **Hydrate** - Provides ctx.msg, ctx.chat shortcuts
-3. **Conversations** - Enables conversation flows
-4. **Custom** - Service injection into context
+### Workflow оплаты
 
----
-
-## 🗄️ Database Schema
-
-### Key Models
-
-- **User** - Telegram users with balance and connection limits
-- **Connection** - VPN connections with Outline keys
-- **Payment** - Payment tracking and status
-- **Tariff** - Subscription plans
-- **BalanceChange** - Audit trail for balance modifications
-
-See [src/prisma/schema.prisma](src/prisma/schema.prisma) for full schema.
-
----
-
-## 🚀 Deployment
-
-### Using Webhook (Recommended for Production)
-
-1. Ensure your server has HTTPS
-2. Set `NODE_ENV=production` in `.env`
-3. Run `npm run webhook:set`
-4. Start server: `npm run start:prod`
-
-### Using Polling (Development Only)
-
-1. Set `NODE_ENV=development` in `.env`
-2. Run: `npm run start:dev`
-
----
-
-## 📚 Development Guide
-
-### Adding a New Conversation
-
-1. Create conversation file: `src/grammy/conversations/my-scene.conversation.ts`
-2. Implement conversation function
-3. Register in `conversations-registry.service.ts`
-4. Add button in `buttons.const.ts`
-5. Add scene config in `scenes.const.ts`
-6. Export from `conversations/index.ts`
-
-### Adding a New Service
-
-1. Services are automatically available in conversations via context injection
-2. Add service to `ConversationsRegistryService.injectServicesIntoContext()`
-3. Access in conversation: `const myService: MyService = (ctx as any).myService`
-
----
-
-## 🧪 Testing
-
-```bash
-# Unit tests
-npm run test
-
-# Watch mode
-npm run test:watch
-
-# Coverage
-npm run test:cov
-
-# E2E tests
-npm run test:e2e
+```
+1. Пользователь выбирает тариф
+   ↓
+2. Conversation сохраняет tariffId в session
+   ↓
+3. PaymentService создаёт платёж (status: PENDING)
+   ↓
+4. YooMoneyStrategy генерирует форму оплаты
+   ↓
+5. Пользователь получает ссылку на оплату
+   ↓
+6. PaymentScheduler проверяет статус каждые 10 секунд
+   ↓
+7. При успехе: статус → PAID, баланс пополняется
+   ↓
+8. Уведомления отправляются пользователю и админу
 ```
 
----
+### Защита от двойного зачисления
 
-## 📊 Database Management
+Баланс пополняется **только один раз** при переходе статуса платежа из `PENDING` в `PAID`:
+
+```typescript
+if (paymentStatus !== payment.status) {
+  // Зачисляем баланс только при изменении статуса
+  await this.userService.commitBalanceChange(
+    user,
+    tariff.price,
+    BalanceChangeTypeEnum.PAYMENT,
+    paymentId
+  );
+}
+```
+
+### Автоматическое списание
+
+Каждую полночь запускается scheduler:
+
+```typescript
+@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+async handleMidnight() {
+  const serviceFee = this.botService.minimumBalance;
+  const users = await this.userService.usersWithBalance(serviceFee);
+
+  for (const user of users) {
+    await this.userService.commitBalanceChange(
+      user,
+      -serviceFee,
+      BalanceChangeTypeEnum.SCHEDULER
+    );
+  }
+}
+```
+
+## База данных (Prisma)
+
+### Модели
+
+#### User
+```prisma
+model User {
+  userId      Int      @id
+  chatId      Int?
+  firstname   String?
+  lastname    String?
+  username    String?
+  balance     Int      # Баланс в рублях
+  createdAt   DateTime @default(now())
+}
+```
+
+#### Payment
+```prisma
+model Payment {
+  paymentId       String   @id
+  orderId         String
+  status          String   @default("PENDING")
+  paymentSystem   String   @default("YOOMONEY")
+  userId          Int
+  chatId          Int
+  tariffId        String
+  amount          Int
+  paymentAt       DateTime
+  paymentAmount   Int
+  paymentCurrency String
+  url             String
+  form            String
+  transactionId   String?
+  isFinal         Boolean?
+  email           String?
+}
+```
+
+#### Tariff
+```prisma
+model Tariff {
+  id       String @id @unique
+  name     String
+  price    Int
+  period   Int    # Период в днях
+  caption  String
+  @@index([price])
+}
+```
+
+#### BalanceChange
+```prisma
+model BalanceChange {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  paymentId    String?
+  balance      Int      # Баланс до изменения
+  changeAmount Int      # Сумма изменения
+  type         String   # PAYMENT, MANUALLY, SCHEDULER
+  status       String   # DONE, INSUFFICIENT
+  changeAt     DateTime @default(now())
+}
+```
+
+### Управление БД
 
 ```bash
-# Open Prisma Studio
+# Открыть Prisma Studio (GUI для БД)
 npm run prisma:studio
 
-# Create migration
+# Создать миграцию
 npm run prisma:migrate
 
-# Deploy migrations
+# Применить миграции
 npm run prisma:migrate:deploy
 
-# Generate client
+# Сгенерировать Prisma Client
 npm run prisma:generate
 ```
 
----
+## Deployment
 
-## 🔒 Security Notes
+### Development (Polling)
 
-### Current Issues
+```bash
+npm run start:dev
+```
 
-1. **TLS Verification Disabled** - `NODE_TLS_REJECT_UNAUTHORIZED = '0'` in [main-grammy.ts](src/main-grammy.ts)
-   - ⚠️ Should be fixed in production
+Бот будет работать в режиме long polling - подходит для разработки.
 
-2. **CORS Wide Open** - Allows all origins
-   - ⚠️ Should be restricted to specific domains
+### Production (Webhook)
 
-3. **No Rate Limiting** - Commands not rate-limited
-   - ⚠️ Consider adding rate limiting middleware
+1. **Настройте HTTPS сервер**
+2. **Установите переменную окружения:**
+   ```env
+   NODE_ENV=production
+   ```
+3. **Установите webhook:**
+   ```bash
+   npm run webhook:set
+   ```
+4. **Запустите бот:**
+   ```bash
+   npm run start:prod
+   ```
 
-### Security Features
+Бот будет принимать обновления через webhook `https://your-domain.com/telegram/webhook`.
 
-- ✅ Admin commands protected by chat ID verification
-- ✅ Connection hash IDs use HMAC-SHA256
-- ✅ Webhook validation with secret token
-- ✅ Payment link expiration (10 minutes)
-- ✅ Audit trail for all balance changes
+## Добавление новой функциональности
 
----
+### Добавление новой conversation
 
-## 🐛 Troubleshooting
+1. **Создайте файл conversation:**
+   ```typescript
+   // src/grammy/conversations/my-feature.conversation.ts
+   export async function myFeatureConversation(
+     conversation: Conversation<MyContext>,
+     ctx: MyContext
+   ) {
+     await ctx.reply('Hello from my feature!');
 
-### Bot not responding
+     // Ожидание ответа пользователя
+     const response = await conversation.waitForCallbackQuery();
 
-1. Check bot token in `.env`
-2. Verify bot is running: `npm run start:dev`
-3. Check logs for errors
+     // Обработка ответа
+     await ctx.reply(`You clicked: ${response.data}`);
+   }
+   ```
 
-### Webhook not working
+2. **Зарегистрируйте в ConversationsRegistryService:**
+   ```typescript
+   bot.use(createConversation(myFeatureConversation));
+   ```
 
-1. Verify HTTPS is properly configured
-2. Check webhook info: `npm run webhook:set`
-3. Ensure `TELEGRAM_SECRET_TOKEN` matches
-4. Check server logs at `/telegram/webhook`
+3. **Добавьте кнопку в constants/buttons.const.ts:**
+   ```typescript
+   export const BUTTONS = {
+     MY_FEATURE: { text: 'Моя фича', callback_data: CommandEnum.MY_FEATURE },
+     // ...
+   };
+   ```
 
-### Database issues
+4. **Добавьте обработчик в bot.update.ts:**
+   ```typescript
+   bot.callbackQuery(CommandEnum.MY_FEATURE, async (ctx) => {
+     await ctx.conversation.enter('myFeature');
+   });
+   ```
 
-1. Regenerate Prisma client: `npm run prisma:generate`
-2. Check migrations: `npm run prisma:migrate`
-3. Verify DATABASE_URL in `.env`
+### Добавление нового сервиса
 
----
+1. **Создайте модуль и сервис:**
+   ```bash
+   nest g module my-feature
+   nest g service my-feature
+   ```
 
-## 📖 Documentation
+2. **Инжектируйте сервис в context:**
+   ```typescript
+   // conversations-registry.service.ts
+   private injectServicesIntoContext(bot: Bot<MyContext>) {
+     bot.use(async (ctx, next) => {
+       (ctx as any).myFeatureService = this.myFeatureService;
+       await next();
+     });
+   }
+   ```
 
-- **Migration Guide**: [MIGRATION-GUIDE.md](MIGRATION-GUIDE.md)
-- **Architecture**: [migration-plan.md](migration-plan.md)
-- **Scene Logic**: [docs/scenes-logic.md](docs/scenes-logic.md)
-- **grammY Docs**: https://grammy.dev
-- **NestJS Docs**: https://nestjs.com
+3. **Используйте в conversation:**
+   ```typescript
+   const myService: MyFeatureService = (ctx as any).myFeatureService;
+   const result = await myService.doSomething();
+   ```
 
----
+## Расширенные возможности
 
-## 🤝 Contributing
+### Middleware Stack
 
-This is a private project, but PRs are welcome for:
+```
+User Update
+    ↓
+Session Middleware        # Сохранение состояния
+    ↓
+Hydrate Middleware        # Упрощение доступа к ctx
+    ↓
+Conversations Middleware  # Поддержка conversations
+    ↓
+Service Injection         # Внедрение сервисов в ctx
+    ↓
+Bot Handlers              # Обработка команд
+    ↓
+Conversations             # Логика диалогов
+```
 
-- Bug fixes
-- Performance improvements
-- Documentation updates
-- Security enhancements
+### Extended Context
 
----
+```typescript
+type MyContext = Context & ConversationFlavor & {
+  session: SessionData;
+  botService: BotService;
+  userService: UserService;
+  paymentService: PaymentService;
+  tariffService: TariffService;
+};
+```
 
-## 📝 License
+### Cron Jobs
+
+```typescript
+// Проверка pending платежей каждые 10 секунд
+@Cron(CronExpression.EVERY_10_SECONDS)
+async handlePendingPayments() {
+  // ...
+}
+
+// Списание баланса каждую полночь
+@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+async handleMidnight() {
+  // ...
+}
+```
+
+## Безопасность
+
+### Текущие меры
+
+- Admin-команды защищены проверкой chat ID
+- Webhook валидация через секретный токен
+- SHA1 хеш-валидация для YooMoney webhook
+- Audit trail для всех изменений баланса
+
+### Рекомендации для production
+
+1. **Включите TLS verification:**
+   ```typescript
+   // Удалите эту строку из main-grammy.ts:
+   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+   ```
+
+2. **Ограничьте CORS:**
+   ```typescript
+   app.enableCors({
+     origin: 'https://your-domain.com',
+     credentials: true,
+   });
+   ```
+
+3. **Добавьте rate limiting:**
+   ```bash
+   npm install @nestjs/throttler
+   ```
+
+4. **Используйте environment-specific конфиги:**
+   ```typescript
+   ConfigModule.forRoot({
+     isGlobal: true,
+     envFilePath: `.env.${process.env.NODE_ENV}`,
+   });
+   ```
+
+## Troubleshooting
+
+### Бот не отвечает
+
+1. Проверьте `BOT_TOKEN` в `.env`
+2. Убедитесь, что бот запущен: `npm run start:dev`
+3. Проверьте логи в консоли
+
+### Webhook не работает
+
+1. Проверьте HTTPS сертификат
+2. Убедитесь, что `NODE_ENV=production`
+3. Проверьте `TELEGRAM_SECRET_TOKEN` в `.env`
+4. Проверьте endpoint: `POST /telegram/webhook`
+
+### Платежи не зачисляются
+
+1. Проверьте `YOOMONEY_SECRET` в `.env`
+2. Убедитесь, что PaymentScheduler запущен
+3. Проверьте статус платежа в Prisma Studio
+4. Проверьте логи PaymentService
+
+### База данных не создаётся
+
+1. Запустите: `npm run prisma:generate`
+2. Запустите: `npm run prisma:migrate`
+3. Проверьте `DATABASE_URL` в `.env`
+
+## Документация
+
+- [PAYMENT-WORKFLOW.md](PAYMENT-WORKFLOW.md) - Детальное описание логики платежей
+- [PROJECT-STRUCTURE.md](PROJECT-STRUCTURE.md) - Структура проекта
+- [QUICK-START.md](QUICK-START.md) - Быстрый старт
+
+## Ресурсы
+
+- [grammY Documentation](https://grammy.dev)
+- [NestJS Documentation](https://nestjs.com)
+- [Prisma Documentation](https://prisma.io)
+- [YooMoney API](https://yoomoney.ru/docs)
+
+## Лицензия
 
 MIT
 
 ---
 
-## 🙋 Support
-
-For issues or questions:
-
-1. Check [MIGRATION-GUIDE.md](MIGRATION-GUIDE.md)
-2. Review conversation examples in `src/grammy/conversations/`
-3. Check grammY documentation at https://grammy.dev
-4. Open an issue with detailed logs
-
----
-
-## ⚡ Performance
-
-Expected improvements with grammY over Telegraf:
-
-- **Memory Usage**: ~15-20% reduction
-- **Response Time**: Faster callback query handling
-- **Bundle Size**: Smaller production bundle
-- **Type Safety**: Better compile-time error detection
-
----
-
-## 🎉 Credits
-
-Built with:
-
-- [grammY](https://grammy.dev) - Modern Telegram Bot Framework
-- [NestJS](https://nestjs.com) - Progressive Node.js Framework
-- [Prisma](https://prisma.io) - Next-generation ORM
-- [Outline VPN](https://getoutline.org) - Open-source VPN
-
----
-
-**Happy Bot Building! 🚀**
+**Готовый шаблон для вашего Telegram бота!** 🚀
