@@ -2,8 +2,6 @@ import { Injectable, OnModuleInit, Logger, Inject, forwardRef } from '@nestjs/co
 import { GrammYService } from '../grammy.service';
 import { CommandEnum } from '../../enum/command.enum';
 import * as conversations from './index';
-import { OutlineService } from '../../outline/outline.service';
-import { ConnectionService } from '../../prisma/connection.service';
 import { PaymentService } from '../../payment/payment.service';
 import { TariffService } from '../../tariff/tariff.service';
 
@@ -20,10 +18,6 @@ export class ConversationsRegistryService implements OnModuleInit {
   constructor(
     @Inject(forwardRef(() => GrammYService))
     private readonly grammyService: GrammYService,
-    @Inject(forwardRef(() => OutlineService))
-    private readonly outlineService: OutlineService,
-    @Inject(forwardRef(() => ConnectionService))
-    private readonly connService: ConnectionService,
     @Inject(forwardRef(() => PaymentService))
     private readonly paymentService: PaymentService,
     @Inject(forwardRef(() => TariffService))
@@ -40,12 +34,9 @@ export class ConversationsRegistryService implements OnModuleInit {
    * Register all conversation handlers
    */
   private registerConversations(): void {
-    const bot = this.grammyService.bot;
-
     // Register each conversation with its CommandEnum name
     this.grammyService.registerConversation(CommandEnum.START, conversations.startConversation);
     this.grammyService.registerConversation(CommandEnum.HOME, conversations.homeConversation);
-    this.grammyService.registerConversation(CommandEnum.CONNECT, conversations.connectConversation);
     this.grammyService.registerConversation(CommandEnum.STATUS, conversations.statusConversation);
     this.grammyService.registerConversation(
       CommandEnum.QUESTION,
@@ -78,8 +69,6 @@ export class ConversationsRegistryService implements OnModuleInit {
 
     bot.use(async (ctx, next) => {
       // Make services available in conversation handlers
-      (ctx as any).outlineService = this.outlineService;
-      (ctx as any).connService = this.connService;
       (ctx as any).paymentService = this.paymentService;
       (ctx as any).tariffService = this.tariffService;
       await next();

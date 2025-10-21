@@ -2,12 +2,8 @@ export enum CommandEnum {
   START = 'START',
   BACK = 'BACK',
   HOME = 'HOME',
-  OUTLINE_APPLE = 'OUTLINE_APPLE',
-  OUTLINE_ANDROID = 'OUTLINE_ANDROID',
-  OUTLINE_DOWNLOADED = 'OUTLINE_DOWNLOADED',
 
   STATUS = 'STATUS', // Статус
-  CONNECT = 'CONNECT', // Подключиться
   GET_ACCESS = 'GET_ACCESS',
   PAYMENT = 'PAYMENT', //Купить
   QUESTION = 'QUESTION', // Помощь,

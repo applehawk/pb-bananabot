@@ -4,12 +4,11 @@ import { InlineKeyboard } from 'grammy';
 import { SCENES } from '../constants/scenes.const';
 import { CommandEnum } from '../../enum/command.enum';
 import { UserService } from '../../user/user.service';
-import { ConnectionService } from '../../prisma/connection.service';
 
 /**
  * STATUS Conversation
  *
- * Displays user's current status: username, balance, and number of connections.
+ * Displays user's current status: username and balance.
  */
 export async function statusConversation(conversation: Conversation<MyContext>, ctx: MyContext) {
   const userId = ctx.from?.id;
@@ -19,7 +18,6 @@ export async function statusConversation(conversation: Conversation<MyContext>, 
 
   // Get services from context
   const userService: UserService = (ctx as any).userService;
-  const connService: ConnectionService = (ctx as any).connService;
 
   // Get user data
   const user = await userService.findOneByUserId(userId);
@@ -28,13 +26,9 @@ export async function statusConversation(conversation: Conversation<MyContext>, 
     currency: 'RUB',
   });
 
-  // Count connections
-  const connections = await connService.connections({ where: { userId } });
-  const connectionsNumber = connections.length;
-
   // Get scene config
   const scene = SCENES[CommandEnum.STATUS];
-  const text = scene.text(username, balance, connectionsNumber);
+  const text = scene.text(username, balance, 0);
 
   // Build keyboard
   const keyboard = new InlineKeyboard();

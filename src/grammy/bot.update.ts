@@ -2,7 +2,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GrammYService } from './grammy.service';
 import { MyContext } from './grammy-context.interface';
-import { BotService } from '../bot.service';
+import { BotService } from './bot.service';
 import { UserService } from '../user/user.service';
 import { TariffService } from '../tariff/tariff.service';
 import { BalanceChangeTypeEnum } from '../payment/enum/balancechange-type.enum';
@@ -124,7 +124,8 @@ export class BotUpdate implements OnModuleInit {
     }
 
     try {
-      const args = ctx.match?.split(' ').filter(Boolean) || [];
+      const matchText = typeof ctx.match === 'string' ? ctx.match : '';
+      const args = matchText.split(' ').filter(Boolean) || [];
       const [tariffName, priceStr] = args;
 
       if (!tariffName || !priceStr || Number.isNaN(parseInt(priceStr))) {
@@ -149,7 +150,8 @@ export class BotUpdate implements OnModuleInit {
     }
 
     try {
-      const args = ctx.match?.split(' ').filter(Boolean) || [];
+      const matchText = typeof ctx.match === 'string' ? ctx.match : '';
+      const args = matchText.split(' ').filter(Boolean) || [];
       const [username, changeStr] = args;
 
       if (!username || !changeStr || Number.isNaN(parseInt(changeStr))) {

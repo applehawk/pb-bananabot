@@ -1,9 +1,9 @@
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
 
-import { BotService } from 'src/bot.service';
+import { BotService } from '../grammy/bot.service';
 import { PaymentService } from './payment.service';
-import { UserService } from 'src/user/user.service';
+import { UserService } from '../user/user.service';
 import { PaymentStatusEnum } from './enum/payment-status.enum';
 import { PaymentSystemEnum } from './enum/payment-system.enum';
 import { BalanceChangeStatusEnum } from './enum/balancechange-status.enum';

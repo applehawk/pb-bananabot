@@ -6,7 +6,6 @@
 
 export { startConversation } from './start.conversation';
 export { homeConversation } from './home.conversation';
-export { connectConversation } from './connect.conversation';
 export { statusConversation } from './status.conversation';
 export { questionConversation } from './question.conversation';
 export { getAccessConversation } from './get-access.conversation';

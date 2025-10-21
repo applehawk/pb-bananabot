@@ -1,7 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
-//import { Payment, PaymentSchema } from './schemas/payment.schema';
 
-import { BotModule } from 'src/bot.module';
+import { BotModule } from '../grammy/bot.module';
 //import { MongooseModule } from '@nestjs/mongoose';
 //import { PaymentScheduler } from './payment.scheduler';
 import { PaymentService } from './payment.service';

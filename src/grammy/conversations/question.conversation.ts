@@ -16,10 +16,10 @@ export async function questionConversation(conversation: Conversation<MyContext>
   const keyboard = new InlineKeyboard();
   for (const row of scene.buttons) {
     for (const button of row) {
-      if (button.url) {
-        keyboard.url(button.text, button.url);
-      } else if (button.callback_data) {
-        keyboard.text(button.text, button.callback_data);
+      if ('url' in button && button.url) {
+        keyboard.url(button.text, button.url as string);
+      } else if ('callback_data' in button && button.callback_data) {
+        keyboard.text(button.text, button.callback_data as string);
       }
     }
     keyboard.row();

@@ -16,23 +16,6 @@ export class UserService {
         });
       }
 
-      async limitExceedWithUser(user: User) : Promise<boolean> {
-        return this.prisma.connection
-            .count({where: { userId: user.userId }})
-            .then( count => {
-              return count > user.connLimit
-            })
-      }
-      
-      async limitExceedWithTgId(userId: number) : Promise<boolean> {
-        return new Promise<boolean>( _ => { 
-          return this.findOneByUserId(userId).then( user => {
-            this.prisma.connection.count({where: { userId: user.userId }}).then( count => {
-              return count > user.connLimit
-            })
-          }) 
-        })
-      }
 
       async findOneByUserId(userId: number): Promise<User | null> {
         return this.userFirst({where: { userId: userId } })
@@ -127,14 +110,14 @@ export class UserService {
         firstname: user.firstname,
         lastname: user.lastname,
         username: user.username,
-        balance: user.balance, connLimit: user.connLimit
+        balance: user.balance
       }
       const updateUser: Prisma.UserUpdateInput = {
         userId: user.userId,
         chatId: user.chatId,
         firstname: user.firstname,
         lastname: user.lastname,
-        username: user.username, //exclude balance and connLimit
+        username: user.username
       }
       return this.prisma.user.upsert( {
         where: {userId: user.userId}, create: createUser, update: updateUser

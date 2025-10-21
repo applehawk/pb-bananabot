@@ -15,7 +15,9 @@ export interface SessionData {
  *
  * Combines:
  * - Base grammY Context
- * - Session management via SessionFlavor
  * - Conversation support via ConversationFlavor
+ * - Custom session data
  */
-export interface MyContext extends Context, SessionFlavor<SessionData>, ConversationFlavor {}
+export type MyContext = Context & ConversationFlavor & {
+  session: SessionData;
+};

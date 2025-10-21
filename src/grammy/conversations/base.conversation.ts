@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { MyContext } from '../grammy-context.interface';
 import { InlineKeyboard, Keyboard } from 'grammy';
-import { SCENES } from '../../constants/scenes.const';
+import { SCENES } from '../constants/scenes.const';
 
 /**
  * Base Conversation Class

@@ -18,24 +18,7 @@ model User {
   firstname   String?
   lastname    String?
   username    String?
-  connLimit   Int
   balance     Int
-  connections Connection[]
-  createdAt DateTime @default(now())
-}
-
-model Connection {
-  id          Int @id @default(autoincrement())
-  hashId      String
-  name        String // key_telegram_id
-  server      String
-  server_port String
-  password    String
-  method      String
-  access_url  String
-  //many-to-one, but not necessary relations
-  user        User?  @relation(fields: [userId], references: [userId])
-  userId      Int?
   createdAt DateTime @default(now())
 }
 

@@ -12,31 +12,20 @@ export const SCENES = {
   [CommandEnum.HOME]: {
     navigateText: `👋🏻 Привет!
 
-Это Telegram-бот для подключения к VPN.
-
-Доступны локации:
-├ 🇳🇱 Нидерланды`,
+Добро пожаловать в Banana Bot!`,
     navigateButtons: [
-      [BUTTONS[CommandEnum.STATUS], BUTTONS[CommandEnum.CONNECT]],
+      [BUTTONS[CommandEnum.STATUS]],
       [BUTTONS[CommandEnum.GET_ACCESS], BUTTONS[CommandEnum.QUESTION]],
     ],
   },
   [CommandEnum.START]: {
-    text: `Чтобы подключиться к VPN нужно:
-Скачать приложение Outline на свой телефон:
-  Apple: https://apps.apple.com/us/app/outline-app/id1356177741
-  Android (ссылка 1): https://play.google.com/store/apps/details?id=org.outline.android.client
-  Android (ссылка 2): https://s3.amazonaws.com/outline-releases/client/android/stable/Outline-Client.apk
-‌если не работает для Android ссылка 1, используйте ссылку 2.`,
-    buttons: [[BUTTONS[CommandEnum.OUTLINE_APPLE], BUTTONS[CommandEnum.OUTLINE_ANDROID]]],
+    text: `Добро пожаловать!`,
+    buttons: [],
     navigateText: `👋🏻 Привет!
 
-Это Telegram-бот для подключения к VPN.
-
-Доступны локации:
-├ 🇳🇱 Нидерланды`,
+Добро пожаловать в Banana Bot!`,
     navigateButtons: [
-      [BUTTONS[CommandEnum.STATUS], BUTTONS[CommandEnum.CONNECT]],
+      [BUTTONS[CommandEnum.STATUS]],
       [BUTTONS[CommandEnum.GET_ACCESS], BUTTONS[CommandEnum.QUESTION]],
     ],
   },
@@ -72,20 +61,6 @@ Visa, MasterCard, МИР.`,
       [BUTTONS[CommandEnum.PAY_WITH_YOOMONEY]],
       [BUTTONS[CommandEnum.CONFIRM_PAYMENT]],
     ],
-  },
-  [CommandEnum.CONNECT]: {
-    balancePositive: (connectionLink: string) => ({
-      text: `Подключение к Outline:
-
-Ваша ссылка:
-└ <code>${connectionLink}</code>
-Нажмите чтобы скопировать (тапните) и добавьте в приложение
-
-Если приложение уже установлено - воспользуйтесь быстрым подключением
-- Outline - для iOS 🍏
-- Outline - для Android 🤖`,
-      buttons: [],
-    }),
   },
   [CommandEnum.STATUS]: {
     text: (username: string, balance: string, connectionsNumber: number) =>

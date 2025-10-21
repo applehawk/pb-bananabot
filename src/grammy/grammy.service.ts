@@ -11,7 +11,7 @@ import { Bot, session } from 'grammy';
 import { conversations, createConversation } from '@grammyjs/conversations';
 import { hydrate } from '@grammyjs/hydrate';
 import { MyContext } from './grammy-context.interface';
-import { BotService } from '../bot.service';
+import { BotService } from './bot.service';
 import { UserService } from '../user/user.service';
 
 /**
