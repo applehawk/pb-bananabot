@@ -65,9 +65,6 @@ src/
 ├── utils/                        # Утилиты
 │   └── split-array-into-pairs.ts # Разбивка массива на пары
 │
-├── interceptors/                 # NestJS Interceptors
-│   └── response-time-interceptor.service.ts
-│
 ├── enum/                         # Общие enums
 │   └── command.enum.ts           # Команды бота
 │
@@ -377,24 +374,25 @@ npm run prisma:generate
 ## Переменные окружения
 
 ```env
-# Telegram
-BOT_TOKEN=your_bot_token
-ADMIN_CHAT_ID=123456789
-ADMIN_CHAT_ID_2=987654321
-TELEGRAM_SECRET_TOKEN=webhook_secret
+# Telegram (обязательные)
+BOT_TOKEN=your_bot_token                    # Токен от @BotFather
+ADMIN_CHAT_ID=123456789                     # Telegram ID админа
 
 # Database
-DATABASE_URL=file:./src/prisma/dev.db
+DATABASE_URL=file:./src/prisma/dev.db       # SQLite база данных
 
 # Server
-PORT=80
-NODE_ENV=development
-DOMAIN=https://your-domain.com
+PORT=80                                      # Порт для webhook (production)
+NODE_ENV=development                         # development | production
+DOMAIN=https://your-domain.com              # Домен для webhook
 
 # Payment
-YOOMONEY_SECRET=yoomoney_webhook_secret
-YOOMONEY_SUCCESS_URL=https://your-domain.com/payment/success
-MINIMUM_BALANCE=3
+YOOMONEY_SECRET=yoomoney_webhook_secret     # Секрет от YooMoney
+MINIMUM_BALANCE=3                           # Сумма ежедневного списания (₽)
+
+# Optional
+ADMIN_CHAT_ID_2=987654321                   # Второй админ (опционально)
+TELEGRAM_SECRET_TOKEN=webhook_secret        # Секрет для webhook (опционально)
 ```
 
 ## Паттерны и Best Practices
@@ -467,20 +465,77 @@ if (paymentStatus !== payment.status) {
 bananabot_rewriting_vpnssconf/
 ├── src/
 │   ├── grammy/                        # 🤖 Bot implementation
+│   │   ├── bot.module.ts
+│   │   ├── bot.service.ts
+│   │   ├── bot.update.ts
+│   │   ├── grammy.module.ts
+│   │   ├── grammy.service.ts
+│   │   ├── grammy-context.interface.ts
+│   │   ├── webhook.controller.ts
+│   │   ├── constants/
+│   │   │   ├── buttons.const.ts
+│   │   │   └── scenes.const.ts
+│   │   └── conversations/
+│   │       ├── conversations-registry.service.ts
+│   │       ├── start.conversation.ts
+│   │       ├── home.conversation.ts
+│   │       ├── status.conversation.ts
+│   │       ├── question.conversation.ts
+│   │       ├── get-access.conversation.ts
+│   │       ├── payment.conversation.ts
+│   │       ├── month-tariff.conversation.ts
+│   │       ├── threemonth-tariff.conversation.ts
+│   │       └── sixmonth-tariff.conversation.ts
+│   │
 │   ├── payment/                       # 💳 Payment system
+│   │   ├── payment.module.ts
+│   │   ├── payment.service.ts
+│   │   ├── payment.controller.ts
+│   │   ├── payment.scheduler.ts
+│   │   ├── strategies/
+│   │   │   ├── payment-strategy.interface.ts
+│   │   │   ├── yoomoney-payment.strategy.ts
+│   │   │   └── factory/
+│   │   │       └── payment-strategy.factory.ts
+│   │   └── enum/
+│   │       ├── payment-status.enum.ts
+│   │       ├── payment-system.enum.ts
+│   │       ├── balancechange-type.enum.ts
+│   │       └── balancechange-status.enum.ts
+│   │
 │   ├── user/                          # 👤 User management
+│   │   ├── user.module.ts
+│   │   └── user.service.ts
+│   │
 │   ├── tariff/                        # 📊 Tariff management
+│   │   ├── tariff.module.ts
+│   │   └── tariff.service.ts
+│   │
 │   ├── prisma/                        # 🗄️ Database
+│   │   ├── schema.prisma
+│   │   ├── prisma.module.ts
+│   │   ├── prisma.service.ts
+│   │   └── migrations/
+│   │
 │   ├── utils/                         # 🛠️ Utilities
-│   ├── interceptors/                  # 🔍 Interceptors
+│   │   └── split-array-into-pairs.ts
+│   │
 │   ├── enum/                          # 📝 Enums
+│   │   └── command.enum.ts
+│   │
 │   └── main-grammy.ts                 # 🚀 Entry point
 │
 ├── libs/
 │   └── yoomoney-client/               # YooMoney SDK wrapper
+│       ├── src/
+│       │   ├── yoomoney-client.module.ts
+│       │   ├── yoomoney-client.service.ts
+│       │   ├── index.ts
+│       │   └── types/
+│       │       └── notification.type.ts
+│       └── tsconfig.lib.json
 │
 ├── docs/
-│   ├── README-GRAMMY.md               # Основная документация
 │   ├── PAYMENT-WORKFLOW.md            # Логика платежей
 │   ├── PROJECT-STRUCTURE.md           # Этот файл
 │   └── QUICK-START.md                 # Быстрый старт
@@ -490,6 +545,7 @@ bananabot_rewriting_vpnssconf/
 │
 ├── .env.example                       # Пример переменных окружения
 ├── package.json
+├── package-grammy.json                # Package.json для grammY билда
 ├── tsconfig.json
 ├── nest-cli.json
 └── README.md                          # Главный README
