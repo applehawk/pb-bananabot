@@ -2,19 +2,21 @@ import { NestFactory } from '@nestjs/core';
 import { BotModule } from './grammy/bot.module';
 import { Logger } from '@nestjs/common';
 
-// SECURITY WARNING: TLS verification is disabled
-// This should be fixed in production
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-
 async function bootstrap() {
+  const isDev = process.env.NODE_ENV !== 'production';
+
+  // Development only: Disable TLS verification for local testing
+  // WARNING: Never use in production!
+  if (isDev && process.env.DISABLE_TLS_VERIFY === 'true') {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    Logger.warn('⚠️  TLS certificate verification is DISABLED (development only)', 'Security');
+  }
+
   const app = await NestFactory.create(BotModule);
 
-  // SECURITY WARNING: CORS is wide open
-  // Should be restricted to specific domains in production
+  // Enable CORS with security-conscious defaults
   app.enableCors({
-    origin: '*',
-    allowedHeaders: '*',
-    methods: '*',
+    origin: isDev ? '*' : process.env.ALLOWED_ORIGINS?.split(',') || false,
     credentials: true,
   });
 

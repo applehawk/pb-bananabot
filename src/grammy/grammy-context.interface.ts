@@ -18,6 +18,4 @@ export interface SessionData {
  * - Conversation support via ConversationFlavor
  * - Custom session data
  */
-export type MyContext = Context & ConversationFlavor & {
-  session: SessionData;
-};
+export type MyContext = Context & SessionFlavor<SessionData> & ConversationFlavor<Context & SessionFlavor<SessionData>>;

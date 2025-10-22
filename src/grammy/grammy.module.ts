@@ -1,6 +1,8 @@
-import { Module, Global } from '@nestjs/common';
+import { Module, Global, forwardRef } from '@nestjs/common';
 import { GrammYService } from './grammy.service';
+import { BotService } from './bot.service';
 import { WebhookController } from './webhook.controller';
+import { UserModule } from '../user/user.module';
 
 /**
  * GrammY Integration Module
@@ -10,8 +12,9 @@ import { WebhookController } from './webhook.controller';
  */
 @Global()
 @Module({
-  providers: [GrammYService],
+  imports: [forwardRef(() => UserModule)],
+  providers: [GrammYService, BotService],
   controllers: [WebhookController],
-  exports: [GrammYService],
+  exports: [GrammYService, BotService],
 })
 export class GrammYModule {}
