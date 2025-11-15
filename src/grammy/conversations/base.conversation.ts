@@ -56,7 +56,8 @@ export abstract class BaseConversation {
         keyboard.row();
       }
 
-      const text = typeof scene.text === 'function' ? 'Text not rendered' : scene.text;
+      const text =
+        typeof scene.text === 'function' ? 'Text not rendered' : scene.text;
       await ctx.reply(text || scene.navigateText, {
         parse_mode: 'HTML',
         reply_markup: keyboard,
@@ -65,7 +66,8 @@ export abstract class BaseConversation {
     }
 
     // Just text, no buttons
-    const text = typeof scene.text === 'function' ? 'Text not rendered' : scene.text;
+    const text =
+      typeof scene.text === 'function' ? 'Text not rendered' : scene.text;
     await ctx.reply(text || scene.navigateText, { parse_mode: 'HTML' });
   }
 

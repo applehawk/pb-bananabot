@@ -11,7 +11,10 @@ import { PaymentSystemEnum } from '../../payment/enum/payment-system.enum';
  * Displays payment options for selected tariff.
  * Handles payment creation via YooMoney.
  */
-export async function paymentConversation(conversation: Conversation<MyContext>, ctx: MyContext) {
+export async function paymentConversation(
+  conversation: Conversation<MyContext>,
+  ctx: MyContext,
+) {
   const userId = ctx.from?.id;
   const chatId = ctx.chat?.id;
   if (!userId || !chatId) return;
@@ -25,12 +28,16 @@ export async function paymentConversation(conversation: Conversation<MyContext>,
 
   // Get user and tariff data using conversation.external() to prevent re-execution during replay
   // Pass ctx as parameter to access the outside context with middleware-injected services
-  const user = await conversation.external((ctx) => ctx.userService.user({ userId }));
+  const user = await conversation.external((ctx) =>
+    ctx.userService.user({ userId }),
+  );
   const balance = user.balance.toLocaleString('ru-RU', {
     style: 'currency',
     currency: 'RUB',
   });
-  const tariff = await conversation.external((ctx) => ctx.tariffService.getOneById(tariffId));
+  const tariff = await conversation.external((ctx) =>
+    ctx.tariffService.getOneById(tariffId),
+  );
 
   const scene = SCENES[CommandEnum.PAYMENT];
   const text = scene.text(balance, tariff.name);
@@ -64,10 +71,18 @@ export async function paymentConversation(conversation: Conversation<MyContext>,
     // Pass ctx as parameter to access the outside context with middleware-injected services
     try {
       const payment = await conversation.external((ctx) =>
-        ctx.paymentService.createPayment(userId, chatId, tariffId, PaymentSystemEnum.YOOMONEY),
+        ctx.paymentService.createPayment(
+          userId,
+          chatId,
+          tariffId,
+          PaymentSystemEnum.YOOMONEY,
+        ),
       );
 
-      const paymentKeyboard = new InlineKeyboard().url('👉 перейти к оплате', payment.url);
+      const paymentKeyboard = new InlineKeyboard().url(
+        '👉 перейти к оплате',
+        payment.url,
+      );
 
       const sentMessage = await ctx.reply(
         `Чтобы оплатить подписку для выбранного вами тарифа, вам нужно перейти к оплате, нажав на кнопку ниже.\n\nПосле того как вы оплатите, я автоматически вам поменяю тариф.`,

@@ -45,7 +45,9 @@ export const SCENES = {
         .join('') +
       `\nТекущий баланс: ${currentBalance}\n\n`,
     buttons: (tariffs: Tariff[]) =>
-      splitArrayIntoPairs(tariffs.map((tariff) => BUTTONS[CommandEnum[tariff.name + '_TARIFF']])),
+      splitArrayIntoPairs(
+        tariffs.map((tariff) => BUTTONS[CommandEnum[tariff.name + '_TARIFF']]),
+      ),
   },
   [CommandEnum.PAYMENT]: {
     text: (balance: string, currentTariff: string) =>

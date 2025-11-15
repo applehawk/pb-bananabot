@@ -15,5 +15,7 @@ export async function threeMonthTariffConversation(
   ctx.session.tariffId = 'THREEMONTH_TARIFF';
 
   // Navigate to payment scene
-  await conversation.external(() => ctx.conversation.enter(CommandEnum.PAYMENT));
+  await conversation.external(() =>
+    ctx.conversation.enter(CommandEnum.PAYMENT),
+  );
 }

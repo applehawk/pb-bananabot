@@ -29,14 +29,16 @@ export class PaymentService {
     private readonly tariffService: TariffService,
     private readonly prisma: PrismaService,
     private readonly paymentStrategyFactory: PaymentStrategyFactory,
-    private readonly yooMoney: YooMoneyClient
+    private readonly yooMoney: YooMoneyClient,
   ) {}
 
   async getPendingPayments(): Promise<Payment[]> {
-    return this.prisma.payment.findMany({ where: { status: PaymentStatusEnum.PENDING }} );
+    return this.prisma.payment.findMany({
+      where: { status: PaymentStatusEnum.PENDING },
+    });
   }
   async findPaymentByPaymentId(paymentId: string): Promise<Payment> {
-    return this.prisma.payment.findUnique({ where: { paymentId: paymentId}} );
+    return this.prisma.payment.findUnique({ where: { paymentId: paymentId } });
   }
 
   async createPayment(
@@ -51,12 +53,17 @@ export class PaymentService {
     const user = await this.userService.findOneByUserId(userId);
 
     if (!user) throw new Error('User not found');
-    if (!user?.chatId) await this.userService.updateUser( { where: {userId: user.userId}, data: {chatId: user.chatId} })
+    if (!user?.chatId)
+      await this.userService.updateUser({
+        where: { userId: user.userId },
+        data: { chatId: user.chatId },
+      });
 
     const tariff: Tariff = await this.tariffService.getOneById(tariffId);
     if (!tariff) throw new Error(`Tariff with id ${tariffId} not found`);
 
-    const paymentStrategy = this.paymentStrategyFactory.createPaymentStrategy(paymentSystem);
+    const paymentStrategy =
+      this.paymentStrategyFactory.createPaymentStrategy(paymentSystem);
     const payment = await paymentStrategy.createPayment({
       userId,
       chatId,
@@ -67,52 +74,72 @@ export class PaymentService {
       paymentAt: paymentAt || DateTime.local().toJSDate(),
       //limit: tariff.connectionsLimit,
     });
-    return this.prisma.payment.create({data: payment._payment})
+    return this.prisma.payment.create({ data: payment._payment });
   }
 
-  async updatePaymentStatus(paymentId: string, status: string, isFinal: boolean): Promise<void> {
-    await this.prisma.payment.update(
-      {
-        where: {
-          paymentId: paymentId
-        }, 
-        data: {
-          status: status, isFinal: isFinal
-        }
-      })
+  async updatePaymentStatus(
+    paymentId: string,
+    status: string,
+    isFinal: boolean,
+  ): Promise<void> {
+    await this.prisma.payment.update({
+      where: {
+        paymentId: paymentId,
+      },
+      data: {
+        status: status,
+        isFinal: isFinal,
+      },
+    });
   }
 
-  async validatePayment(paymentId: string): Promise<boolean> { 
+  async validatePayment(paymentId: string): Promise<boolean> {
     const payment = await this.findPaymentByPaymentId(paymentId);
     if (!payment) throw new Error(`Payment with id ${paymentId} not found`);
 
-    this.logger.debug(`Payment status: ${PaymentStatusEnum[payment.status]}`)
-    const paymentStrategy = this.paymentStrategyFactory.createPaymentStrategy(PaymentSystemEnum[payment.paymentSystem]);
+    this.logger.debug(`Payment status: ${PaymentStatusEnum[payment.status]}`);
+    const paymentStrategy = this.paymentStrategyFactory.createPaymentStrategy(
+      PaymentSystemEnum[payment.paymentSystem],
+    );
 
-    const paymentStatus = await paymentStrategy.validateTransaction(payment.paymentId);
+    const paymentStatus = await paymentStrategy.validateTransaction(
+      payment.paymentId,
+    );
     const isPaid = paymentStatus === PaymentStatusEnum.PAID;
 
-    if(isPaid) {
-      if(paymentStatus !== payment.status) { //going to PAID status
+    if (isPaid) {
+      if (paymentStatus !== payment.status) {
+        //going to PAID status
         const user = await this.userService.findOneByUserId(payment.userId);
         const tariff = await this.tariffService.getOneById(payment.tariffId);
-        if(user) {
-          await this.userService.commitBalanceChange(user, tariff.price, BalanceChangeTypeEnum.PAYMENT, paymentId)
+        if (user) {
+          await this.userService.commitBalanceChange(
+            user,
+            tariff.price,
+            BalanceChangeTypeEnum.PAYMENT,
+            paymentId,
+          );
         }
       }
-      this.logger.debug(`Change status for ${paymentId} on ${paymentStatus}. IsPaid: ${isPaid}`);
+      this.logger.debug(
+        `Change status for ${paymentId} on ${paymentStatus}. IsPaid: ${isPaid}`,
+      );
       await this.updatePaymentStatus(paymentId, PaymentStatusEnum.PAID, isPaid);
     } else {
       if (paymentStatus !== payment.status) {
-        this.logger.debug(`Change status for ${paymentId} on ${paymentStatus}, IsPaid: ${isPaid}`);
+        this.logger.debug(
+          `Change status for ${paymentId} on ${paymentStatus}, IsPaid: ${isPaid}`,
+        );
         await this.updatePaymentStatus(paymentId, paymentStatus, isPaid);
       }
     }
 
     return isPaid;
-}
+  }
   async getPaymentForm(paymentId: string): Promise<string> {
-    const payment = await this.prisma.payment.findUnique({where: {paymentId: paymentId}})
+    const payment = await this.prisma.payment.findUnique({
+      where: { paymentId: paymentId },
+    });
     if (!payment) throw new Error(`Payment with id ${paymentId} not found`);
 
     return payment.form;
@@ -146,7 +173,8 @@ export class PaymentService {
 
     if (calculatedHash !== sha1_hash) return false;
 
-    const operationDetails = await this.yooMoney.getOperationDetails(operation_id);
+    const operationDetails =
+      await this.yooMoney.getOperationDetails(operation_id);
     if (
       operationDetails.operation_id === operation_id &&
       operationDetails.amount === parseFloat(amount) &&
@@ -159,5 +187,4 @@ export class PaymentService {
 
     return false;
   }
-  
 }

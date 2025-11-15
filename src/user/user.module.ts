@@ -1,14 +1,9 @@
-import { Tariff } from '@prisma/client';
-import { User } from '@prisma/client';
-
 import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
-import { PrismaModule } from 'src/prisma/prisma.module';
+import { DatabaseModule } from '../database/database.module';
 
 @Module({
-  imports: [
-    PrismaModule
-  ],
+  imports: [DatabaseModule],
   providers: [UserService],
   exports: [UserService],
 })

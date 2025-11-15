@@ -10,7 +10,10 @@ import { CommandEnum } from '../../enum/command.enum';
  * Main menu with navigation buttons.
  * Displays available actions: Status, Connect, Get Access, Question.
  */
-export async function homeConversation(conversation: Conversation<MyContext>, ctx: MyContext) {
+export async function homeConversation(
+  conversation: Conversation<MyContext>,
+  ctx: MyContext,
+) {
   const scene = SCENES[CommandEnum.HOME];
 
   // Build reply keyboard

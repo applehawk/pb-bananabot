@@ -37,7 +37,9 @@ export class WebhookController {
     @Req() req: Request,
     @Headers('x-telegram-bot-api-secret-token') secretToken?: string,
   ): Promise<{ ok: boolean }> {
-    const expectedToken = this.configService.get<string>('TELEGRAM_SECRET_TOKEN');
+    const expectedToken = this.configService.get<string>(
+      'TELEGRAM_SECRET_TOKEN',
+    );
 
     // Validate secret token if configured
     if (expectedToken && secretToken !== expectedToken) {

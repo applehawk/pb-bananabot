@@ -19,8 +19,12 @@ export async function getAccessConversation(
 
   // Get tariffs and user balance using conversation.external() to prevent re-execution during replay
   // Pass ctx as parameter to access the outside context with middleware-injected services
-  const tariffs = await conversation.external((ctx) => ctx.tariffService.getAllTariffs());
-  const user = await conversation.external((ctx) => ctx.userService.findOneByUserId(userId));
+  const tariffs = await conversation.external((ctx) =>
+    ctx.tariffService.getAllTariffs(),
+  );
+  const user = await conversation.external((ctx) =>
+    ctx.userService.findOneByUserId(userId),
+  );
   const currentBalance = user.balance.toLocaleString('ru-RU', {
     style: 'currency',
     currency: 'RUB',

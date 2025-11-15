@@ -5,11 +5,8 @@ import { Tariff } from '@prisma/client';
 import { TariffService } from './tariff.service';
 import { PrismaModule } from 'src/prisma/prisma.module';
 
-
 @Module({
-    imports: [
-        PrismaModule
-    ],
+  imports: [PrismaModule],
   //imports: [MongooseModule.forFeature([{ name: Tariff.name, schema: TariffSchema }])],
   providers: [TariffService],
   exports: [TariffService],

@@ -85,8 +85,14 @@ export class BotService {
   /**
    * Notify user of successful payment
    */
-  async sendPaymentSuccessMessage(chatId: number, balance: number): Promise<void> {
-    await this.sendMessage(chatId, `Баланс успешно пополнен до ${balance} 🎉 \n\n`);
+  async sendPaymentSuccessMessage(
+    chatId: number,
+    balance: number,
+  ): Promise<void> {
+    await this.sendMessage(
+      chatId,
+      `Баланс успешно пополнен до ${balance} 🎉 \n\n`,
+    );
   }
 
   /**
@@ -107,7 +113,10 @@ export class BotService {
           `Пользователь ${username} оплатил, его баланс ${balance}. Оплаченная сумма: ${amount}. Платежная система ${paymentSystem} 🎉`,
         );
       } catch (error) {
-        this.logger.error(`Failed to send admin notification to ${adminId}:`, error);
+        this.logger.error(
+          `Failed to send admin notification to ${adminId}:`,
+          error,
+        );
       }
     }
   }

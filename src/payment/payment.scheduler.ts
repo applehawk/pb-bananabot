@@ -22,18 +22,20 @@ export class PaymentScheduler {
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handleMidnight() {
-    const serviceFee = this.botService.minimumBalance
-    const users = await this.userService.usersWithBalance(serviceFee)
+    const serviceFee = this.botService.minimumBalance;
+    const users = await this.userService.usersWithBalance(serviceFee);
     for (const user of users) {
-      await this.userService.commitBalanceChange(user, -serviceFee, BalanceChangeTypeEnum.SCHEDULER)
-      .then(async balanceChange => {
-          if(balanceChange.status == BalanceChangeStatusEnum.INSUFFICIENT) {
+      await this.userService
+        .commitBalanceChange(user, -serviceFee, BalanceChangeTypeEnum.SCHEDULER)
+        .then(async (balanceChange) => {
+          if (balanceChange.status == BalanceChangeStatusEnum.INSUFFICIENT) {
             await this.botService.sendInsufficientChargeMessage(
               user.chatId,
-              user.balance, balanceChange.changeAmount
-            )
+              user.balance,
+              balanceChange.changeAmount,
+            );
           }
-        })
+        });
     }
   }
 
@@ -45,7 +47,9 @@ export class PaymentScheduler {
       this.logger.debug('Start validating pending payments');
       for (const payment of pendingPayments) {
         try {
-          const isPaid = await this.paymentService.validatePayment(payment.paymentId);
+          const isPaid = await this.paymentService.validatePayment(
+            payment.paymentId,
+          );
 
           if (isPaid) {
             const user = await this.userService.findOneByUserId(payment.userId);
@@ -63,12 +67,13 @@ export class PaymentScheduler {
             );
           }
         } catch (error) {
-          this.logger.error(`Error validating payment with id ${payment.paymentId}: ${error.message}`);
+          this.logger.error(
+            `Error validating payment with id ${payment.paymentId}: ${error.message}`,
+          );
         }
       }
 
       this.logger.debug('Finish validating pending payments');
     }
   }
-
 }

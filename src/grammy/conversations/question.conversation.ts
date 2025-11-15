@@ -9,7 +9,10 @@ import { CommandEnum } from '../../enum/command.enum';
  *
  * Help/support scene with link to community chat.
  */
-export async function questionConversation(conversation: Conversation<MyContext>, ctx: MyContext) {
+export async function questionConversation(
+  conversation: Conversation<MyContext>,
+  ctx: MyContext,
+) {
   const scene = SCENES[CommandEnum.QUESTION];
 
   // Build keyboard

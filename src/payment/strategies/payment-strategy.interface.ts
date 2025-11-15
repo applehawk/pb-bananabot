@@ -2,10 +2,10 @@ import { PaymentStatusEnum } from '../enum/payment-status.enum';
 import { Payment } from '@prisma/client';
 
 export class PaymentProxy {
-  _payment: Payment = {} as Payment
+  _payment: Payment = {} as Payment;
 
   constructor(payment: Partial<Payment>) {
-     Object.assign(this._payment, payment);
+    Object.assign(this._payment, payment);
   }
 }
 

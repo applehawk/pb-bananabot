@@ -20,7 +20,10 @@ export class PaymentStrategyFactory {
   createPaymentStrategy(paymentSystem: PaymentSystemEnum): PaymentStrategy {
     switch (paymentSystem) {
       case PaymentSystemEnum.YOOMONEY:
-        return new YooMoneyPaymentStrategy(this.yooMoneyClient, this.configService);
+        return new YooMoneyPaymentStrategy(
+          this.yooMoneyClient,
+          this.configService,
+        );
       default:
         throw new Error(`Unsupported payment system: ${paymentSystem}`);
     }

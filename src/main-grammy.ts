@@ -9,7 +9,10 @@ async function bootstrap() {
   // WARNING: Never use in production!
   if (isDev && process.env.DISABLE_TLS_VERIFY === 'true') {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-    Logger.warn('⚠️  TLS certificate verification is DISABLED (development only)', 'Security');
+    Logger.warn(
+      '⚠️  TLS certificate verification is DISABLED (development only)',
+      'Security',
+    );
   }
 
   const app = await NestFactory.create(BotModule);

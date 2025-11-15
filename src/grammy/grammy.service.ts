@@ -49,7 +49,8 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     }
 
     this.bot = new Bot<MyContext>(token);
-    this.useWebhook = this.configService.get<string>('NODE_ENV') === 'production';
+    this.useWebhook =
+      this.configService.get<string>('NODE_ENV') === 'production';
 
     this.setupBasicMiddlewares();
     this.setupHandlers();
@@ -71,7 +72,9 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
         getSessionKey: (ctx) => {
           // Add version to session key to invalidate old sessions
           const version = 'v2'; // Increment this to clear all sessions
-          return ctx.chat?.id !== undefined ? `${ctx.chat.id}:${version}` : undefined;
+          return ctx.chat?.id !== undefined
+            ? `${ctx.chat.id}:${version}`
+            : undefined;
         },
       }),
     );
@@ -101,7 +104,9 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     // Conversations plugin
     this.bot.use(conversations());
 
-    this.logger.log('Service injection and conversations middlewares initialized');
+    this.logger.log(
+      'Service injection and conversations middlewares initialized',
+    );
   }
 
   /**
@@ -112,7 +117,10 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     // Error handler
     this.bot.catch((err) => {
       const ctx = err.ctx;
-      this.logger.error(`Error while handling update ${ctx.update.update_id}:`, err.error);
+      this.logger.error(
+        `Error while handling update ${ctx.update.update_id}:`,
+        err.error,
+      );
     });
 
     this.logger.log('Base handlers initialized');
@@ -162,9 +170,13 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
    * Set up service injection and conversations middleware after all services are injected
    */
   async onModuleInit(): Promise<void> {
-    this.logger.log('GrammYService.onModuleInit() - setting up service middlewares');
+    this.logger.log(
+      'GrammYService.onModuleInit() - setting up service middlewares',
+    );
     this.setupServiceMiddlewares();
-    this.logger.log('GrammYService initialized (bot not started yet - waiting for conversations)');
+    this.logger.log(
+      'GrammYService initialized (bot not started yet - waiting for conversations)',
+    );
   }
 
   /**

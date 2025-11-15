@@ -9,7 +9,10 @@ import { CommandEnum } from '../../enum/command.enum';
  *
  * Displays user's current status: username and balance.
  */
-export async function statusConversation(conversation: Conversation<MyContext>, ctx: MyContext) {
+export async function statusConversation(
+  conversation: Conversation<MyContext>,
+  ctx: MyContext,
+) {
   const userId = ctx.from?.id;
   const username = ctx.from?.username || 'не указан';
 
@@ -17,7 +20,9 @@ export async function statusConversation(conversation: Conversation<MyContext>, 
 
   // Get user data using conversation.external() to prevent re-execution during replay
   // Pass ctx as parameter to access the outside context with middleware-injected services
-  const user = await conversation.external((ctx) => ctx.userService.findOneByUserId(userId));
+  const user = await conversation.external((ctx) =>
+    ctx.userService.findOneByUserId(userId),
+  );
   const balance = user.balance.toLocaleString('ru-RU', {
     style: 'currency',
     currency: 'RUB',

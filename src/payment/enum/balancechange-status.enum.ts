@@ -1,4 +1,4 @@
 export enum BalanceChangeStatusEnum {
-    DONE = 'DONE',
-    INSUFFICIENT = 'INSUFFICIENT',
-  }
+  DONE = 'DONE',
+  INSUFFICIENT = 'INSUFFICIENT',
+}

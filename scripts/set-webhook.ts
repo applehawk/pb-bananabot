@@ -49,13 +49,17 @@ const webhookUrl = `https://${DOMAIN}/telegram/webhook`;
     const webhookInfo = await bot.api.getWebhookInfo();
     console.log('\n📋 Webhook Info:');
     console.log(`  URL: ${webhookInfo.url}`);
-    console.log(`  Has Secret Token: ${webhookInfo.has_custom_certificate ? 'Yes' : 'No'}`);
+    console.log(
+      `  Has Secret Token: ${webhookInfo.has_custom_certificate ? 'Yes' : 'No'}`,
+    );
     console.log(`  Pending Updates: ${webhookInfo.pending_update_count}`);
     console.log(`  Max Connections: ${webhookInfo.max_connections}`);
 
     if (webhookInfo.last_error_date) {
       console.log(`\n⚠️  Last Error: ${webhookInfo.last_error_message}`);
-      console.log(`   Date: ${new Date(webhookInfo.last_error_date * 1000).toISOString()}`);
+      console.log(
+        `   Date: ${new Date(webhookInfo.last_error_date * 1000).toISOString()}`,
+      );
     }
   } catch (error) {
     console.error('❌ Failed to set webhook:', error);

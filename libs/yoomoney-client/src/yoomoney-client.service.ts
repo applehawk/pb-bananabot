@@ -18,13 +18,20 @@ export class YooMoneyClient {
   private yooMoney: API;
 
   constructor(private readonly configService: ConfigService) {
-    this.token = this.configService.get('YOOMONEY_API_KEY_P1') + this.configService.get('YOOMONEY_API_KEY_P2');
+    this.token =
+      this.configService.get('YOOMONEY_API_KEY_P1') +
+      this.configService.get('YOOMONEY_API_KEY_P2');
     this.receiver = this.configService.get('YOOMONEY_WALLET');
-    this.successURL = this.configService.get('DOMAIN') + '/payment/yoomoney/success';
+    this.successURL =
+      this.configService.get('DOMAIN') + '/payment/yoomoney/success';
     this.yooMoney = new API(this.token);
   }
 
-  generatePaymentForm(amount: number, paymentId: string, comment: string): string {
+  generatePaymentForm(
+    amount: number,
+    paymentId: string,
+    comment: string,
+  ): string {
     const builder = new YMPaymentFormBuilder({
       quickPayForm: 'donate',
       sum: amount,
@@ -46,7 +53,9 @@ export class YooMoneyClient {
     return await this.yooMoney.operationDetails(parameters);
   }
 
-  async getOperationHistory(parameters?: OperationHistoryParameters): Promise<OperationHistoryResponse> {
+  async getOperationHistory(
+    parameters?: OperationHistoryParameters,
+  ): Promise<OperationHistoryResponse> {
     return this.yooMoney.operationHistory(parameters);
   }
 }

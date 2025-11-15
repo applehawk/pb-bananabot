@@ -10,7 +10,10 @@ import { CommandEnum } from '../../enum/command.enum';
  * Entry point for new users.
  * Shows app download links and then navigates to HOME.
  */
-export async function startConversation(conversation: Conversation<MyContext>, ctx: MyContext) {
+export async function startConversation(
+  conversation: Conversation<MyContext>,
+  ctx: MyContext,
+) {
   const scene = SCENES[CommandEnum.START];
 
   // Send initial message

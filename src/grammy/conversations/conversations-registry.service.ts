@@ -1,4 +1,11 @@
-import { Injectable, OnModuleInit, OnApplicationBootstrap, Logger, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnApplicationBootstrap,
+  Logger,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { GrammYService } from '../grammy.service';
 import { CommandEnum } from '../../enum/command.enum';
 import * as conversations from './index';
@@ -10,7 +17,9 @@ import * as conversations from './index';
  * Must be initialized after GrammYService.
  */
 @Injectable()
-export class ConversationsRegistryService implements OnModuleInit, OnApplicationBootstrap {
+export class ConversationsRegistryService
+  implements OnModuleInit, OnApplicationBootstrap
+{
   private readonly logger = new Logger(ConversationsRegistryService.name);
 
   constructor(
@@ -29,7 +38,9 @@ export class ConversationsRegistryService implements OnModuleInit, OnApplication
   }
 
   async onApplicationBootstrap(): Promise<void> {
-    this.logger.log('ConversationsRegistryService.onApplicationBootstrap() called - starting bot...');
+    this.logger.log(
+      'ConversationsRegistryService.onApplicationBootstrap() called - starting bot...',
+    );
     // Start the bot AFTER all modules are initialized and conversations are registered
     this.grammyService.startBot();
     this.logger.log('Bot started successfully after all initialization');
@@ -40,9 +51,18 @@ export class ConversationsRegistryService implements OnModuleInit, OnApplication
    */
   private registerConversations(): void {
     // Register each conversation with its CommandEnum name
-    this.grammyService.registerConversation(CommandEnum.START, conversations.startConversation);
-    this.grammyService.registerConversation(CommandEnum.HOME, conversations.homeConversation);
-    this.grammyService.registerConversation(CommandEnum.STATUS, conversations.statusConversation);
+    this.grammyService.registerConversation(
+      CommandEnum.START,
+      conversations.startConversation,
+    );
+    this.grammyService.registerConversation(
+      CommandEnum.HOME,
+      conversations.homeConversation,
+    );
+    this.grammyService.registerConversation(
+      CommandEnum.STATUS,
+      conversations.statusConversation,
+    );
     this.grammyService.registerConversation(
       CommandEnum.QUESTION,
       conversations.questionConversation,
@@ -51,7 +71,10 @@ export class ConversationsRegistryService implements OnModuleInit, OnApplication
       CommandEnum.GET_ACCESS,
       conversations.getAccessConversation,
     );
-    this.grammyService.registerConversation(CommandEnum.PAYMENT, conversations.paymentConversation);
+    this.grammyService.registerConversation(
+      CommandEnum.PAYMENT,
+      conversations.paymentConversation,
+    );
     this.grammyService.registerConversation(
       CommandEnum.MONTH_TARIFF,
       conversations.monthTariffConversation,

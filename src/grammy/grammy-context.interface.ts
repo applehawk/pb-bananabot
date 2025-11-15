@@ -4,6 +4,8 @@ import { BotService } from './bot.service';
 import { UserService } from '../user/user.service';
 import { TariffService } from '../tariff/tariff.service';
 import { PaymentService } from '../payment/payment.service';
+import { CreditsService } from '../credits/credits.service';
+import { GenerationService } from '../generation/generation.service';
 
 /**
  * Session data structure
@@ -12,6 +14,9 @@ import { PaymentService } from '../payment/payment.service';
 export interface SessionData {
   messageId?: number;
   tariffId?: string;
+  generationId?: string;
+  lastPrompt?: string;
+  awaitingPhoto?: boolean;
 }
 
 /**
@@ -23,6 +28,9 @@ export interface CustomContextProps {
   userService: UserService;
   tariffService: TariffService;
   paymentService: PaymentService;
+  // New services for image generation
+  creditsService: CreditsService;
+  generationService: GenerationService;
 }
 
 /**

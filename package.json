@@ -1,6 +1,7 @@
 {
   "name": "bananabot-grammy",
   "version": "1.0.0",
+  "type": "module",
   "description": "Telegram VPN Bot with NestJS and GrammyJS",
   "author": "VladMac",
   "private": true,
@@ -20,7 +21,7 @@
     "start:prod": "node dist/main-grammy",
     "start:migrate:prod": "npm run prisma:migrate:deploy && npm run start:prod",
     "webhook:set": "ts-node scripts/set-webhook.ts",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "eslint . --ext .ts --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -33,19 +34,35 @@
     "prisma:seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.515.0",
+    "@google/generative-ai": "^0.21.0",
     "@grammyjs/conversations": "^2.1.0",
     "@grammyjs/hydrate": "^1.6.0",
+    "@grammyjs/menu": "^1.2.2",
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.1.7",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.7",
     "@nestjs/platform-express": "^11.1.7",
     "@nestjs/schedule": "^6.0.1",
+    "@nestjs/throttler": "^6.4.0",
     "@prisma/client": "^6.17.1",
+    "axios": "^1.6.5",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
     "grammy": "^1.38.3",
+    "ioredis": "^5.3.2",
+    "joi": "^17.11.0",
     "luxon": "^3.7.2",
+    "nanoid": "^5.0.4",
+    "nestjs-pino": "^4.4.1",
+    "pino": "^9.14.0",
+    "pino-pretty": "^10.3.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sharp": "^0.33.1",
     "uuid": "^13.0.0",
+    "winston": "^3.11.0",
     "yoomoney-sdk": "^2.2.0"
   },
   "devDependencies": {
@@ -58,20 +75,21 @@
     "@types/node": "^22.10.2",
     "@types/supertest": "^6.0.2",
     "@types/uuid": "^10.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.18.1",
-    "@typescript-eslint/parser": "^8.18.1",
-    "eslint": "^9.38.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-prettier": "^5.2.1",
-    "jest": "^29.7.0",
-    "prettier": "^3.4.2",
+    "@typescript-eslint/eslint-plugin": "^8.46.4",
+    "@typescript-eslint/parser": "^8.46.4",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "jest": "^30.2.0",
+    "prettier": "^3.6.2",
     "prisma": "^6.17.1",
     "supertest": "^7.0.0",
-    "ts-jest": "^29.2.5",
+    "ts-jest": "^29.4.5",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.46.4"
   },
   "jest": {
     "moduleFileExtensions": [
@@ -93,5 +111,10 @@
       "^@app/(.*)$": "<rootDir>/../libs/$1/src",
       "^@/(.*)$": "<rootDir>/$1"
     }
+  },
+  "npmAudit": {
+    "ignore": [
+      "GHSA-mh29-5h37-fv8m"
+    ]
   }
 }

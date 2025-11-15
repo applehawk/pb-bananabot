@@ -1,5 +1,5 @@
 export enum BalanceChangeTypeEnum {
-    PAYMENT = 'PAYMENT',
-    MANUALLY = 'MANUALLY',
-    SCHEDULER = 'SCHEDULER'
-  }
+  PAYMENT = 'PAYMENT',
+  MANUALLY = 'MANUALLY',
+  SCHEDULER = 'SCHEDULER',
+}

@@ -36,7 +36,9 @@ export class BotUpdate implements OnModuleInit {
    * Conversations are registered in ConversationsRegistryService constructor
    */
   async onModuleInit(): Promise<void> {
-    this.logger.log('BotUpdate.onModuleInit() called - registering handlers...');
+    this.logger.log(
+      'BotUpdate.onModuleInit() called - registering handlers...',
+    );
     this.registerCommands();
     this.registerCallbackHandlers();
     this.registerTextHandlers();
@@ -105,9 +107,12 @@ export class BotUpdate implements OnModuleInit {
   private async handleStart(ctx: MyContext): Promise<void> {
     // Only allow private chats
     if (ctx.chat?.type !== 'private') {
-      await ctx.reply('Для работы с ботом, нужно писать ему в личные сообщения', {
-        reply_markup: { remove_keyboard: true },
-      });
+      await ctx.reply(
+        'Для работы с ботом, нужно писать ему в личные сообщения',
+        {
+          reply_markup: { remove_keyboard: true },
+        },
+      );
       return;
     }
 
@@ -140,12 +145,16 @@ export class BotUpdate implements OnModuleInit {
       const [tariffName, priceStr] = args;
 
       if (!tariffName || !priceStr || Number.isNaN(parseInt(priceStr))) {
-        throw new Error('Не указан один из обязательных параметров или указан неверно!');
+        throw new Error(
+          'Не указан один из обязательных параметров или указан неверно!',
+        );
       }
 
       const price = parseInt(priceStr);
       await this.tariffService.updateTariffPrice(tariffName, price);
-      await ctx.reply(`✅ Тариф "${tariffName}" обновлен. Новая цена: ${price} руб.`);
+      await ctx.reply(
+        `✅ Тариф "${tariffName}" обновлен. Новая цена: ${price} руб.`,
+      );
     } catch (error) {
       await ctx.reply(`❌ Ошибка: ${error.message}`);
     }
@@ -166,7 +175,9 @@ export class BotUpdate implements OnModuleInit {
       const [username, changeStr] = args;
 
       if (!username || !changeStr || Number.isNaN(parseInt(changeStr))) {
-        throw new Error('Не указан один из обязательных параметров или указан неверно!');
+        throw new Error(
+          'Не указан один из обязательных параметров или указан неверно!',
+        );
       }
 
       const changeInt = parseInt(changeStr);
