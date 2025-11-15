@@ -13,6 +13,8 @@ import { hydrate } from '@grammyjs/hydrate';
 import { MyContext } from './grammy-context.interface';
 import { BotService } from './bot.service';
 import { UserService } from '../user/user.service';
+import { TariffService } from '../tariff/tariff.service';
+import { PaymentService } from '../payment/payment.service';
 
 /**
  * GrammY Service
@@ -28,6 +30,7 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(GrammYService.name);
   public bot: Bot<MyContext>;
   private readonly useWebhook: boolean;
+  private botStarted = false;
 
   constructor(
     private readonly configService: ConfigService,
@@ -35,6 +38,10 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     private readonly botService: BotService,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
+    @Inject(forwardRef(() => TariffService))
+    private readonly tariffService: TariffService,
+    @Inject(forwardRef(() => PaymentService))
+    private readonly paymentService: PaymentService,
   ) {
     const token = this.configService.get<string>('BOT_TOKEN');
     if (!token) {
@@ -44,40 +51,57 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     this.bot = new Bot<MyContext>(token);
     this.useWebhook = this.configService.get<string>('NODE_ENV') === 'production';
 
-    this.setupMiddlewares();
+    this.setupBasicMiddlewares();
     this.setupHandlers();
   }
 
   /**
-   * Setup bot middlewares
-   * Order matters: session must come before conversations
+   * Setup basic bot middlewares (session and hydration)
+   * Service injection and conversations will be added later in onModuleInit
    */
-  private setupMiddlewares(): void {
+  private setupBasicMiddlewares(): void {
     // Session management - must be first
+    // Using a session key version to invalidate old sessions after service injection changes
     this.bot.use(
       session({
         initial: (): { messageId?: number; tariffId?: string } => ({
           messageId: undefined,
           tariffId: undefined,
         }),
+        getSessionKey: (ctx) => {
+          // Add version to session key to invalidate old sessions
+          const version = 'v2'; // Increment this to clear all sessions
+          return ctx.chat?.id !== undefined ? `${ctx.chat.id}:${version}` : undefined;
+        },
       }),
     );
 
     // Hydration - enables ctx.msg, ctx.chat shortcuts
     this.bot.use(hydrate());
 
-    // Conversations plugin
-    this.bot.use(conversations());
+    this.logger.log('Basic middlewares initialized');
+  }
 
+  /**
+   * Setup service injection and conversations middleware
+   * Called in onModuleInit after all services are injected
+   */
+  private setupServiceMiddlewares(): void {
     // Custom middleware to inject Nest services into context
+    // IMPORTANT: Must be before conversations plugin so services are available during replay
     this.bot.use(async (ctx, next) => {
-      // Make services available in conversation handlers if needed
-      (ctx as any).botService = this.botService;
-      (ctx as any).userService = this.userService;
+      // Make services available in conversation handlers
+      ctx.botService = this.botService;
+      ctx.userService = this.userService;
+      ctx.tariffService = this.tariffService;
+      ctx.paymentService = this.paymentService;
       await next();
     });
 
-    this.logger.log('Middlewares initialized');
+    // Conversations plugin
+    this.bot.use(conversations());
+
+    this.logger.log('Service injection and conversations middlewares initialized');
   }
 
   /**
@@ -97,29 +121,50 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
   /**
    * Register a conversation handler
    * Called by scene/conversation services during initialization
+   * IMPORTANT: Must be called BEFORE bot.start()
    */
   public registerConversation(name: string, conversation: any): void {
-    this.bot.use(createConversation(conversation, name));
-    this.logger.log(`Registered conversation: ${name}`);
+    this.logger.log(`Registering conversation: ${name}`);
+    const middleware = createConversation(conversation, name);
+    this.logger.log(`Created middleware for conversation: ${name}`);
+    this.bot.use(middleware);
+    this.logger.log(`Registered conversation middleware: ${name}`);
   }
 
   /**
-   * Start bot based on environment
-   * - Development: Long polling
-   * - Production: Webhook (started externally via WebhookController)
+   * Start bot - should be called AFTER conversations are registered
    */
-  async onModuleInit(): Promise<void> {
+  public startBot(): void {
+    if (this.botStarted) {
+      this.logger.warn('Bot already started, ignoring duplicate start call');
+      return;
+    }
+
     if (!this.useWebhook) {
       this.logger.log('Starting bot in polling mode (development)');
-      await this.bot.start({
+      // Start polling without blocking - don't await
+      this.bot.start({
         onStart: (info) => {
           this.logger.log(`Bot started: @${info.username} (${info.id})`);
         },
       });
+      this.logger.log('Bot polling started in background');
     } else {
       this.logger.log('Bot configured for webhook mode (production)');
       this.logger.warn('Remember to set webhook URL via setWebhook script');
     }
+
+    this.botStarted = true;
+  }
+
+  /**
+   * Module initialization
+   * Set up service injection and conversations middleware after all services are injected
+   */
+  async onModuleInit(): Promise<void> {
+    this.logger.log('GrammYService.onModuleInit() - setting up service middlewares');
+    this.setupServiceMiddlewares();
+    this.logger.log('GrammYService initialized (bot not started yet - waiting for conversations)');
   }
 
   /**

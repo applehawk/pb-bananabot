@@ -24,6 +24,9 @@ async function bootstrap() {
   await app.listen(port);
   Logger.log(`🚀 BananaBot (grammY) running on port ${port}`, 'Bootstrap');
   Logger.log(`📡 Mode: ${process.env.NODE_ENV || 'development'}`, 'Bootstrap');
+
+  // Debug: Check if providers are initialized
+  Logger.log('Checking provider initialization...', 'Bootstrap');
 }
 
 bootstrap();

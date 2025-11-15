@@ -27,13 +27,16 @@ export class BotUpdate implements OnModuleInit {
     private readonly userService: UserService,
     private readonly tariffService: TariffService,
   ) {
+    this.logger.log('BotUpdate constructor called');
     this.adminChatId = Number(configService.get('ADMIN_CHAT_ID'));
   }
 
   /**
    * Initialize all handlers after module initialization
+   * Conversations are registered in ConversationsRegistryService constructor
    */
   async onModuleInit(): Promise<void> {
+    this.logger.log('BotUpdate.onModuleInit() called - registering handlers...');
     this.registerCommands();
     this.registerCallbackHandlers();
     this.registerTextHandlers();
@@ -64,6 +67,11 @@ export class BotUpdate implements OnModuleInit {
     // /setmenu command (admin only)
     bot.command('setmenu', async (ctx) => {
       await this.handleSetMenuCommand(ctx);
+    });
+
+    // /reset command - force clear all conversation state
+    bot.command('reset', async (ctx) => {
+      await this.handleResetCommand(ctx);
     });
   }
 
@@ -103,15 +111,18 @@ export class BotUpdate implements OnModuleInit {
       return;
     }
 
-    // Reset session
-    ctx.session.messageId = undefined;
-    ctx.session.tariffId = undefined;
+    // Reset session and conversation state
+    // Note: We need to completely reset the session to clear any stale conversation state
+    ctx.session = {
+      messageId: undefined,
+      tariffId: undefined,
+    };
 
     // Upsert user
     await this.botService.upsertUser(ctx);
 
     // Enter START conversation
-    await ctx.conversation.enter('start');
+    await ctx.conversation.enter(CommandEnum.START);
   }
 
   /**
@@ -191,6 +202,20 @@ export class BotUpdate implements OnModuleInit {
     });
 
     await ctx.reply('✅ Menu button set');
+  }
+
+  /**
+   * /reset command handler
+   * Completely clears session and conversation state
+   */
+  private async handleResetCommand(ctx: MyContext): Promise<void> {
+    // Reset the entire session object to clear conversation state
+    ctx.session = {
+      messageId: undefined,
+      tariffId: undefined,
+    };
+
+    await ctx.reply('✅ Session reset! Please send /start to begin fresh.');
   }
 
   /**

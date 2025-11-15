@@ -3,10 +3,7 @@ import { MyContext } from '../grammy-context.interface';
 import { InlineKeyboard } from 'grammy';
 import { SCENES } from '../constants/scenes.const';
 import { CommandEnum } from '../../enum/command.enum';
-import { PaymentService } from '../../payment/payment.service';
 import { PaymentSystemEnum } from '../../payment/enum/payment-system.enum';
-import { TariffService } from '../../tariff/tariff.service';
-import { UserService } from '../../user/user.service';
 
 /**
  * PAYMENT Conversation
@@ -19,11 +16,6 @@ export async function paymentConversation(conversation: Conversation<MyContext>,
   const chatId = ctx.chat?.id;
   if (!userId || !chatId) return;
 
-  // Get services from context
-  const paymentService: PaymentService = (ctx as any).paymentService;
-  const tariffService: TariffService = (ctx as any).tariffService;
-  const userService: UserService = (ctx as any).userService;
-
   // Get tariff from session
   const { tariffId } = ctx.session;
   if (!tariffId) {
@@ -31,13 +23,14 @@ export async function paymentConversation(conversation: Conversation<MyContext>,
     return;
   }
 
-  // Get user and tariff data
-  const user = await userService.user({ userId });
+  // Get user and tariff data using conversation.external() to prevent re-execution during replay
+  // Pass ctx as parameter to access the outside context with middleware-injected services
+  const user = await conversation.external((ctx) => ctx.userService.user({ userId }));
   const balance = user.balance.toLocaleString('ru-RU', {
     style: 'currency',
     currency: 'RUB',
   });
-  const tariff = await tariffService.getOneById(tariffId);
+  const tariff = await conversation.external((ctx) => ctx.tariffService.getOneById(tariffId));
 
   const scene = SCENES[CommandEnum.PAYMENT];
   const text = scene.text(balance, tariff.name);
@@ -67,13 +60,11 @@ export async function paymentConversation(conversation: Conversation<MyContext>,
   await response.answerCallbackQuery();
 
   if (response.callbackQuery.data === CommandEnum.PAY_WITH_YOOMONEY) {
-    // Create payment
+    // Create payment using conversation.external() to prevent re-execution during replay
+    // Pass ctx as parameter to access the outside context with middleware-injected services
     try {
-      const payment = await paymentService.createPayment(
-        userId,
-        chatId,
-        tariffId,
-        PaymentSystemEnum.YOOMONEY,
+      const payment = await conversation.external((ctx) =>
+        ctx.paymentService.createPayment(userId, chatId, tariffId, PaymentSystemEnum.YOOMONEY),
       );
 
       const paymentKeyboard = new InlineKeyboard().url('👉 перейти к оплате', payment.url);

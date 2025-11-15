@@ -33,8 +33,10 @@ import { TariffModule } from '../tariff/tariff.module';
   ],
   controllers: [],
   providers: [
-    BotUpdate,
+    // IMPORTANT: ConversationsRegistryService MUST be listed before BotUpdate
+    // to ensure conversations are registered in constructor before handlers
     ConversationsRegistryService,
+    BotUpdate,
   ],
   exports: [],
 })

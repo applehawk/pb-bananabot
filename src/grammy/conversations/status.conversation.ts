@@ -3,7 +3,6 @@ import { MyContext } from '../grammy-context.interface';
 import { InlineKeyboard } from 'grammy';
 import { SCENES } from '../constants/scenes.const';
 import { CommandEnum } from '../../enum/command.enum';
-import { UserService } from '../../user/user.service';
 
 /**
  * STATUS Conversation
@@ -16,11 +15,9 @@ export async function statusConversation(conversation: Conversation<MyContext>, 
 
   if (!userId) return;
 
-  // Get services from context
-  const userService: UserService = (ctx as any).userService;
-
-  // Get user data
-  const user = await userService.findOneByUserId(userId);
+  // Get user data using conversation.external() to prevent re-execution during replay
+  // Pass ctx as parameter to access the outside context with middleware-injected services
+  const user = await conversation.external((ctx) => ctx.userService.findOneByUserId(userId));
   const balance = user.balance.toLocaleString('ru-RU', {
     style: 'currency',
     currency: 'RUB',

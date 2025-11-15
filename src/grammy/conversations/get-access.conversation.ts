@@ -3,8 +3,6 @@ import { MyContext } from '../grammy-context.interface';
 import { InlineKeyboard } from 'grammy';
 import { SCENES } from '../constants/scenes.const';
 import { CommandEnum } from '../../enum/command.enum';
-import { TariffService } from '../../tariff/tariff.service';
-import { UserService } from '../../user/user.service';
 
 /**
  * GET_ACCESS Conversation
@@ -19,13 +17,10 @@ export async function getAccessConversation(
   const userId = ctx.from?.id;
   if (!userId) return;
 
-  // Get services from context
-  const tariffService: TariffService = (ctx as any).tariffService;
-  const userService: UserService = (ctx as any).userService;
-
-  // Get tariffs and user balance
-  const tariffs = await tariffService.getAllTariffs();
-  const user = await userService.findOneByUserId(userId);
+  // Get tariffs and user balance using conversation.external() to prevent re-execution during replay
+  // Pass ctx as parameter to access the outside context with middleware-injected services
+  const tariffs = await conversation.external((ctx) => ctx.tariffService.getAllTariffs());
+  const user = await conversation.external((ctx) => ctx.userService.findOneByUserId(userId));
   const currentBalance = user.balance.toLocaleString('ru-RU', {
     style: 'currency',
     currency: 'RUB',
@@ -41,13 +36,17 @@ export async function getAccessConversation(
 
   // Build keyboard
   const keyboard = new InlineKeyboard();
-  for (const row of buttonRows) {
+  for (let i = 0; i < buttonRows.length; i++) {
+    const row = buttonRows[i];
     for (const button of row) {
       if (button.callback_data) {
         keyboard.text(button.text, button.callback_data);
       }
     }
-    keyboard.row();
+    // Only add a new row if this is not the last row
+    if (i < buttonRows.length - 1) {
+      keyboard.row();
+    }
   }
 
   await ctx.reply(text, {

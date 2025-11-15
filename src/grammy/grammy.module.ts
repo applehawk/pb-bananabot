@@ -3,6 +3,8 @@ import { GrammYService } from './grammy.service';
 import { BotService } from './bot.service';
 import { WebhookController } from './webhook.controller';
 import { UserModule } from '../user/user.module';
+import { TariffModule } from '../tariff/tariff.module';
+import { PaymentModule } from '../payment/payment.module';
 
 /**
  * GrammY Integration Module
@@ -12,7 +14,11 @@ import { UserModule } from '../user/user.module';
  */
 @Global()
 @Module({
-  imports: [forwardRef(() => UserModule)],
+  imports: [
+    forwardRef(() => UserModule),
+    forwardRef(() => TariffModule),
+    forwardRef(() => PaymentModule),
+  ],
   providers: [GrammYService, BotService],
   controllers: [WebhookController],
   exports: [GrammYService, BotService],

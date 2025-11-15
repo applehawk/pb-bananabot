@@ -1,9 +1,7 @@
-import { Injectable, OnModuleInit, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnApplicationBootstrap, Logger, Inject, forwardRef } from '@nestjs/common';
 import { GrammYService } from '../grammy.service';
 import { CommandEnum } from '../../enum/command.enum';
 import * as conversations from './index';
-import { PaymentService } from '../../payment/payment.service';
-import { TariffService } from '../../tariff/tariff.service';
 
 /**
  * Conversations Registry Service
@@ -12,22 +10,29 @@ import { TariffService } from '../../tariff/tariff.service';
  * Must be initialized after GrammYService.
  */
 @Injectable()
-export class ConversationsRegistryService implements OnModuleInit {
+export class ConversationsRegistryService implements OnModuleInit, OnApplicationBootstrap {
   private readonly logger = new Logger(ConversationsRegistryService.name);
 
   constructor(
     @Inject(forwardRef(() => GrammYService))
     private readonly grammyService: GrammYService,
-    @Inject(forwardRef(() => PaymentService))
-    private readonly paymentService: PaymentService,
-    @Inject(forwardRef(() => TariffService))
-    private readonly tariffService: TariffService,
-  ) {}
+  ) {
+    this.logger.log('ConversationsRegistryService constructor called');
+  }
 
   async onModuleInit(): Promise<void> {
+    this.logger.log('ConversationsRegistryService.onModuleInit() called');
+    // Register conversations in onModuleInit to ensure GrammYService is fully initialized
+    this.logger.log('Registering conversations...');
     this.registerConversations();
-    this.injectServicesIntoContext();
     this.logger.log('All conversations registered');
+  }
+
+  async onApplicationBootstrap(): Promise<void> {
+    this.logger.log('ConversationsRegistryService.onApplicationBootstrap() called - starting bot...');
+    // Start the bot AFTER all modules are initialized and conversations are registered
+    this.grammyService.startBot();
+    this.logger.log('Bot started successfully after all initialization');
   }
 
   /**
@@ -59,21 +64,5 @@ export class ConversationsRegistryService implements OnModuleInit {
       CommandEnum.SIXMONTH_TARIFF,
       conversations.sixMonthTariffConversation,
     );
-  }
-
-  /**
-   * Inject services into context for use in conversations
-   */
-  private injectServicesIntoContext(): void {
-    const bot = this.grammyService.bot;
-
-    bot.use(async (ctx, next) => {
-      // Make services available in conversation handlers
-      (ctx as any).paymentService = this.paymentService;
-      (ctx as any).tariffService = this.tariffService;
-      await next();
-    });
-
-    this.logger.log('Services injected into context');
   }
 }
