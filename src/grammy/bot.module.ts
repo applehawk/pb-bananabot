@@ -5,13 +5,16 @@ import { ScheduleModule } from '@nestjs/schedule';
 // Core GrammY
 import { GrammYModule } from './grammy.module';
 import { BotUpdate } from './bot.update';
-import { ConversationsRegistryService } from './conversations/conversations-registry.service';
 
 // Existing modules
-import { PrismaModule } from '../prisma/prisma.module';
-import { PaymentModule } from '../payment/payment.module';
+import { DatabaseModule } from '../database/database.module';
 import { UserModule } from '../user/user.module';
-import { TariffModule } from '../tariff/tariff.module';
+// Legacy VPN modules (temporarily disabled for image generation bot)
+// import { PaymentModule } from '../payment/payment.module';
+// import { TariffModule } from '../tariff/tariff.module';
+
+// Configuration
+import configuration from '../config/configuration';
 
 /**
  * Bot Module (grammY version)
@@ -23,19 +26,18 @@ import { TariffModule } from '../tariff/tariff.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [configuration],
     }),
     ScheduleModule.forRoot(),
     GrammYModule,
-    PrismaModule,
-    forwardRef(() => PaymentModule),
+    DatabaseModule,
     forwardRef(() => UserModule),
-    forwardRef(() => TariffModule),
+    // Legacy VPN modules disabled
+    // forwardRef(() => PaymentModule),
+    // forwardRef(() => TariffModule),
   ],
   controllers: [],
   providers: [
-    // IMPORTANT: ConversationsRegistryService MUST be listed before BotUpdate
-    // to ensure conversations are registered in constructor before handlers
-    ConversationsRegistryService,
     BotUpdate,
   ],
   exports: [],

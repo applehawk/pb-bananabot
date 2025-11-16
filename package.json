@@ -1,7 +1,6 @@
 {
   "name": "bananabot-grammy",
   "version": "1.0.0",
-  "type": "module",
   "description": "Telegram VPN Bot with NestJS and GrammyJS",
   "author": "VladMac",
   "private": true,

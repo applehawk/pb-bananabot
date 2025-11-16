@@ -41,16 +41,13 @@ export class BotService {
    * Upsert user from context
    */
   async upsertUser(ctx: MyContext): Promise<void> {
-    const upsertUser: User = {
-      userId: ctx.from?.id,
-      chatId: ctx.chat?.id,
-      firstname: ctx.from?.first_name || null,
-      lastname: ctx.from?.last_name || null,
-      username: ctx.from?.username || null,
-      balance: 0.0,
-      createdAt: new Date(),
-    };
-    await this.userService.upsert(upsertUser);
+    await this.userService.upsert({
+      telegramId: ctx.from?.id,
+      username: ctx.from?.username,
+      firstName: ctx.from?.first_name,
+      lastName: ctx.from?.last_name,
+      languageCode: ctx.from?.language_code || 'ru',
+    });
   }
 
   /**

@@ -1,11 +1,22 @@
 import { PaymentStatusEnum } from '../enum/payment-status.enum';
-import { Payment } from '@prisma/client';
+
+/**
+ * Payment data structure for payment strategies
+ * Replaces old Payment Prisma model
+ */
+export interface PaymentData {
+  paymentId: string;
+  form?: string; // HTML form for payment
+  amount?: number;
+  currency?: string;
+  status?: string;
+}
 
 export class PaymentProxy {
-  _payment: Payment = {} as Payment;
+  _payment: PaymentData;
 
-  constructor(payment: Partial<Payment>) {
-    Object.assign(this._payment, payment);
+  constructor(payment: PaymentData) {
+    this._payment = payment;
   }
 }
 
@@ -14,11 +25,9 @@ export type CreatePaymentData = {
   chatId: number;
   tariffId: string;
   tariffPrice: number;
-  //paymentMonths: number;
-  //email?: string;
   paymentAt?: Date;
-  //limit?: number;
 };
+
 export interface PaymentStrategy {
   createPayment(data: CreatePaymentData): Promise<PaymentProxy>;
   validateTransaction(paymentId: string): Promise<PaymentStatusEnum>;

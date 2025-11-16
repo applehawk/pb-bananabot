@@ -3,11 +3,12 @@ import { GrammYService } from './grammy.service';
 import { BotService } from './bot.service';
 import { WebhookController } from './webhook.controller';
 import { UserModule } from '../user/user.module';
-import { TariffModule } from '../tariff/tariff.module';
-import { PaymentModule } from '../payment/payment.module';
+// Legacy VPN modules (disabled)
+// import { TariffModule } from '../tariff/tariff.module';
+// import { PaymentModule } from '../payment/payment.module';
 import { CreditsModule } from '../credits/credits.module';
 import { GenerationModule } from '../generation/generation.module';
-import { ImageGenUpdate } from './image-gen.update';
+import { ImageGenModule } from './image-gen.module';
 import { GrammYServiceExtension } from './grammy-service-extension';
 
 /**
@@ -15,22 +16,26 @@ import { GrammYServiceExtension } from './grammy-service-extension';
  *
  * Provides global access to the GrammY Bot instance throughout the application.
  * Supports both polling (for development) and webhook (for production) modes.
- * Extended with image generation capabilities.
+ *
+ * Module initialization order:
+ * 1. ImageGenModule imports ConversationsModule
+ *    - ConversationsRegistryService.onModuleInit() registers conversations
+ *    - ImageGenService.onModuleInit() registers commands using those conversations
+ * 2. BotUpdate.onModuleInit() registers base commands
+ * 3. BotUpdate.onApplicationBootstrap() starts the bot
  */
 @Global()
 @Module({
   imports: [
     forwardRef(() => UserModule),
-    forwardRef(() => TariffModule),
-    forwardRef(() => PaymentModule),
     forwardRef(() => CreditsModule),
     forwardRef(() => GenerationModule),
+    ImageGenModule, // Handles image generation commands (imports ConversationsModule internally)
   ],
   providers: [
     GrammYService,
     BotService,
     GrammYServiceExtension,
-    ImageGenUpdate,
   ],
   controllers: [WebhookController],
   exports: [GrammYService, BotService],

@@ -15,7 +15,7 @@ export default () => ({
 
   gemini: {
     apiKey: process.env.GEMINI_API_KEY,
-    model: process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp',
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash-image',
     maxRetries: parseInt(process.env.GEMINI_MAX_RETRIES, 10) || 3,
     timeout: parseInt(process.env.GEMINI_TIMEOUT, 10) || 60000,
   },

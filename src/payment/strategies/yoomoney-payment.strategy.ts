@@ -1,8 +1,6 @@
 import { YooMoneyClient } from '@app/yoomoney-client';
 import { Injectable } from '@nestjs/common';
 import { PaymentStatusEnum } from '../enum/payment-status.enum';
-import { PaymentSystemEnum } from '../enum/payment-system.enum';
-import { Payment } from '@prisma/client';
 import {
   PaymentStrategy,
   CreatePaymentData,
@@ -26,28 +24,21 @@ export class YooMoneyPaymentStrategy implements PaymentStrategy {
     ...data
   }: CreatePaymentData): Promise<PaymentProxy> {
     const paymentAmount = tariffPrice;
-    const comment = `Payment for ${tariffPrice} tariff price, userId: ${data.userId}, chatId: ${data.chatId}`;
+    const comment = `Payment for ${tariffPrice} credits, userId: ${data.userId}`;
     const paymentId = uuidv4();
-    const orderId = uuidv4();
 
     const form = this.yooMoneyClient.generatePaymentForm(
       paymentAmount,
       paymentId,
       comment,
     );
-    const url = `${this.configService.get('DOMAIN')}/payment/${paymentId}`;
 
     const payment = new PaymentProxy({
-      ...data,
       paymentId,
-      orderId,
-      amount: tariffPrice,
-      paymentSystem: PaymentSystemEnum.YOOMONEY,
-      paymentAmount,
-      paymentCurrency: 'RUB',
-      url,
       form,
-      //monthCount: paymentMonths,
+      amount: tariffPrice,
+      currency: 'RUB',
+      status: PaymentStatusEnum.PENDING,
     });
 
     return payment;

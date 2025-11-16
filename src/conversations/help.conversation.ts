@@ -1,9 +1,15 @@
-import { Composer } from 'grammy';
-import { MyContext } from '../telegram-context.interface';
+import { Conversation } from '@grammyjs/conversations';
+import { MyContext } from '../grammy/grammy-context.interface';
 
-export const helpCommand = new Composer<MyContext>();
-
-helpCommand.command('help', async (ctx) => {
+/**
+ * HELP Conversation
+ *
+ * Displays help information, commands, and usage examples
+ */
+export async function helpConversation(
+  conversation: Conversation<MyContext>,
+  ctx: MyContext,
+) {
   const helpMessage =
     `🤖 **AI Image Generator Bot - Справка**\n\n` +
     `**Основные команды:**\n` +
@@ -54,4 +60,4 @@ helpCommand.command('help', async (ctx) => {
       ],
     },
   });
-});
+}

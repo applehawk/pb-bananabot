@@ -16,4 +16,10 @@ export enum CommandEnum {
 
   CONFIRM_PAYMENT = 'CONFIRM_PAYMENT',
   PAY_WITH_YOOMONEY = 'PAY_WITH_YOOMONEY',
+
+  // Image generation commands
+  GENERATE = 'generate',
+  BALANCE = 'balance',
+  HELP = 'help',
+  HISTORY = 'history',
 }

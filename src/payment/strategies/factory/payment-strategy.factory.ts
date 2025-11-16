@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PaymentStrategy } from '../payment-strategy.interface';
-import { PaymentSystemEnum } from 'src/payment/enum/payment-system.enum';
-
-//import { InjectModel } from '@nestjs/mongoose';
-//import { Model } from 'mongoose';
-
-import { Payment } from '@prisma/client';
+import { PaymentSystemEnum } from '../../enum/payment-system.enum';
 import { YooMoneyPaymentStrategy } from '../yoomoney-payment.strategy';
 import { YooMoneyClient } from '@app/yoomoney-client';
 import { ConfigService } from '@nestjs/config';

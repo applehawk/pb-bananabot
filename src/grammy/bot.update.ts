@@ -1,22 +1,28 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GrammYService } from './grammy.service';
 import { MyContext } from './grammy-context.interface';
 import { BotService } from './bot.service';
 import { UserService } from '../user/user.service';
-import { TariffService } from '../tariff/tariff.service';
-import { BalanceChangeTypeEnum } from '../payment/enum/balancechange-type.enum';
+// import { TariffService } from '../tariff/tariff.service'; // Legacy VPN module
+import { PrismaService } from '../database/prisma.service';
 import { CommandEnum } from '../enum/command.enum';
-import { InlineKeyboard } from 'grammy';
 
 /**
  * Bot Update Handler (grammY version)
  *
  * Registers all command handlers, callback query handlers, and text message handlers.
  * Replaces the old Telegraf @Update() decorator-based approach with direct grammY API.
+ *
+ * Note: This runs AFTER all OnModuleInit hooks in all modules thanks to OnApplicationBootstrap
  */
 @Injectable()
-export class BotUpdate implements OnModuleInit {
+export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
   private readonly logger = new Logger(BotUpdate.name);
   private readonly adminChatId: number;
 
@@ -25,7 +31,8 @@ export class BotUpdate implements OnModuleInit {
     private readonly botService: BotService,
     private readonly configService: ConfigService,
     private readonly userService: UserService,
-    private readonly tariffService: TariffService,
+    // private readonly tariffService: TariffService, // Legacy VPN module
+    private readonly prisma: PrismaService,
   ) {
     this.logger.log('BotUpdate constructor called');
     this.adminChatId = Number(configService.get('ADMIN_CHAT_ID'));
@@ -33,7 +40,7 @@ export class BotUpdate implements OnModuleInit {
 
   /**
    * Initialize all handlers after module initialization
-   * Conversations are registered in ConversationsRegistryService constructor
+   * Conversations are registered in ConversationsRegistryService.onModuleInit()
    */
   async onModuleInit(): Promise<void> {
     this.logger.log(
@@ -46,7 +53,22 @@ export class BotUpdate implements OnModuleInit {
   }
 
   /**
+   * Start bot after all modules are initialized
+   * This ensures conversations are registered before bot starts processing updates
+   */
+  async onApplicationBootstrap(): Promise<void> {
+    this.logger.log(
+      'BotUpdate.onApplicationBootstrap() - starting bot after all modules initialized...',
+    );
+    // IMPORTANT: Start bot after all handlers AND conversations are registered
+    this.grammyService.startBot();
+    this.logger.log('Bot started successfully');
+  }
+
+  /**
    * Register command handlers
+   * Note: Image generation commands (/generate, /balance, /help, /history)
+   * are registered in ImageGenService
    */
   private registerCommands(): void {
     const bot = this.grammyService.bot;
@@ -56,10 +78,10 @@ export class BotUpdate implements OnModuleInit {
       await this.handleStart(ctx);
     });
 
-    // /tariff command (admin only)
-    bot.command('tariff', async (ctx) => {
-      await this.handleTariffCommand(ctx);
-    });
+    // Legacy VPN commands (disabled)
+    // bot.command('tariff', async (ctx) => {
+    //   await this.handleTariffCommand(ctx);
+    // });
 
     // /up command (admin only)
     bot.command('up', async (ctx) => {
@@ -131,34 +153,34 @@ export class BotUpdate implements OnModuleInit {
   }
 
   /**
-   * /tariff command handler (admin only)
+   * /tariff command handler (admin only) - LEGACY VPN MODULE (DISABLED)
    * Usage: /tariff <name> <price>
    */
-  private async handleTariffCommand(ctx: MyContext): Promise<void> {
-    if (!this.isAdmin(ctx)) {
-      return;
-    }
-
-    try {
-      const matchText = typeof ctx.match === 'string' ? ctx.match : '';
-      const args = matchText.split(' ').filter(Boolean) || [];
-      const [tariffName, priceStr] = args;
-
-      if (!tariffName || !priceStr || Number.isNaN(parseInt(priceStr))) {
-        throw new Error(
-          'Не указан один из обязательных параметров или указан неверно!',
-        );
-      }
-
-      const price = parseInt(priceStr);
-      await this.tariffService.updateTariffPrice(tariffName, price);
-      await ctx.reply(
-        `✅ Тариф "${tariffName}" обновлен. Новая цена: ${price} руб.`,
-      );
-    } catch (error) {
-      await ctx.reply(`❌ Ошибка: ${error.message}`);
-    }
-  }
+  // private async handleTariffCommand(ctx: MyContext): Promise<void> {
+  //   if (!this.isAdmin(ctx)) {
+  //     return;
+  //   }
+  //
+  //   try {
+  //     const matchText = typeof ctx.match === 'string' ? ctx.match : '';
+  //     const args = matchText.split(' ').filter(Boolean) || [];
+  //     const [tariffName, priceStr] = args;
+  //
+  //     if (!tariffName || !priceStr || Number.isNaN(parseInt(priceStr))) {
+  //       throw new Error(
+  //         'Не указан один из обязательных параметров или указан неверно!',
+  //       );
+  //     }
+  //
+  //     const price = parseInt(priceStr);
+  //     await this.tariffService.updateTariffPrice(tariffName, price);
+  //     await ctx.reply(
+  //       `✅ Тариф "${tariffName}" обновлен. Новая цена: ${price} руб.`,
+  //     );
+  //   } catch (error) {
+  //     await ctx.reply(`❌ Ошибка: ${error.message}`);
+  //   }
+  // }
 
   /**
    * /up command handler (admin only)
@@ -181,16 +203,22 @@ export class BotUpdate implements OnModuleInit {
       }
 
       const changeInt = parseInt(changeStr);
-      const user = await this.userService.findUserByUsername(username);
-      const balanceChange = await this.userService.commitBalanceChange(
-        user,
-        changeInt,
-        BalanceChangeTypeEnum.MANUALLY,
-      );
+
+      // Find user by username
+      const user = await this.prisma.user.findFirst({
+        where: { username },
+      });
+
+      if (!user) {
+        throw new Error(`Пользователь ${username} не найден`);
+      }
+
+      // Update credits
+      await this.userService.updateCredits(user.id, changeInt);
 
       await this.grammyService.bot.api.sendMessage(
         this.adminChatId,
-        `Пополнен баланс на ${balanceChange.changeAmount}, статус пополнения: ${balanceChange.status}`,
+        `Пополнен баланс на ${changeInt} кредитов для @${username}`,
       );
     } catch (error) {
       await ctx.reply(`❌ Ошибка: ${error.message}`);
@@ -267,22 +295,13 @@ export class BotUpdate implements OnModuleInit {
         return;
       }
 
-      // Update user chatId if not set
-      const user = await this.userService.findOneByUserId(ctx.from?.id);
-      if (user && !user.chatId) {
-        await this.userService.updateUser({
-          where: { userId: user.userId },
-          data: { chatId: ctx.chat?.id },
-        });
-      }
-
       this.logger.log(`Text message: ${ctx.message?.text}`);
 
       // Check if text matches any button text and enter corresponding scene
       const messageText = ctx.message?.text;
       if (messageText === '📱в меню') {
         // Special handling for HOME button
-        const existUser = await this.userService.findOneByUserId(ctx.from?.id);
+        const existUser = await this.userService.findByTelegramId(ctx.from?.id);
         if (existUser) {
           await ctx.conversation.enter(CommandEnum.HOME);
         } else {

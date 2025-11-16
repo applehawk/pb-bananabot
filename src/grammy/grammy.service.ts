@@ -10,11 +10,12 @@ import { ConfigService } from '@nestjs/config';
 import { Bot, session } from 'grammy';
 import { conversations, createConversation } from '@grammyjs/conversations';
 import { hydrate } from '@grammyjs/hydrate';
-import { MyContext } from './grammy-context.interface';
+import { MyContext, SessionData } from './grammy-context.interface';
 import { BotService } from './bot.service';
 import { UserService } from '../user/user.service';
-import { TariffService } from '../tariff/tariff.service';
-import { PaymentService } from '../payment/payment.service';
+// Legacy VPN modules (disabled)
+// import { TariffService } from '../tariff/tariff.service';
+// import { PaymentService } from '../payment/payment.service';
 
 /**
  * GrammY Service
@@ -38,10 +39,10 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     private readonly botService: BotService,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
-    @Inject(forwardRef(() => TariffService))
-    private readonly tariffService: TariffService,
-    @Inject(forwardRef(() => PaymentService))
-    private readonly paymentService: PaymentService,
+    // @Inject(forwardRef(() => TariffService)) // Legacy VPN module
+    // private readonly tariffService: TariffService,
+    // @Inject(forwardRef(() => PaymentService)) // Legacy VPN module
+    // private readonly paymentService: PaymentService,
   ) {
     const token = this.configService.get<string>('BOT_TOKEN');
     if (!token) {
@@ -53,25 +54,29 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
       this.configService.get<string>('NODE_ENV') === 'production';
 
     this.setupBasicMiddlewares();
+    this.setupServiceMiddlewares();
     this.setupHandlers();
   }
 
   /**
    * Setup basic bot middlewares (session and hydration)
-   * Service injection and conversations will be added later in onModuleInit
    */
   private setupBasicMiddlewares(): void {
     // Session management - must be first
     // Using a session key version to invalidate old sessions after service injection changes
     this.bot.use(
       session({
-        initial: (): { messageId?: number; tariffId?: string } => ({
+        initial: (): SessionData => ({
           messageId: undefined,
           tariffId: undefined,
+          generationId: undefined,
+          lastPrompt: undefined,
+          awaitingPhoto: undefined,
+          generationPrompt: undefined,
         }),
         getSessionKey: (ctx) => {
           // Add version to session key to invalidate old sessions
-          const version = 'v2'; // Increment this to clear all sessions
+          const version = 'v3'; // Increment this to clear all sessions
           return ctx.chat?.id !== undefined
             ? `${ctx.chat.id}:${version}`
             : undefined;
@@ -87,7 +92,7 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Setup service injection and conversations middleware
-   * Called in onModuleInit after all services are injected
+   * Called in constructor after all services are injected via DI
    */
   private setupServiceMiddlewares(): void {
     // Custom middleware to inject Nest services into context
@@ -96,8 +101,9 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
       // Make services available in conversation handlers
       ctx.botService = this.botService;
       ctx.userService = this.userService;
-      ctx.tariffService = this.tariffService;
-      ctx.paymentService = this.paymentService;
+      // Legacy VPN services (disabled)
+      // ctx.tariffService = this.tariffService;
+      // ctx.paymentService = this.paymentService;
       await next();
     });
 
@@ -167,13 +173,10 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Module initialization
-   * Set up service injection and conversations middleware after all services are injected
+   * Middlewares and handlers are set up in constructor
    */
   async onModuleInit(): Promise<void> {
-    this.logger.log(
-      'GrammYService.onModuleInit() - setting up service middlewares',
-    );
-    this.setupServiceMiddlewares();
+    this.logger.log('GrammYService.onModuleInit() - ready for conversations');
     this.logger.log(
       'GrammYService initialized (bot not started yet - waiting for conversations)',
     );

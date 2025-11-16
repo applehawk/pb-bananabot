@@ -204,16 +204,21 @@ model Transaction {
   amount        Float?   // Money amount (USD, RUB, etc.)
   creditsAdded  Float    // Can be negative for costs
 
-  // Payment Details
+  // Payment Details (for PURCHASE type)
   paymentMethod PaymentMethod @default(FREE)
-  paymentId     String?  // External payment ID
+  paymentId     String?  // External payment ID (unique per system)
   currency      String?  @default("USD")
+
+  // Package Info (for PURCHASE type)
+  packageId     String?
+  package       CreditPackage? @relation(fields: [packageId], references: [id])
 
   // Status
   status        TransactionStatus @default(PENDING)
+  isFinal       Boolean  @default(false) // For payment completion tracking
 
   // Metadata
-  metadata      Json?    // Store payment details, package info, etc.
+  metadata      Json?    // Store payment form, webhook data, etc.
   description   String?  @db.Text
 
   // Timestamps
@@ -297,6 +302,8 @@ model CreditPackage {
   priceCrypto   Float?
 
   description   String?  @db.Text
+
+  transactions  Transaction[] // Purchases using this package
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

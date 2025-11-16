@@ -98,29 +98,40 @@ export class GeminiService {
       const result = await this.model.generateContent({
         contents: [
           {
-            role: 'user',
             parts: [{ text: fullPrompt }],
           },
         ],
         generationConfig: {
-          responseMimeType: 'image/jpeg',
-          temperature: 0.9,
+          responseModalities: ['Image'],
+          imageConfig: {
+            aspectRatio: aspectRatio,
+          },
         },
       });
 
       const response = await result.response;
+      const images: Array<{ data: string; mimeType: string }> = [];
 
-      // Note: Gemini 2.0 Flash returns image data differently
-      // This is a placeholder - adjust based on actual API response
-      const imageData = response.text(); // or response.candidates[0]?.content
+      // Extract images from response parts
+      if (response.candidates && response.candidates[0]) {
+        const parts = response.candidates[0].content?.parts || [];
+
+        for (const part of parts) {
+          if (part.inlineData) {
+            images.push({
+              data: part.inlineData.data, // Already base64
+              mimeType: part.inlineData.mimeType || 'image/png',
+            });
+          }
+        }
+      }
+
+      if (images.length === 0) {
+        throw new Error('No images generated in response');
+      }
 
       return {
-        images: [
-          {
-            data: imageData,
-            mimeType: 'image/jpeg',
-          },
-        ],
+        images,
         prompt,
         enhancedPrompt: fullPrompt,
       };
@@ -152,11 +163,11 @@ export class GeminiService {
     );
 
     try {
-      const parts: any[] = [{ text: prompt }];
+      const contents: any[] = [{ text: prompt }];
 
       // Add input images
       for (const img of inputImages) {
-        parts.push({
+        contents.push({
           inlineData: {
             mimeType: img.mimeType,
             data: img.data.toString('base64'),
@@ -167,26 +178,40 @@ export class GeminiService {
       const result = await this.model.generateContent({
         contents: [
           {
-            role: 'user',
-            parts,
+            parts: contents,
           },
         ],
         generationConfig: {
-          responseMimeType: 'image/jpeg',
-          temperature: 0.9,
+          responseModalities: ['Image'],
+          imageConfig: {
+            aspectRatio: aspectRatio,
+          },
         },
       });
 
       const response = await result.response;
-      const imageData = response.text();
+      const images: Array<{ data: string; mimeType: string }> = [];
+
+      // Extract images from response parts
+      if (response.candidates && response.candidates[0]) {
+        const parts = response.candidates[0].content?.parts || [];
+
+        for (const part of parts) {
+          if (part.inlineData) {
+            images.push({
+              data: part.inlineData.data,
+              mimeType: part.inlineData.mimeType || 'image/png',
+            });
+          }
+        }
+      }
+
+      if (images.length === 0) {
+        throw new Error('No images generated in response');
+      }
 
       return {
-        images: [
-          {
-            data: imageData,
-            mimeType: 'image/jpeg',
-          },
-        ],
+        images,
         prompt,
       };
     } catch (error) {

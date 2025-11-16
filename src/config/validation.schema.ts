@@ -16,7 +16,7 @@ export const validationSchema = Joi.object({
 
   // Gemini
   GEMINI_API_KEY: Joi.string().required(),
-  GEMINI_MODEL: Joi.string().default('gemini-2.0-flash-exp'),
+  GEMINI_MODEL: Joi.string().default('gemini-2.5-flash-image'),
   GEMINI_MAX_RETRIES: Joi.number().default(3),
   GEMINI_TIMEOUT: Joi.number().default(60000),
 

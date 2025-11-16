@@ -2,10 +2,12 @@ import { Context, SessionFlavor } from 'grammy';
 import { ConversationFlavor } from '@grammyjs/conversations';
 import { BotService } from './bot.service';
 import { UserService } from '../user/user.service';
-import { TariffService } from '../tariff/tariff.service';
-import { PaymentService } from '../payment/payment.service';
+// Legacy VPN modules (disabled)
+// import { TariffService } from '../tariff/tariff.service';
+// import { PaymentService } from '../payment/payment.service';
 import { CreditsService } from '../credits/credits.service';
 import { GenerationService } from '../generation/generation.service';
+import { GenerationMode } from '../enum/generation-mode.enum';
 
 /**
  * Session data structure
@@ -17,6 +19,11 @@ export interface SessionData {
   generationId?: string;
   lastPrompt?: string;
   awaitingPhoto?: boolean;
+  generationPrompt?: string; // Prompt passed from command to conversation
+
+  // Generation mode settings
+  generationMode?: GenerationMode; // Current generation mode
+  imageCount?: number; // Number of images to generate (for MULTI_IMAGE mode)
 }
 
 /**
@@ -26,9 +33,6 @@ export interface SessionData {
 export interface CustomContextProps {
   botService: BotService;
   userService: UserService;
-  tariffService: TariffService;
-  paymentService: PaymentService;
-  // New services for image generation
   creditsService: CreditsService;
   generationService: GenerationService;
 }
