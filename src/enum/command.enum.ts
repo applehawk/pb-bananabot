@@ -22,4 +22,5 @@ export enum CommandEnum {
   BALANCE = 'balance',
   HELP = 'help',
   HISTORY = 'history',
+  BUY_CREDITS = 'buy_credits',
 }

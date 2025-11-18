@@ -4,7 +4,7 @@ import { BotService } from './bot.service';
 import { UserService } from '../user/user.service';
 // Legacy VPN modules (disabled)
 // import { TariffService } from '../tariff/tariff.service';
-// import { PaymentService } from '../payment/payment.service';
+import { PaymentService } from '../payment/payment.service';
 import { CreditsService } from '../credits/credits.service';
 import { GenerationService } from '../generation/generation.service';
 import { GenerationMode } from '../enum/generation-mode.enum';
@@ -35,6 +35,7 @@ export interface CustomContextProps {
   userService: UserService;
   creditsService: CreditsService;
   generationService: GenerationService;
+  paymentService: PaymentService;
 }
 
 /**

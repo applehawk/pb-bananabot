@@ -1,4 +1,4 @@
-.PHONY: clean clean-all clean-build clean-deps clean-cache install build dev start test help
+.PHONY: clean clean-all clean-build clean-deps clean-cache install build dev start stop kill-port test help web-install web-dev web-build web-start
 
 # Default target
 help:
@@ -12,7 +12,16 @@ help:
 	@echo "  make build          - Build the project"
 	@echo "  make dev            - Run in development mode"
 	@echo "  make start          - Run in production mode"
+	@echo "  make stop           - Stop running bot process"
+	@echo "  make kill-port      - Kill process on port 3000"
+	@echo "  make restart        - Stop and start the bot"
 	@echo "  make test           - Run tests"
+	@echo ""
+	@echo "Web Admin Panel:"
+	@echo "  make web-install    - Install admin panel dependencies"
+	@echo "  make web-dev        - Run admin panel in dev mode (port 3001)"
+	@echo "  make web-build      - Build admin panel for production"
+	@echo "  make web-start      - Start admin panel in production"
 
 # Remove build artifacts and cache files
 clean:
@@ -66,6 +75,24 @@ dev:
 start:
 	npm run start:prod
 
+# Stop running bot process
+stop:
+	@echo "Stopping bot processes..."
+	@pkill -f "node dist/src/main-grammy" || echo "No bot process found"
+	@echo "✓ Bot stopped"
+
+# Kill process on port 3000
+kill-port:
+	@echo "Killing process on port 3000..."
+	@lsof -ti:3000 | xargs kill -9 2>/dev/null || echo "No process found on port 3000"
+	@echo "✓ Port 3000 freed"
+
+# Restart bot (stop + start)
+restart: stop kill-port
+	@echo "Restarting bot..."
+	@sleep 1
+	@make start
+
 # Run with migrations in production
 start-migrate:
 	npm run start:migrate:prod
@@ -89,3 +116,33 @@ migrate:
 # Fresh install (clean + install + build)
 fresh: clean-all install build
 	@echo "✓ Fresh installation complete"
+
+# === Web Admin Panel Commands ===
+
+# Install admin panel dependencies
+web-install:
+	@echo "Installing admin panel dependencies..."
+	cd web && pnpm install
+	@echo "✓ Admin panel dependencies installed"
+
+# Run admin panel in development mode
+web-dev:
+	@echo "Starting admin panel in development mode..."
+	cd web && pnpm run dev
+
+# Build admin panel for production
+web-build:
+	@echo "Building admin panel..."
+	cd web && pnpm run build
+	@echo "✓ Admin panel built"
+
+# Start admin panel in production mode
+web-start:
+	@echo "Starting admin panel in production mode..."
+	cd web && pnpm start
+
+# Seed database with test packages
+web-seed:
+	@echo "Seeding database with test packages..."
+	cd web && pnpm run seed
+	@echo "✓ Database seeded"

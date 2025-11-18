@@ -5,7 +5,7 @@ import { WebhookController } from './webhook.controller';
 import { UserModule } from '../user/user.module';
 // Legacy VPN modules (disabled)
 // import { TariffModule } from '../tariff/tariff.module';
-// import { PaymentModule } from '../payment/payment.module';
+import { PaymentModule } from '../payment/payment.module';
 import { CreditsModule } from '../credits/credits.module';
 import { GenerationModule } from '../generation/generation.module';
 import { ImageGenModule } from './image-gen.module';
@@ -30,6 +30,7 @@ import { GrammYServiceExtension } from './grammy-service-extension';
     forwardRef(() => UserModule),
     forwardRef(() => CreditsModule),
     forwardRef(() => GenerationModule),
+    forwardRef(() => PaymentModule),
     ImageGenModule, // Handles image generation commands (imports ConversationsModule internally)
   ],
   providers: [

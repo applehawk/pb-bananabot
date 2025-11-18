@@ -2,6 +2,7 @@ import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { GrammYService } from './grammy.service';
 import { CreditsService } from '../credits/credits.service';
 import { GenerationService } from '../generation/generation.service';
+import { PaymentService } from '../payment/payment.service';
 
 /**
  * Extension для GrammYService
@@ -15,6 +16,8 @@ export class GrammYServiceExtension {
     private readonly creditsService: CreditsService,
     @Inject(forwardRef(() => GenerationService))
     private readonly generationService: GenerationService,
+    @Inject(forwardRef(() => PaymentService))
+    private readonly paymentService: PaymentService,
   ) {
     // Расширяем middleware для инъекции новых сервисов
     this.setupImageGenServices();
@@ -27,6 +30,7 @@ export class GrammYServiceExtension {
     bot.use(async (ctx, next) => {
       ctx.creditsService = this.creditsService;
       ctx.generationService = this.generationService;
+      ctx.paymentService = this.paymentService;
       await next();
     });
   }
