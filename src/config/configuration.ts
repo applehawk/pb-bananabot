@@ -21,7 +21,9 @@ export default () => ({
   },
 
   database: {
-    url: process.env.DATABASE_URL,
+    url:
+      process.env.DATABASE_URL ||
+      `postgresql://${process.env.DATABASE_USER}:${process.env.DATABASE_PASSWORD}@${process.env.DATABASE_HOST}:${process.env.DATABASE_PORT || 5432}/${process.env.DATABASE_NAME}?schema=public`,
   },
 
   redis: {
@@ -31,11 +33,8 @@ export default () => ({
 
   payment: {
     yoomoney: {
-      domain: process.env.YOOMONEY_DOMAIN,
       token: process.env.YOOMONEY_TOKEN,
-      shopId: process.env.YOOMONEY_SHOP_ID,
       secret: process.env.YOOMONEY_SECRET,
-      wallet: process.env.YOOMONEY_WALLET,
       successUrl: process.env.YOOMONEY_SUCCESS_URL || 'https://t.me/your_bot',
     },
     telegramStars: {

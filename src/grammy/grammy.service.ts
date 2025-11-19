@@ -43,9 +43,11 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     // @Inject(forwardRef(() => PaymentService)) // Legacy VPN module
     // private readonly paymentService: PaymentService,
   ) {
-    const token = this.configService.get<string>('BOT_TOKEN');
+    const token = this.configService.get<string>('telegram.botToken');
     if (!token) {
-      throw new Error('BOT_TOKEN not set in environment variables');
+      throw new Error(
+        'TELEGRAM_BOT_TOKEN not set in environment variables or configuration',
+      );
     }
 
     this.bot = new Bot<MyContext>(token);

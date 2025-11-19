@@ -71,7 +71,12 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
-      DATABASE_URL: postgresql://${DATABASE_USER:-bananabot}:${DATABASE_PASSWORD:-bananabot_secret}@postgres:5432/${DATABASE_NAME:-bananabot}?schema=public
+      DATABASE_HOST: ${DATABASE_HOST:-postgres}
+      DATABASE_PORT: ${DATABASE_PORT:-5432}
+      DATABASE_USER: ${DATABASE_USER:-bananabot}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-bananabot_secret}
+      DATABASE_NAME: ${DATABASE_NAME:-bananabot}
+      DATABASE_URL: postgresql://${DATABASE_USER:-bananabot}:${DATABASE_PASSWORD:-bananabot_secret}@${DATABASE_HOST:-postgres}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-bananabot}?schema=public
       REDIS_URL: redis://redis:6379
     env_file:
       - .env

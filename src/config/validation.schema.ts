@@ -21,7 +21,12 @@ export const validationSchema = Joi.object({
   GEMINI_TIMEOUT: Joi.number().default(60000),
 
   // Database
-  DATABASE_URL: Joi.string().required(),
+  DATABASE_URL: Joi.string().optional(),
+  DATABASE_HOST: Joi.string().optional(),
+  DATABASE_PORT: Joi.number().default(5432),
+  DATABASE_USER: Joi.string().optional(),
+  DATABASE_PASSWORD: Joi.string().optional(),
+  DATABASE_NAME: Joi.string().optional(),
 
   // Redis
   REDIS_URL: Joi.string().optional(),
@@ -29,9 +34,7 @@ export const validationSchema = Joi.object({
 
   // Payment - YooMoney
   YOOMONEY_TOKEN: Joi.string().optional(),
-  YOOMONEY_SHOP_ID: Joi.string().optional(),
   YOOMONEY_SECRET: Joi.string().optional(),
-  YOOMONEY_WALLET: Joi.string().optional(),
   YOOMONEY_SUCCESS_URL: Joi.string().uri().optional(),
 
   // Payment - Telegram Stars
