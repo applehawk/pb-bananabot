@@ -14,10 +14,12 @@ RUN npm ci
 
 # Copy source code
 COPY src ./src
+
+# Copy prisma submodule
 COPY prisma ./prisma
 
-# Generate Prisma Client
-RUN npx prisma generate
+# Install prisma dependencies and generate client
+RUN cd prisma && npm install && npx prisma generate
 
 # Build application
 RUN npm run build
