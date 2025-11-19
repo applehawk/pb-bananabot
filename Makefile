@@ -210,7 +210,7 @@ admin-build:
 # Start all services with Docker Compose (with prisma generation)
 docker-up: db-generate
 	@echo "Starting all services (bot, admin, postgres, redis)..."
-	docker-compose up -d
+	docker compose up -d
 	@echo "✓ All services started"
 	@echo ""
 	@echo "Services available at:"
@@ -244,13 +244,13 @@ docker-build:
 # Start only admin panel in Docker (production)
 admin-prod:
 	@echo "Starting admin panel in Docker (production)..."
-	docker-compose up -d admin
+	docker compose up -d admin
 	@echo "✓ Admin panel started at http://localhost:3001"
 
 # Stop admin panel Docker container
 admin-stop:
 	@echo "Stopping admin panel container..."
-	docker-compose stop admin
+	docker compose stop admin
 	@echo "✓ Admin panel stopped"
 
 # ============================================================================

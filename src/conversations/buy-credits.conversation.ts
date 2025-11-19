@@ -38,66 +38,74 @@ export async function buyCreditsConversation(
     return;
   }
 
-  // FIX 2: Write logic linearly. grammY handles skipping this reply on replay.
-  let message = `💎 <b>Покупка кредитов</b>\n\n`; // Switched to HTML for safety
-  message += `Ваш текущий баланс: <b>${user.credits.toFixed(1)}</b> кредитов\n\n`;
-  message += `📦 <b>Доступные пакеты:</b>\n\n`;
+  // --- Quick Buy Logic ---
+  let targetPackageId: string | undefined;
+  let targetPaymentMethod: string | undefined;
 
-  const keyboard = new InlineKeyboard();
-
-  for (const pkg of packages) {
-    const badge = pkg.popular ? '⭐ ' : '';
-    const discount = pkg.discount > 0 ? ` (-${pkg.discount}%)` : '';
-
-    // Using HTML tags <b> and <i> prevents crashes with special chars in names
-    message += `${badge}<b>${pkg.name}</b>\n`;
-    message += `  💎 ${pkg.credits} кредитов\n`;
-    message += `  💰 ${pkg.priceYooMoney || pkg.price} руб.${discount}\n`;
-    if (pkg.description) {
-      message += `  📝 <i>${pkg.description}</i>\n`;
+  if (ctx.session.quickBuy) {
+    if (packages.length > 0) {
+      targetPackageId = packages[0].id;
+      targetPaymentMethod = 'yoomoney';
+      ctx.session.quickBuy = undefined; // Reset flag
     }
-    message += `\n`;
-
-    keyboard.text(
-      `${badge}${pkg.name} - ${pkg.credits} кр.`,
-      `select_package:${pkg.id}`,
-    );
-    keyboard.row();
   }
 
-  keyboard.text('❌ Отмена', 'cancel_purchase');
+  // --- Package Selection ---
+  if (!targetPackageId) {
+    let message = `💎 <b>Покупка кредитов</b>\n\n`;
+    message += `Ваш текущий баланс: <b>${user.credits.toFixed(1)}</b> кредитов\n\n`;
+    message += `📦 <b>Доступные пакеты:</b>\n\n`;
 
-  await ctx.reply(message, {
-    parse_mode: 'HTML', // Safer than Markdown
-    reply_markup: keyboard,
-  });
+    const keyboard = new InlineKeyboard();
 
-  // --- Wait for Package Selection ---
+    for (const pkg of packages) {
+      const badge = pkg.popular ? '⭐ ' : '';
+      const discount = pkg.discount > 0 ? ` (-${pkg.discount}%)` : '';
 
-  const packageResponse = await conversation.waitFor('callback_query:data');
-  const callbackData = packageResponse.callbackQuery.data;
+      message += `${badge}<b>${pkg.name}</b>\n`;
+      message += `  💎 ${pkg.credits} кредитов\n`;
+      message += `  💰 ${pkg.priceYooMoney || pkg.price} руб.${discount}\n`;
+      if (pkg.description) {
+        message += `  📝 <i>${pkg.description}</i>\n`;
+      }
+      message += `\n`;
 
-  // Important: Answer callback immediately to stop the loading animation
-  await packageResponse.answerCallbackQuery();
+      keyboard.text(
+        `${badge}${pkg.name} - ${pkg.credits} кр.`,
+        `select_package:${pkg.id}`,
+      );
+      keyboard.row();
+    }
 
-  if (callbackData === 'cancel_purchase') {
-    await ctx.reply('❌ Покупка отменена.');
-    return;
+    keyboard.text('❌ Отмена', 'cancel_purchase');
+
+    await ctx.reply(message, {
+      parse_mode: 'HTML',
+      reply_markup: keyboard,
+    });
+
+    const packageResponse = await conversation.waitFor('callback_query:data');
+    const callbackData = packageResponse.callbackQuery.data;
+    await packageResponse.answerCallbackQuery();
+
+    if (callbackData === 'cancel_purchase') {
+      await ctx.deleteMessage();
+      return;
+    }
+
+    if (!callbackData.startsWith('select_package:')) {
+      await ctx.reply('❌ Пожалуйста, выберите пакет из меню.');
+      return;
+    }
+
+    targetPackageId = callbackData.replace('select_package:', '');
   }
-
-  if (!callbackData.startsWith('select_package:')) {
-    // If user clicked an old button or something unexpected
-    await ctx.reply('❌ Пожалуйста, выберите пакет из меню.');
-    return;
-  }
-
-  const packageId = callbackData.replace('select_package:', '');
 
   // Fetch specific package details
   const selectedPackage = await conversation.external(async (ctx) => {
     const paymentService = (ctx as any).paymentService;
-    if (paymentService) {
-      return await paymentService.getCreditPackage(packageId);
+    if (paymentService && targetPackageId) {
+      return await paymentService.getCreditPackage(targetPackageId);
     }
     return null;
   });
@@ -108,51 +116,54 @@ export async function buyCreditsConversation(
   }
 
   // --- Payment Method Selection ---
+  if (!targetPaymentMethod) {
+    let paymentMessage = `💎 <b>${selectedPackage.name}</b>\n\n`;
+    paymentMessage += `Кредиты: ${selectedPackage.credits}\n\n`;
+    paymentMessage += `📱 <b>Выберите способ оплаты:</b>\n\n`;
 
-  let paymentMessage = `💎 <b>${selectedPackage.name}</b>\n\n`;
-  paymentMessage += `Кредиты: ${selectedPackage.credits}\n\n`;
-  paymentMessage += `📱 <b>Выберите способ оплаты:</b>\n\n`;
+    const paymentKeyboard = new InlineKeyboard();
 
-  const paymentKeyboard = new InlineKeyboard();
+    if (selectedPackage.priceYooMoney) {
+      paymentKeyboard.text(
+        `💳 YooMoney - ${selectedPackage.priceYooMoney} руб.`,
+        `pay:yoomoney:${targetPackageId}`,
+      );
+      paymentKeyboard.row();
+    }
 
-  if (selectedPackage.priceYooMoney) {
-    paymentKeyboard.text(
-      `💳 YooMoney - ${selectedPackage.priceYooMoney} руб.`,
-      `pay:yoomoney:${packageId}`,
-    );
-    paymentKeyboard.row();
+    paymentKeyboard.text('🔙 Назад', 'back_to_packages');
+    paymentKeyboard.text('❌ Отмена', 'cancel_purchase');
+
+    await ctx.reply(paymentMessage, {
+      parse_mode: 'HTML',
+      reply_markup: paymentKeyboard,
+    });
+
+    const paymentResponse = await conversation.waitFor('callback_query:data');
+    const paymentData = paymentResponse.callbackQuery.data;
+    await paymentResponse.answerCallbackQuery();
+
+    if (paymentData === 'cancel_purchase') {
+      await ctx.deleteMessage();
+      return;
+    }
+
+    if (paymentData === 'back_to_packages') {
+      await buyCreditsConversation(conversation, ctx);
+      return;
+    }
+
+    if (!paymentData.startsWith('pay:')) {
+      await ctx.reply('❌ Неверный выбор.');
+      return;
+    }
+
+    const [, method] = paymentData.split(':');
+    targetPaymentMethod = method;
   }
-  // ... add other methods ...
 
-  paymentKeyboard.text('🔙 Назад', 'back_to_packages');
-  paymentKeyboard.text('❌ Отмена', 'cancel_purchase');
+  if (!targetPackageId || !targetPaymentMethod) return;
 
-  await ctx.reply(paymentMessage, {
-    parse_mode: 'HTML',
-    reply_markup: paymentKeyboard,
-  });
-
-  const paymentResponse = await conversation.waitFor('callback_query:data');
-  const paymentData = paymentResponse.callbackQuery.data;
-  await paymentResponse.answerCallbackQuery();
-
-  if (paymentData === 'cancel_purchase') {
-    await ctx.reply('❌ Покупка отменена.');
-    return;
-  }
-
-  if (paymentData === 'back_to_packages') {
-    // Restart conversation cleanly by recursing
-    await buyCreditsConversation(conversation, ctx);
-    return;
-  }
-
-  if (!paymentData.startsWith('pay:')) {
-    await ctx.reply('❌ Неверный выбор.');
-    return;
-  }
-
-  const [, paymentMethod, pkgId] = paymentData.split(':');
 
   // --- Create Payment ---
 
@@ -162,7 +173,7 @@ export async function buyCreditsConversation(
   let paymentSystem: PaymentSystemEnum;
 
   // Determine enum based on string
-  switch (paymentMethod) {
+  switch (targetPaymentMethod) {
     case 'yoomoney': paymentSystem = PaymentSystemEnum.YOOMONEY; break;
     case 'stars': paymentSystem = PaymentSystemEnum.STARS; break;
     case 'crypto': paymentSystem = PaymentSystemEnum.CRYPTO; break;
@@ -172,7 +183,7 @@ export async function buyCreditsConversation(
   try {
     transaction = await conversation.external(async (ctx) => {
       const paymentService = (ctx as any).paymentService;
-      return await paymentService.createPayment(String(telegramId), pkgId, paymentSystem);
+      return await paymentService.createPayment(String(telegramId), targetPackageId, paymentSystem);
     });
 
     if (!transaction) throw new Error('Transaction is null');

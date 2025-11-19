@@ -71,7 +71,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       DATABASE_URL: postgresql://${DATABASE_USER:-bananabot}:${DATABASE_PASSWORD:-bananabot_secret}@postgres:5432/${DATABASE_NAME:-bananabot}?schema=public
       REDIS_URL: redis://redis:6379
     env_file:

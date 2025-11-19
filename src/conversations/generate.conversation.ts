@@ -1,5 +1,5 @@
 import { Conversation } from '@grammyjs/conversations';
-import { InputFile } from 'grammy';
+import { InlineKeyboard, InputFile } from 'grammy';
 import { MyContext } from '../grammy/grammy-context.interface';
 
 /**
@@ -24,28 +24,53 @@ export async function generateConversation(
     console.log('[GENERATE] Prompt from message text:', prompt);
   }
 
-  // Если промпта нет, просим пользователя ввести
-  if (!prompt || prompt.length === 0) {
-    await ctx.reply(
-      `💡 Укажите описание изображения.\n\n` +
-        `Пример:\n` +
-        `Futuristic city at sunset\n\n` +
-        `Отправьте текстовое сообщение с описанием.`,
-    );
+  // Interactive Prompt UI
+  const keyboard = new InlineKeyboard()
+    .text('🎨 Сгенерировать!', 'generate_trigger').row()
+    .text('💳 Купить кредиты', 'buy_credits');
 
-    // Wait for user's text message
-    const promptCtx = await conversation.waitFor('message:text');
-    prompt = promptCtx.message?.text?.trim() || '';
-    console.log('[GENERATE] Prompt from user input:', prompt);
+  let messageText = `💡 <b>Генерация изображения</b>\n\n`;
+  if (prompt) {
+    messageText += `Промпт: <b>${prompt}</b>\n\nНажмите кнопку ниже, чтобы начать.`;
+  } else {
+    messageText += `Введите описание изображения в чат, и оно появится здесь.\n\n<i>Ожидание ввода...</i>`;
+  }
 
-    // Filter out commands from prompt
-    if (prompt.startsWith('/')) {
-      await ctx.reply('❌ Пожалуйста, отправьте описание без команды. Просто текст.');
-      return;
+  const msg = await ctx.reply(messageText, { reply_markup: keyboard, parse_mode: 'HTML' });
+
+  while (true) {
+    const ctx2 = await conversation.waitFor(['message:text', 'callback_query:data']);
+
+    if (ctx2.message?.text) {
+      prompt = ctx2.message.text;
+      // Delete user message
+      await ctx2.deleteMessage().catch(() => { });
+      // Edit bot message
+      await ctx.api.editMessageText(
+        ctx.chat.id,
+        msg.message_id,
+        `💡 <b>Генерация изображения</b>\n\n` +
+        `Промпт: <b>${prompt}</b>\n\n` +
+        `Нажмите кнопку ниже, чтобы начать.`,
+        { reply_markup: keyboard, parse_mode: 'HTML' }
+      ).catch(() => { });
+      continue;
     }
 
-    if (!prompt || prompt.length === 0) {
-      await ctx.reply('❌ Промпт не может быть пустым. Попробуйте снова: /generate');
+    if (ctx2.callbackQuery?.data === 'generate_trigger') {
+      if (!prompt) {
+        await ctx2.answerCallbackQuery({ text: '❌ Сначала введите описание!' });
+        continue;
+      }
+      await ctx2.answerCallbackQuery();
+      await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => { });
+      break; // Proceed to generation
+    }
+
+    if (ctx2.callbackQuery?.data === 'buy_credits') {
+      await ctx2.answerCallbackQuery();
+      ctx.session.quickBuy = true;
+      await ctx.conversation.enter('buy_credits');
       return;
     }
   }
@@ -80,9 +105,9 @@ export async function generateConversation(
   if (user.credits < cost) {
     await ctx.reply(
       `💎 Недостаточно кредитов\n\n` +
-        `Требуется: ${cost}\n` +
-        `Доступно: ${user.credits}\n\n` +
-        `Пополните баланс: /buy`,
+      `Требуется: ${cost}\n` +
+      `Доступно: ${user.credits}\n\n` +
+      `Пополните баланс: /buy`,
       {
         reply_markup: {
           inline_keyboard: [
@@ -97,7 +122,7 @@ export async function generateConversation(
   // Send processing message
   const statusMsg = await ctx.reply(
     `🎨 Генерирую изображение...\n⏱ Подождите 5-10 секунд\n\n` +
-      `Промпт: "${prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt}"`,
+    `Промпт: "${prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt}"`,
   );
 
   try {
@@ -159,21 +184,21 @@ export async function generateConversation(
     } else {
       await ctx.reply(
         `✅ Изображение сгенерировано, но произошла ошибка при отправке.\n` +
-          `Generation ID: ${generation.id}`,
+        `Generation ID: ${generation.id}`,
       );
     }
   } catch (error) {
     await ctx.api
       .deleteMessage(ctx.chat.id, statusMsg.message_id)
-      .catch(() => {});
+      .catch(() => { });
 
     await ctx.reply(
       `❌ Ошибка при генерации изображения\n\n` +
-        `${error.message}\n\n` +
-        `Попробуйте:\n` +
-        `• Изменить промпт\n` +
-        `• Попробовать позже\n` +
-        `• Использовать /help для справки`,
+      `${error.message}\n\n` +
+      `Попробуйте:\n` +
+      `• Изменить промпт\n` +
+      `• Попробовать позже\n` +
+      `• Использовать /help для справки`,
     );
   }
 }

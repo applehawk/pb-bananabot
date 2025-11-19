@@ -24,6 +24,7 @@ export interface SessionData {
   // Generation mode settings
   generationMode?: GenerationMode; // Current generation mode
   imageCount?: number; // Number of images to generate (for MULTI_IMAGE mode)
+  quickBuy?: boolean; // Flag for quick purchase flow (skip steps)
 }
 
 /**
