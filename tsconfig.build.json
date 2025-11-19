@@ -8,5 +8,6 @@
     "amvera.yml",
     "Dockerfile",
     "**/*spec.ts",
+    "bananabot-admin"
   ]
 }

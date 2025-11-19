@@ -26,5 +26,9 @@
       ],
     }
   },
-  "exclude": ["web/**/*", "node_modules"]
+  "exclude": [
+    "web/**/*",
+    "node_modules",
+    "bananabot-admin"
+  ]
 }
