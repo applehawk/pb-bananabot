@@ -1,4 +1,4 @@
-.PHONY: clean clean-all clean-build clean-deps clean-cache install build dev start stop kill-port test help web-install web-dev web-build web-start
+.PHONY: clean clean-all clean-build clean-deps clean-cache install build dev start stop kill-port test help
 
 # Default target
 help:
@@ -16,12 +16,6 @@ help:
 	@echo "  make kill-port      - Kill process on port 3000"
 	@echo "  make restart        - Stop and start the bot"
 	@echo "  make test           - Run tests"
-	@echo ""
-	@echo "Web Admin Panel:"
-	@echo "  make web-install    - Install admin panel dependencies"
-	@echo "  make web-dev        - Run admin panel in dev mode (port 3001)"
-	@echo "  make web-build      - Build admin panel for production"
-	@echo "  make web-start      - Start admin panel in production"
 
 # Remove build artifacts and cache files
 clean:
@@ -116,33 +110,3 @@ migrate:
 # Fresh install (clean + install + build)
 fresh: clean-all install build
 	@echo "✓ Fresh installation complete"
-
-# === Web Admin Panel Commands ===
-
-# Install admin panel dependencies
-web-install:
-	@echo "Installing admin panel dependencies..."
-	cd web && pnpm install
-	@echo "✓ Admin panel dependencies installed"
-
-# Run admin panel in development mode
-web-dev:
-	@echo "Starting admin panel in development mode..."
-	cd web && pnpm run dev
-
-# Build admin panel for production
-web-build:
-	@echo "Building admin panel..."
-	cd web && pnpm run build
-	@echo "✓ Admin panel built"
-
-# Start admin panel in production mode
-web-start:
-	@echo "Starting admin panel in production mode..."
-	cd web && pnpm start
-
-# Seed database with test packages
-web-seed:
-	@echo "Seeding database with test packages..."
-	cd web && pnpm run seed
-	@echo "✓ Database seeded"
