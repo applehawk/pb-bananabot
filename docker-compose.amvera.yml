@@ -1,0 +1,117 @@
+# Docker Compose configuration for Amvera deployment
+# This file is specifically designed for deployment on Amvera platform
+#
+# IMPORTANT: On Amvera, you need to deploy services separately:
+# 1. Create PostgreSQL database via Amvera dashboard (minimum "Starter" tier)
+# 2. Deploy bot service
+# 3. Deploy admin service
+#
+# Each service will use its own Dockerfile and will be deployed as a separate Amvera project
+
+version: '3.8'
+
+services:
+  # Telegram Bot Service
+  # Deploy this as a separate Amvera project from the root directory
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Node environment
+      NODE_ENV: production
+
+      # Database connection
+      # Use Amvera's managed PostgreSQL connection string
+      # Format: postgresql://username:password@amvera-<username>-cnpg-<project_name>-rw:5432/database_name?schema=public
+      DATABASE_URL: ${DATABASE_URL}
+
+      # Telegram Bot settings
+      BOT_TOKEN: ${BOT_TOKEN}
+      ADMIN_CHAT_ID: ${ADMIN_CHAT_ID}
+      ADMIN_CHAT_ID_2: ${ADMIN_CHAT_ID_2:-}
+
+      # Server settings
+      PORT: ${PORT:-80}
+      DOMAIN: ${DOMAIN}
+      TELEGRAM_SECRET_TOKEN: ${TELEGRAM_SECRET_TOKEN:-}
+
+      # Payment settings
+      YOOMONEY_SECRET: ${YOOMONEY_SECRET}
+      MINIMUM_BALANCE: ${MINIMUM_BALANCE:-3}
+
+      # Redis (optional, if you have Redis on Amvera)
+      REDIS_URL: ${REDIS_URL:-}
+    ports:
+      # Amvera expects the service to listen on the port specified in run.containerPort
+      # Default is 80, but you can change it via PORT environment variable
+      - "${PORT:-80}:${PORT:-80}"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:${PORT:-80}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Apply Prisma migrations and start the application
+    command: sh -c "cd prisma && npx prisma migrate deploy && cd .. && node dist/main.js"
+
+  # Admin Panel Service
+  # Deploy this as a separate Amvera project from the bananabot-admin directory
+  admin:
+    build:
+      context: ./bananabot-admin
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Node environment
+      NODE_ENV: production
+
+      # Database connection
+      # Use the same Amvera PostgreSQL connection string as bot
+      DATABASE_URL: ${DATABASE_URL}
+
+      # Next.js server settings
+      PORT: ${ADMIN_PORT:-80}
+      HOSTNAME: "0.0.0.0"
+
+      # Next.js settings
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+
+      # Bot API connection (optional, if admin needs to communicate with bot)
+      # Use Amvera internal domain: amvera-<project-name>-run-<username>
+      BOT_API_URL: ${BOT_API_URL:-}
+    ports:
+      - "${ADMIN_PORT:-80}:${ADMIN_PORT:-80}"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:${ADMIN_PORT:-80}/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    # Apply Prisma migrations and start Next.js
+    command: sh -c "cd prisma && pnpm migrate && cd .. && pnpm start"
+
+# NOTES:
+# 1. Amvera doesn't use networks in the same way as local Docker
+#    Services communicate via internal domains: amvera-<project>-run-<username>
+#
+# 2. PostgreSQL is a managed service, not a container
+#    Create it separately in Amvera dashboard and use connection string in DATABASE_URL
+#
+# 3. For external access, Amvera provides:
+#    - Free subdomain: <project>.<username>.amvera.io
+#    - Custom domains: configure via Amvera settings
+#
+# 4. SSL certificates are automatically provided by Amvera for HTTPS
+#
+# 5. Each service should be deployed as a separate Amvera project:
+#    - Bot: deploy from root directory using this docker-compose file (or just Dockerfile)
+#    - Admin: deploy from bananabot-admin directory using its Dockerfile
+#
+# 6. Environment variables should be set in Amvera dashboard or via .env file
+#
+# 7. For submodules, make sure to clone with --recurse-submodules:
+#    git clone --recurse-submodules <repo-url>
+#    or after cloning: git submodule update --init --recursive

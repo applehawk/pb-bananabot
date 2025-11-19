@@ -1,3 +1,21 @@
+# Docker Compose configuration for local development
+# This file orchestrates all services: PostgreSQL, Redis, Bot, and Admin Panel
+#
+# Prerequisites:
+# 1. Clone repository with submodules:
+#    git clone --recurse-submodules <repo-url>
+#    OR after cloning: git submodule update --init --recursive
+# 2. Copy .env.example to .env and configure variables
+# 3. Ensure prisma and bananabot-admin submodules are initialized
+#
+# Usage:
+#   make up           # Start all services
+#   make down         # Stop all services
+#   make logs         # View logs
+#   make ps           # Show running services
+#
+# For production deployment on Amvera, use docker-compose.amvera.yml
+
 version: '3.8'
 
 services:
