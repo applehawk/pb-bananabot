@@ -16,8 +16,6 @@
 #
 # For production deployment on Amvera, use docker-compose.amvera.yml
 
-version: '3.8'
-
 services:
   # PostgreSQL Database (shared by bot and admin panel)
   postgres:
