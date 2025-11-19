@@ -47,13 +47,24 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### 6. Запушьте изменения
 ```bash
 git push origin imggenbot
+git push amvera imggenbot  # Опционально: для деплоя на Amvera
+```
+
+### 7. Создайте Pull Request (опционально)
+Если работаете в ветке imggenbot, создайте PR в основной репозиторий:
+```bash
+gh pr create --base main --head imggenbot --title "Refactor: Move admin panel to separate submodule"
 ```
 
 ## Работа с submodule в будущем
 
 ### Клонирование репозитория с submodules
 ```bash
+# Основной репозиторий
 git clone --recurse-submodules git@github.com:applehawk/pb-bananabot.git
+
+# Или если клонируете с Amvera
+git clone --recurse-submodules https://git.msk0.amvera.ru/defg/bananaartbot
 ```
 
 Или если уже клонировали:
@@ -101,15 +112,25 @@ NodeJS/
     └── Makefile            # Makefile для админ-панели
 ```
 
-## Деплой на Amvera Cloud
+## Информация о репозиториях
 
-### Настройка для основного репозитория (bananabot)
-Основной репозиторий уже имеет remote для Amvera:
+### Основной репозиторий bananabot
+- **Origin (основной):** `git@github.com:applehawk/pb-bananabot.git`
+- **Amvera (деплой):** `https://git.msk0.amvera.ru/defg/bananaartbot`
+- **Upstream (форк):** `git@github.com:applehawk/bananabot.git`
+
+Проверить remotes:
 ```bash
-git remote -v | grep amvera
-# amvera	https://git.msk0.amvera.ru/defg/bananaartbot (fetch)
-# amvera	https://git.msk0.amvera.ru/defg/bananaartbot (push)
+git remote -v
+# amvera    https://git.msk0.amvera.ru/defg/bananaartbot (fetch)
+# amvera    https://git.msk0.amvera.ru/defg/bananaartbot (push)
+# origin    git@github.com:applehawk/pb-bananabot.git (fetch)
+# origin    git@github.com:applehawk/pb-bananabot.git (push)
+# upstream  git@github.com:applehawk/bananabot.git (fetch)
+# upstream  git@github.com:applehawk/bananabot.git (push)
 ```
+
+## Деплой на Amvera Cloud
 
 ### Настройка для bananabot-admin
 После создания репозитория на GitHub и добавления remote amvera (см. шаг 2), вы сможете деплоить админ-панель отдельно на Amvera.
