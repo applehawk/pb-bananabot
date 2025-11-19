@@ -104,18 +104,18 @@ clean-cache:
 install:
 	npm install
 
-# Build the project (with submodules update)
-build: submodules-update
+# Build the project (with submodules update and prisma generation)
+build: submodules-update db-generate
 	@echo "Building project..."
 	npm run build
 	@echo "✓ Build complete"
 
-# Run in development mode
-dev:
+# Run in development mode (with prisma generation)
+dev: db-generate
 	npm run start:dev
 
-# Run in production mode (with submodules update)
-start: submodules-update
+# Run in production mode (with submodules update and prisma generation)
+start: submodules-update db-generate
 	@echo "Starting bot in production mode..."
 	npm run start:prod
 
@@ -207,8 +207,8 @@ admin-build:
 # Docker Commands
 # ============================================================================
 
-# Start all services with Docker Compose
-docker-up:
+# Start all services with Docker Compose (with prisma generation)
+docker-up: db-generate
 	@echo "Starting all services (bot, admin, postgres, redis)..."
 	docker-compose up -d
 	@echo "✓ All services started"

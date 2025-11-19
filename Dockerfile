@@ -15,11 +15,15 @@ RUN npm ci
 # Copy source code
 COPY src ./src
 
+# Copy libs (local modules like yoomoney-client)
+COPY libs ./libs
+
 # Copy prisma submodule
 COPY prisma ./prisma
 
-# Install prisma dependencies and generate client
-RUN cd prisma && npm install && npx prisma generate
+# Generate Prisma Client to root node_modules
+# This ensures @prisma/client is available for the application
+RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Build application
 RUN npm run build
