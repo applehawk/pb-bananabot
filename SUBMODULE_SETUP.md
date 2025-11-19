@@ -11,8 +11,10 @@
 ```bash
 cd /Users/vladmac/Code/NodeJS/bananabot-admin
 git remote add origin git@github.com:applehawk/bananabot-admin.git
+git remote add amvera https://git.msk0.amvera.ru/defg/bananabot-admin
 git branch -M main
 git push -u origin main
+git push amvera main
 ```
 
 ### 3. Вернитесь в основной репозиторий bananabot
@@ -99,8 +101,26 @@ NodeJS/
     └── Makefile            # Makefile для админ-панели
 ```
 
+## Деплой на Amvera Cloud
+
+### Настройка для основного репозитория (bananabot)
+Основной репозиторий уже имеет remote для Amvera:
+```bash
+git remote -v | grep amvera
+# amvera	https://git.msk0.amvera.ru/defg/bananaartbot (fetch)
+# amvera	https://git.msk0.amvera.ru/defg/bananaartbot (push)
+```
+
+### Настройка для bananabot-admin
+После создания репозитория на GitHub и добавления remote amvera (см. шаг 2), вы сможете деплоить админ-панель отдельно на Amvera.
+
+### Dockerfile
+- Основной бот использует Dockerfile в корне bananabot/
+- Админ-панель может иметь свой собственный Dockerfile в bananabot-admin/
+
 ## Примечания
 - Файл `.gitmodules` уже создан и настроен
 - Makefile в bananabot обновлен (удалены команды web-*)
 - Makefile для bananabot-admin создан и закоммичен
 - Директория web удалена из основного репозитория
+- Оба репозитория могут быть задеплоены независимо на Amvera Cloud
