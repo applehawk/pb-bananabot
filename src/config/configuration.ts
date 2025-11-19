@@ -31,6 +31,7 @@ export default () => ({
 
   payment: {
     yoomoney: {
+      domain: process.env.YOOMONEY_DOMAIN,
       token: process.env.YOOMONEY_TOKEN,
       shopId: process.env.YOOMONEY_SHOP_ID,
       secret: process.env.YOOMONEY_SECRET,

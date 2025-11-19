@@ -18,7 +18,7 @@ export async function buyCreditsConversation(
   // We use an object to return multiple values.
   const { user, packages } = await conversation.external(async (ctx) => {
     const paymentService = (ctx as any).paymentService; // Type assertion if needed
-    
+
     // Parallel fetching is faster
     const [userData, packagesData] = await Promise.all([
       ctx.userService.findByTelegramId(telegramId),
@@ -48,7 +48,7 @@ export async function buyCreditsConversation(
   for (const pkg of packages) {
     const badge = pkg.popular ? '⭐ ' : '';
     const discount = pkg.discount > 0 ? ` (-${pkg.discount}%)` : '';
-    
+
     // Using HTML tags <b> and <i> prevents crashes with special chars in names
     message += `${badge}<b>${pkg.name}</b>\n`;
     message += `  💎 ${pkg.credits} кредитов\n`;
@@ -73,10 +73,10 @@ export async function buyCreditsConversation(
   });
 
   // --- Wait for Package Selection ---
-  
+
   const packageResponse = await conversation.waitFor('callback_query:data');
   const callbackData = packageResponse.callbackQuery.data;
-  
+
   // Important: Answer callback immediately to stop the loading animation
   await packageResponse.answerCallbackQuery();
 
@@ -123,7 +123,7 @@ export async function buyCreditsConversation(
     paymentKeyboard.row();
   }
   // ... add other methods ...
-  
+
   paymentKeyboard.text('🔙 Назад', 'back_to_packages');
   paymentKeyboard.text('❌ Отмена', 'cancel_purchase');
 
@@ -142,8 +142,8 @@ export async function buyCreditsConversation(
   }
 
   if (paymentData === 'back_to_packages') {
-    // Restart conversation cleanly
-    await ctx.conversation.enter('buy_credits'); 
+    // Restart conversation cleanly by recursing
+    await buyCreditsConversation(conversation, ctx);
     return;
   }
 
@@ -176,7 +176,7 @@ export async function buyCreditsConversation(
     });
 
     if (!transaction) throw new Error('Transaction is null');
-    
+
   } catch (error) {
     await ctx.reply('❌ Ошибка создания платежа. Попробуйте позже.');
     return;
@@ -191,8 +191,8 @@ export async function buyCreditsConversation(
 
     await ctx.reply(
       `✅ <b>Платеж создан!</b>\n\n` +
-        `💳 Сумма: ${transaction.amount} руб.\n` +
-        `🔗 <a href="${payUrl}">Нажмите здесь для оплаты</a>`,
+      `💳 Сумма: ${transaction.amount} руб.\n` +
+      `🔗 <a href="${payUrl}">Нажмите здесь для оплаты</a>`,
       {
         parse_mode: 'HTML',
         reply_markup: {
@@ -206,23 +206,23 @@ export async function buyCreditsConversation(
 
     // FIX 3: Loop for checking payment
     let paymentVerified = false;
-    
+
     // Allow user to check 10 times or until verified
     for (let i = 0; i < 10; i++) {
       const confirmResponse = await conversation.waitFor('callback_query:data');
-      
+
       // If user does something else (like cancel), exit loop
       if (confirmResponse.callbackQuery.data === 'cancel_purchase') {
-         await ctx.reply('Платеж отменен.');
-         return;
+        await ctx.reply('Платеж отменен.');
+        return;
       }
 
       if (confirmResponse.callbackQuery.data.startsWith('check_payment:')) {
-        
+
         // Check status via external service
         const isPaid = await conversation.external(async (ctx) => {
-           const paymentService = (ctx as any).paymentService;
-           return await paymentService.validatePayment(transaction.paymentId);
+          const paymentService = (ctx as any).paymentService;
+          return await paymentService.validatePayment(transaction.paymentId);
         });
 
         if (isPaid) {
@@ -237,15 +237,21 @@ export async function buyCreditsConversation(
     }
 
     if (paymentVerified) {
-       await ctx.reply(`🎉 <b>Успешно!</b>\nКредиты зачислены.`, { parse_mode: 'HTML' });
+      await ctx.reply(`🎉 <b>Успешно!</b>\nКредиты зачислены.`, { parse_mode: 'HTML' });
     }
 
-  } 
+  }
   // Handle Stars/Crypto...
 }
 
 function extractPaymentUrl(formHtml: string): string {
-  // Improved Regex to handle single or double quotes
+  // Improved Regex to handle single or double quotes and potential HTML entities
+  // Matches action="URL" or action='URL'
   const match = formHtml.match(/action=["']([^"']+)["']/);
-  return match && match[1] ? match[1] : 'https://yoomoney.ru';
+  if (match && match[1]) {
+    // Decode HTML entities if present (basic ones)
+    let url = match[1].replace(/&amp;/g, '&');
+    return url;
+  }
+  return 'https://yoomoney.ru';
 }

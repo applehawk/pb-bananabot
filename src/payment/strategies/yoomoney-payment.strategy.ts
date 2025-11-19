@@ -17,7 +17,7 @@ export class YooMoneyPaymentStrategy implements PaymentStrategy {
   constructor(
     private readonly yooMoneyClient: YooMoneyClient,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   async createPayment({
     tariffPrice,
@@ -33,9 +33,13 @@ export class YooMoneyPaymentStrategy implements PaymentStrategy {
       comment,
     );
 
+
+    const url = `${this.configService.get('DOMAIN')}/payment/${paymentId}`;
+
     const payment = new PaymentProxy({
       paymentId,
       form,
+      url,
       amount: tariffPrice,
       currency: 'RUB',
       status: PaymentStatusEnum.PENDING,
