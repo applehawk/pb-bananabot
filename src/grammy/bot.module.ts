@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { HealthModule } from '../health/health.module';
 
 // Core GrammY
 import { GrammYModule } from './grammy.module';
@@ -29,6 +30,7 @@ import configuration from '../config/configuration';
       load: [configuration],
     }),
     ScheduleModule.forRoot(),
+    HealthModule,
     GrammYModule,
     DatabaseModule,
     forwardRef(() => UserModule),
@@ -42,4 +44,4 @@ import configuration from '../config/configuration';
   ],
   exports: [],
 })
-export class BotModule {}
+export class BotModule { }

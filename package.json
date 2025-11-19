@@ -38,6 +38,7 @@
     "@grammyjs/conversations": "^2.1.0",
     "@grammyjs/hydrate": "^1.6.0",
     "@grammyjs/menu": "^1.2.2",
+    "@grammyjs/storage-redis": "^2.5.1",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.1.7",
     "@nestjs/config": "^4.0.2",

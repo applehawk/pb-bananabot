@@ -210,14 +210,18 @@ admin-build:
 # Start all services with Docker Compose (with prisma generation)
 docker-up: db-generate
 	@echo "Starting all services (bot, admin, postgres, redis)..."
-	docker compose up -d
+	@docker compose up -d
 	@echo "✓ All services started"
 	@echo ""
 	@echo "Services available at:"
-	@echo "  Bot health:    http://localhost:3000/health"
-	@echo "  Admin panel:   http://localhost:3001"
-	@echo "  PostgreSQL:    localhost:5432"
-	@echo "  Redis:         localhost:6379"
+	@BOT_ADDR=$$(docker compose ps bot --format "{{.Ports}}" | head -n 1 | sed 's/->.*//') && [ -n "$$BOT_ADDR" ] || BOT_ADDR="<not running>"; \
+	ADMIN_ADDR=$$(docker compose ps admin --format "{{.Ports}}" | head -n 1 | sed 's/->.*//') && [ -n "$$ADMIN_ADDR" ] || ADMIN_ADDR="<not running>"; \
+	PG_ADDR=$$(docker compose ps postgres --format "{{.Ports}}" | head -n 1 | sed 's/->.*//') && [ -n "$$PG_ADDR" ] || PG_ADDR="<not running>"; \
+	REDIS_ADDR=$$(docker compose ps redis --format "{{.Ports}}" | head -n 1 | sed 's/->.*//') && [ -n "$$REDIS_ADDR" ] || REDIS_ADDR="<not running>"; \
+	echo "  Bot health:    http://$$BOT_ADDR/health"; \
+	echo "  Admin panel:   http://$$ADMIN_ADDR"; \
+	echo "  PostgreSQL:    $$PG_ADDR"; \
+	echo "  Redis:         $$REDIS_ADDR"
 
 # Stop all services
 docker-down:

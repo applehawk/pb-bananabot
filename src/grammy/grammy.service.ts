@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Bot, session } from 'grammy';
+import { RedisAdapter } from '@grammyjs/storage-redis';
+import Redis from 'ioredis';
 import { conversations, createConversation } from '@grammyjs/conversations';
 import { hydrate } from '@grammyjs/hydrate';
 import { MyContext, SessionData } from './grammy-context.interface';
@@ -59,6 +61,18 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
    * Setup basic bot middlewares (session and hydration)
    */
   private setupBasicMiddlewares(): void {
+    // Redis connection
+    const redisUrl = this.configService.get<string>('REDIS_URL');
+    const redis = new Redis(redisUrl || 'redis://localhost:6379');
+
+    redis.on('error', (err) => {
+      this.logger.error('Redis error:', err);
+    });
+
+    redis.on('connect', () => {
+      this.logger.log('Connected to Redis');
+    });
+
     // Session management - must be first
     // Using a session key version to invalidate old sessions after service injection changes
     this.bot.use(
@@ -71,6 +85,7 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
           awaitingPhoto: undefined,
           generationPrompt: undefined,
         }),
+        storage: new RedisAdapter({ instance: redis }),
         getSessionKey: (ctx) => {
           // Add version to session key to invalidate old sessions
           const version = 'v3'; // Increment this to clear all sessions
