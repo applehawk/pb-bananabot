@@ -108,8 +108,6 @@ services:
       DATABASE_URL: postgresql://${DATABASE_USER:-bananabot}:${DATABASE_PASSWORD:-bananabot_secret}@postgres:5432/${DATABASE_NAME:-bananabot}?schema=public
       PORT: ${ADMIN_PORT:-3001}
       HOSTNAME: "0.0.0.0"
-    env_file:
-      - ./bananabot-admin/.env
     ports:
       - '${ADMIN_PORT:-3001}:3001'
     networks:
