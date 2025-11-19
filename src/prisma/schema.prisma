@@ -1,8 +1,5 @@
-// Prisma Schema for AI Image Generation Telegram Bot
-// PostgreSQL Database
-
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
@@ -11,78 +8,227 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ===========================
-// USERS & AUTHENTICATION
-// ===========================
-
 model User {
-  id              String   @id @default(cuid())
-  telegramId      BigInt   @unique
-  username        String?
-  firstName       String?
-  lastName        String?
-  languageCode    String   @default("en")
-
-  // Credits & Balance
-  credits         Float    @default(0)
-  freeCreditsUsed Int      @default(0)
-  totalGenerated  Int      @default(0)
-
-  // Referral
-  referralCode    String   @unique
-  referredBy      String?  // Referral code of who invited this user
-
-  // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  lastActiveAt    DateTime @default(now())
-
-  // Relations
-  settings        UserSettings?
-  generations     Generation[]
-  transactions    Transaction[]
-  referralsGiven  Referral[] @relation("Referrer")
-  referralsReceived Referral[] @relation("Referred")
-  dailyBonus      DailyBonus?
+  id                String        @id @default(cuid())
+  telegramId        BigInt        @unique
+  username          String?
+  firstName         String?
+  lastName          String?
+  languageCode      String        @default("en")
+  credits           Float         @default(0)
+  freeCreditsUsed   Int           @default(0)
+  totalGenerated    Int           @default(0)
+  referralCode      String        @unique
+  referredBy        String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  lastActiveAt      DateTime      @default(now())
+  dailyBonus        DailyBonus?
+  generations       Generation[]
+  referralsReceived Referral[]    @relation("Referred")
+  referralsGiven    Referral[]    @relation("Referrer")
+  transactions      Transaction[]
+  settings          UserSettings?
 
   @@index([telegramId])
   @@index([referralCode])
   @@index([createdAt])
 }
 
-// ===========================
-// USER SETTINGS
-// ===========================
-
 model UserSettings {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Generation Settings
-  aspectRatio     String   @default("1:1") // 1:1, 16:9, 9:16, 3:4, 4:3
-  numberOfImages  Int      @default(1) // 1-4 for batch generation
-  safetyLevel     String   @default("BLOCK_MEDIUM_AND_ABOVE") // BLOCK_NONE, BLOCK_ONLY_HIGH, BLOCK_MEDIUM_AND_ABOVE, BLOCK_LOW_AND_ABOVE
-  language        String   @default("en")
-  hdQuality       Boolean  @default(false)
-
-  // Prompt Enhancement
-  autoEnhance     Boolean  @default(true)
-  useNegativePrompt Boolean @default(true)
-
-  // Notifications
-  notifyOnComplete Boolean @default(true)
-  notifyOnBonus   Boolean  @default(true)
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  aspectRatio       String   @default("1:1")
+  numberOfImages    Int      @default(1)
+  safetyLevel       String   @default("BLOCK_MEDIUM_AND_ABOVE")
+  language          String   @default("en")
+  hdQuality         Boolean  @default(false)
+  autoEnhance       Boolean  @default(true)
+  useNegativePrompt Boolean  @default(true)
+  notifyOnComplete  Boolean  @default(true)
+  notifyOnBonus     Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
-// ===========================
-// IMAGE GENERATION
-// ===========================
+model Generation {
+  id             String           @id @default(cuid())
+  userId         String
+  type           GenerationType
+  prompt         String
+  negativePrompt String?
+  enhancedPrompt String?
+  aspectRatio    String           @default("1:1")
+  numberOfImages Int              @default(1)
+  safetyLevel    String
+  imageUrl       String?
+  fileId         String?
+  thumbnailUrl   String?
+  status         GenerationStatus @default(PENDING)
+  creditsUsed    Float
+  errorMessage   String?
+  metadata       Json?
+  processingTime Int?
+  createdAt      DateTime         @default(now())
+  completedAt    DateTime?
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inputImages    InputImage[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([type])
+}
+
+model InputImage {
+  id           String     @id @default(cuid())
+  generationId String
+  fileId       String
+  fileUrl      String?
+  order        Int
+  createdAt    DateTime   @default(now())
+  generation   Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
+
+  @@index([generationId])
+  @@index([order])
+}
+
+model Transaction {
+  id            String            @id @default(cuid())
+  userId        String
+  type          TransactionType
+  amount        Float?
+  creditsAdded  Float
+  paymentMethod PaymentMethod     @default(FREE)
+  paymentId     String?
+  currency      String?           @default("USD")
+  status        TransactionStatus @default(PENDING)
+  metadata      Json?
+  description   String?
+  createdAt     DateTime          @default(now())
+  completedAt   DateTime?
+  isFinal       Boolean           @default(false)
+  packageId     String?
+  package       CreditPackage?    @relation(fields: [packageId], references: [id])
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([paymentId])
+  @@index([createdAt])
+}
+
+model Referral {
+  id                 String   @id @default(cuid())
+  referrerId         String
+  referredId         String
+  bonusGranted       Boolean  @default(false)
+  bonusAmount        Float    @default(3)
+  firstPurchase      Boolean  @default(false)
+  firstPurchaseBonus Float    @default(5)
+  createdAt          DateTime @default(now())
+  referred           User     @relation("Referred", fields: [referredId], references: [id], onDelete: Cascade)
+  referrer           User     @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+
+  @@unique([referrerId, referredId])
+  @@index([referrerId])
+  @@index([referredId])
+}
+
+model DailyBonus {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  streakDays    Int       @default(0)
+  lastClaimDate DateTime?
+  totalBonuses  Float     @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([lastClaimDate])
+}
+
+model CreditPackage {
+  id            String        @id @default(cuid())
+  name          String
+  credits       Float
+  price         Float
+  currency      String        @default("USD")
+  discount      Int           @default(0)
+  popular       Boolean       @default(false)
+  active        Boolean       @default(true)
+  priceYooMoney Float?
+  priceStars    Int?
+  priceCrypto   Float?
+  description   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  transactions  Transaction[]
+
+  @@index([active])
+  @@index([popular])
+}
+
+model AdminUser {
+  id         String   @id @default(cuid())
+  telegramId BigInt   @unique
+  username   String?
+  role       String   @default("ADMIN")
+  createdAt  DateTime @default(now())
+
+  @@index([telegramId])
+}
+
+model Analytics {
+  id                    String   @id @default(cuid())
+  date                  DateTime @unique @default(now())
+  newUsers              Int      @default(0)
+  activeUsers           Int      @default(0)
+  totalGenerations      Int      @default(0)
+  textToImage           Int      @default(0)
+  imageToImage          Int      @default(0)
+  multiImage            Int      @default(0)
+  totalRevenue          Float    @default(0)
+  totalCreditsUsed      Float    @default(0)
+  totalCreditsPurchased Float    @default(0)
+  paymentsYooMoney      Int      @default(0)
+  paymentsStars         Int      @default(0)
+  paymentsCrypto        Int      @default(0)
+
+  @@index([date])
+}
+
+model PromoCode {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  credits     Float
+  discount    Int?
+  maxUses     Int?
+  currentUses Int       @default(0)
+  expiresAt   DateTime?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  @@index([code])
+  @@index([active])
+}
+
+model PromoCodeUsage {
+  id           String   @id @default(cuid())
+  code         String
+  userId       String
+  creditsGiven Float
+  usedAt       DateTime @default(now())
+
+  @@unique([code, userId])
+  @@index([userId])
+  @@index([code])
+}
 
 enum GenerationType {
   TEXT_TO_IMAGE
@@ -98,74 +244,6 @@ enum GenerationStatus {
   FAILED
   CANCELLED
 }
-
-model Generation {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Generation Details
-  type            GenerationType
-  prompt          String   @db.Text
-  negativePrompt  String?  @db.Text
-  enhancedPrompt  String?  @db.Text // AI-enhanced version
-
-  // Parameters
-  aspectRatio     String   @default("1:1")
-  numberOfImages  Int      @default(1)
-  safetyLevel     String
-
-  // Results
-  imageUrl        String?  // CDN/S3 URL
-  fileId          String?  // Telegram file_id for caching
-  thumbnailUrl    String?
-
-  // Input Images (for image-to-image and multi-image)
-  inputImages     InputImage[]
-
-  // Status & Credits
-  status          GenerationStatus @default(PENDING)
-  creditsUsed     Float
-  errorMessage    String?  @db.Text
-
-  // Metadata (JSON)
-  metadata        Json?    // Store additional params, safety ratings, etc.
-
-  // Processing Time
-  processingTime  Int?     // milliseconds
-
-  // Timestamps
-  createdAt       DateTime @default(now())
-  completedAt     DateTime?
-
-  @@index([userId])
-  @@index([status])
-  @@index([createdAt])
-  @@index([type])
-}
-
-// ===========================
-// INPUT IMAGES
-// ===========================
-
-model InputImage {
-  id            String   @id @default(cuid())
-  generationId  String
-  generation    Generation @relation(fields: [generationId], references: [id], onDelete: Cascade)
-
-  fileId        String   // Telegram file_id
-  fileUrl       String?  // Downloaded URL if needed
-  order         Int      // Order in the multi-image array
-
-  createdAt     DateTime @default(now())
-
-  @@index([generationId])
-  @@index([order])
-}
-
-// ===========================
-// TRANSACTIONS & PAYMENTS
-// ===========================
 
 enum TransactionType {
   PURCHASE
@@ -192,201 +270,4 @@ enum TransactionStatus {
   FAILED
   REFUNDED
   CANCELLED
-}
-
-model Transaction {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Transaction Details
-  type          TransactionType
-  amount        Float?   // Money amount (USD, RUB, etc.)
-  creditsAdded  Float    // Can be negative for costs
-
-  // Payment Details (for PURCHASE type)
-  paymentMethod PaymentMethod @default(FREE)
-  paymentId     String?  // External payment ID (unique per system)
-  currency      String?  @default("USD")
-
-  // Package Info (for PURCHASE type)
-  packageId     String?
-  package       CreditPackage? @relation(fields: [packageId], references: [id])
-
-  // Status
-  status        TransactionStatus @default(PENDING)
-  isFinal       Boolean  @default(false) // For payment completion tracking
-
-  // Metadata
-  metadata      Json?    // Store payment form, webhook data, etc.
-  description   String?  @db.Text
-
-  // Timestamps
-  createdAt     DateTime @default(now())
-  completedAt   DateTime?
-
-  @@index([userId])
-  @@index([status])
-  @@index([type])
-  @@index([paymentId])
-  @@index([createdAt])
-}
-
-// ===========================
-// REFERRAL SYSTEM
-// ===========================
-
-model Referral {
-  id            String   @id @default(cuid())
-
-  referrerId    String   // User who invited
-  referrer      User     @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
-
-  referredId    String   // User who was invited
-  referred      User     @relation("Referred", fields: [referredId], references: [id], onDelete: Cascade)
-
-  // Rewards
-  bonusGranted  Boolean  @default(false)
-  bonusAmount   Float    @default(3) // Credits given to referrer
-
-  // First Purchase Bonus
-  firstPurchase Boolean  @default(false)
-  firstPurchaseBonus Float @default(5)
-
-  createdAt     DateTime @default(now())
-
-  @@unique([referrerId, referredId])
-  @@index([referrerId])
-  @@index([referredId])
-}
-
-// ===========================
-// DAILY BONUS SYSTEM
-// ===========================
-
-model DailyBonus {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  streakDays    Int      @default(0)
-  lastClaimDate DateTime?
-  totalBonuses  Float    @default(0)
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([userId])
-  @@index([lastClaimDate])
-}
-
-// ===========================
-// PAYMENT PACKAGES
-// ===========================
-
-model CreditPackage {
-  id            String   @id @default(cuid())
-
-  name          String   // "Starter", "Pro", "Ultimate"
-  credits       Float    // Number of credits
-  price         Float    // Price in USD
-  currency      String   @default("USD")
-
-  discount      Int      @default(0) // Percentage discount
-  popular       Boolean  @default(false)
-  active        Boolean  @default(true)
-
-  // Pricing for different payment methods
-  priceYooMoney Float?
-  priceStars    Int?     // Telegram Stars
-  priceCrypto   Float?
-
-  description   String?  @db.Text
-
-  transactions  Transaction[] // Purchases using this package
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([active])
-  @@index([popular])
-}
-
-// ===========================
-// ADMIN & ANALYTICS
-// ===========================
-
-model AdminUser {
-  id            String   @id @default(cuid())
-  telegramId    BigInt   @unique
-  username      String?
-  role          String   @default("ADMIN") // ADMIN, SUPER_ADMIN
-
-  createdAt     DateTime @default(now())
-
-  @@index([telegramId])
-}
-
-model Analytics {
-  id            String   @id @default(cuid())
-  date          DateTime @default(now())
-
-  // Daily Stats
-  newUsers      Int      @default(0)
-  activeUsers   Int      @default(0)
-  totalGenerations Int   @default(0)
-
-  // Generation Stats by Type
-  textToImage   Int      @default(0)
-  imageToImage  Int      @default(0)
-  multiImage    Int      @default(0)
-
-  // Revenue
-  totalRevenue  Float    @default(0)
-  totalCreditsUsed Float @default(0)
-  totalCreditsPurchased Float @default(0)
-
-  // Payment Methods
-  paymentsYooMoney Int   @default(0)
-  paymentsStars Int      @default(0)
-  paymentsCrypto Int     @default(0)
-
-  @@unique([date])
-  @@index([date])
-}
-
-// ===========================
-// PROMO CODES
-// ===========================
-
-model PromoCode {
-  id            String   @id @default(cuid())
-  code          String   @unique
-
-  credits       Float    // Credits to give
-  discount      Int?     // Percentage discount on purchases
-
-  maxUses       Int?     // Max number of uses
-  currentUses   Int      @default(0)
-
-  expiresAt     DateTime?
-  active        Boolean  @default(true)
-
-  createdAt     DateTime @default(now())
-
-  @@index([code])
-  @@index([active])
-}
-
-model PromoCodeUsage {
-  id            String   @id @default(cuid())
-  code          String
-  userId        String
-  creditsGiven  Float
-
-  usedAt        DateTime @default(now())
-
-  @@unique([code, userId])
-  @@index([userId])
-  @@index([code])
 }

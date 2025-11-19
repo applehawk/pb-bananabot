@@ -39,6 +39,6 @@ import { GrammYServiceExtension } from './grammy-service-extension';
     GrammYServiceExtension,
   ],
   controllers: [WebhookController],
-  exports: [GrammYService, BotService],
+  exports: [GrammYService, BotService, GrammYServiceExtension],
 })
-export class GrammYModule {}
+export class GrammYModule { }

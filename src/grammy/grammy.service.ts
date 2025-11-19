@@ -108,10 +108,11 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     });
 
     // Conversations plugin
-    this.bot.use(conversations());
+    // MOVED to onModuleInit to ensure it runs AFTER service injection extensions
+    // this.bot.use(conversations());
 
     this.logger.log(
-      'Service injection and conversations middlewares initialized',
+      'Service injection middlewares initialized',
     );
   }
 
@@ -176,7 +177,9 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
    * Middlewares and handlers are set up in constructor
    */
   async onModuleInit(): Promise<void> {
-    this.logger.log('GrammYService.onModuleInit() - ready for conversations');
+    // Conversations middleware is now registered in GrammYServiceExtension
+    // to ensure it runs AFTER service injection
+
     this.logger.log(
       'GrammYService initialized (bot not started yet - waiting for conversations)',
     );

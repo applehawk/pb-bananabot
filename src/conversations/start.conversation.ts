@@ -43,8 +43,15 @@ export async function startConversation(
     reply_markup: getMainKeyboard(),
   });
 
-  // Wait for first message from user
-  const firstMessage = await conversation.waitFor('message:text');
+  // Wait for first message from user (text or callback)
+  const firstMessage = await conversation.wait();
+
+  // Check if it's a callback query (button press)
+  if (firstMessage.callbackQuery) {
+    console.log('[START] User pressed button, exiting conversation');
+    return;
+  }
+
   const prompt = firstMessage.message?.text?.trim() || '';
 
   console.log('[START] Received first message:', prompt);
@@ -55,7 +62,8 @@ export async function startConversation(
     prompt === '🎨 Генерация' ||
     prompt === '💰 Баланс' ||
     prompt === '📜 История' ||
-    prompt === '❓ Помощь'
+    prompt === '❓ Помощь' ||
+    prompt === '💎 Купить кредиты'
   ) {
     console.log('[START] User used command or button, exiting conversation');
     return;

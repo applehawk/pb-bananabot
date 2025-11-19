@@ -1,4 +1,5 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { conversations } from '@grammyjs/conversations';
 import { GrammYService } from './grammy.service';
 import { CreditsService } from '../credits/credits.service';
 import { GenerationService } from '../generation/generation.service';
@@ -33,5 +34,9 @@ export class GrammYServiceExtension {
       ctx.paymentService = this.paymentService;
       await next();
     });
+
+    // Register conversations middleware HERE
+    // This ensures it runs AFTER the service injection middleware above
+    bot.use(conversations());
   }
 }

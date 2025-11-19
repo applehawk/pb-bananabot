@@ -24,7 +24,7 @@ export class PaymentController {
     private readonly yooMoney: YooMoneyClient,
     private readonly configService: ConfigService,
   ) {
-    this.successRedirectUrl = configService.get('YOOMONEY_SUCCESS_URL');
+    this.successRedirectUrl = configService.get('payment.yoomoney.successUrl');
   }
 
   @Get('yoomoney/success')

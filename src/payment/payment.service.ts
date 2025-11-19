@@ -250,7 +250,7 @@ export class PaymentService {
     amount,
     label, // paymentId
   }: YooMoneyNotification): Promise<boolean> {
-    const secret = this.configService.get('YOOMONEY_SECRET');
+    const secret = this.configService.get('payment.yoomoney.secret');
 
     // Validate signature
     const hashString = [

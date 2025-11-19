@@ -13,6 +13,8 @@ import { UserService } from '../user/user.service';
 import { PrismaService } from '../database/prisma.service';
 import { CommandEnum } from '../enum/command.enum';
 
+import { GrammYServiceExtension } from './grammy-service-extension';
+
 /**
  * Bot Update Handler (grammY version)
  *
@@ -33,6 +35,8 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     private readonly userService: UserService,
     // private readonly tariffService: TariffService, // Legacy VPN module
     private readonly prisma: PrismaService,
+    // Inject extension to force instantiation before BotUpdate runs
+    private readonly grammyServiceExtension: GrammYServiceExtension,
   ) {
     this.logger.log('BotUpdate constructor called');
     this.adminChatId = Number(configService.get('ADMIN_CHAT_ID'));
@@ -44,12 +48,9 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
    */
   async onModuleInit(): Promise<void> {
     this.logger.log(
-      'BotUpdate.onModuleInit() called - registering handlers...',
+      'BotUpdate.onModuleInit() called',
     );
-    this.registerCommands();
-    this.registerCallbackHandlers();
-    this.registerTextHandlers();
-    this.logger.log('Bot update handlers registered');
+    // Handlers moved to onApplicationBootstrap to ensure they run AFTER conversations middleware
   }
 
   /**
@@ -58,8 +59,16 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
    */
   async onApplicationBootstrap(): Promise<void> {
     this.logger.log(
-      'BotUpdate.onApplicationBootstrap() - starting bot after all modules initialized...',
+      'BotUpdate.onApplicationBootstrap() - registering handlers and starting bot...',
     );
+
+    // Register handlers HERE to ensure they run after conversations middleware
+    // (which is registered in GrammYServiceExtension constructor or onModuleInit)
+    this.registerCommands();
+    this.registerCallbackHandlers();
+    this.registerTextHandlers();
+    this.logger.log('Bot update handlers registered');
+
     // IMPORTANT: Start bot after all handlers AND conversations are registered
     this.grammyService.startBot();
     this.logger.log('Bot started successfully');
@@ -76,6 +85,14 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     // /start command
     bot.command('start', async (ctx) => {
       await this.handleStart(ctx);
+    });
+
+    // /buy and /buy_credits commands
+    bot.command('buy', async (ctx) => {
+      await ctx.conversation.enter(CommandEnum.BUY_CREDITS);
+    });
+    bot.command('buy_credits', async (ctx) => {
+      await ctx.conversation.enter(CommandEnum.BUY_CREDITS);
     });
 
     // Legacy VPN commands (disabled)
@@ -151,36 +168,6 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     // Enter START conversation
     await ctx.conversation.enter(CommandEnum.START);
   }
-
-  /**
-   * /tariff command handler (admin only) - LEGACY VPN MODULE (DISABLED)
-   * Usage: /tariff <name> <price>
-   */
-  // private async handleTariffCommand(ctx: MyContext): Promise<void> {
-  //   if (!this.isAdmin(ctx)) {
-  //     return;
-  //   }
-  //
-  //   try {
-  //     const matchText = typeof ctx.match === 'string' ? ctx.match : '';
-  //     const args = matchText.split(' ').filter(Boolean) || [];
-  //     const [tariffName, priceStr] = args;
-  //
-  //     if (!tariffName || !priceStr || Number.isNaN(parseInt(priceStr))) {
-  //       throw new Error(
-  //         'Не указан один из обязательных параметров или указан неверно!',
-  //       );
-  //     }
-  //
-  //     const price = parseInt(priceStr);
-  //     await this.tariffService.updateTariffPrice(tariffName, price);
-  //     await ctx.reply(
-  //       `✅ Тариф "${tariffName}" обновлен. Новая цена: ${price} руб.`,
-  //     );
-  //   } catch (error) {
-  //     await ctx.reply(`❌ Ошибка: ${error.message}`);
-  //   }
-  // }
 
   /**
    * /up command handler (admin only)
@@ -272,13 +259,31 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
         return;
       }
 
-      this.logger.log(`Callback query: ${callbackData}`);
+      const updateId = ctx.update.update_id;
+      this.logger.log(`[handleCallbackQuery] Update ID: ${updateId}, Callback: ${callbackData}`);
+
+      // Check if callback data contains conversation-internal data (e.g., select_package:id, pay:method:id)
+      // These should NOT trigger a new conversation - they're handled by waitFor() inside conversations
+      const isConversationInternalData =
+        callbackData.startsWith('select_package:') ||
+        callbackData.startsWith('pay:') ||
+        callbackData.startsWith('check_payment:') ||
+        callbackData === 'cancel_purchase' ||
+        callbackData === 'back_to_packages';
+
+      // If this is internal conversation data, don't try to enter a conversation
+      // The active conversation's waitFor() will handle it
+      if (isConversationInternalData) {
+        this.logger.log(`Callback is conversation-internal data, letting active conversation handle it`);
+        return;
+      }
 
       // Answer callback query to remove loading state
       await ctx.answerCallbackQuery();
 
       // Enter the conversation/scene based on callback data
       // The conversation name should match the CommandEnum value
+      this.logger.log(`Entering conversation: ${callbackData}`);
       await ctx.conversation.enter(callbackData);
     } catch (error) {
       this.logger.error('Error handling callback query:', error);

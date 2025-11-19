@@ -25,5 +25,6 @@
         "libs/yoomoney-client/src/*"
       ],
     }
-  }
+  },
+  "exclude": ["web/**/*", "node_modules"]
 }

@@ -35,6 +35,7 @@ export default () => ({
       shopId: process.env.YOOMONEY_SHOP_ID,
       secret: process.env.YOOMONEY_SECRET,
       wallet: process.env.YOOMONEY_WALLET,
+      successUrl: process.env.YOOMONEY_SUCCESS_URL || 'https://t.me/your_bot',
     },
     telegramStars: {
       providerToken: process.env.TELEGRAM_PAYMENTS_PROVIDER_TOKEN,

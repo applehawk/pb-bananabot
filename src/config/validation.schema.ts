@@ -32,6 +32,7 @@ export const validationSchema = Joi.object({
   YOOMONEY_SHOP_ID: Joi.string().optional(),
   YOOMONEY_SECRET: Joi.string().optional(),
   YOOMONEY_WALLET: Joi.string().optional(),
+  YOOMONEY_SUCCESS_URL: Joi.string().uri().optional(),
 
   // Payment - Telegram Stars
   TELEGRAM_PAYMENTS_PROVIDER_TOKEN: Joi.string().optional(),
