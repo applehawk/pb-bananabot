@@ -1,6 +1,12 @@
 import { Conversation } from '@grammyjs/conversations';
 import { MyContext } from '../grammy/grammy-context.interface';
-import { getMainKeyboard } from '../grammy/keyboards/main.keyboard';
+import { getMainKeyboard, KeyboardCommands } from '../grammy/keyboards/main.keyboard';
+import { CommandEnum } from '../enum/command.enum';
+import { generateConversation } from './generate.conversation';
+import { balanceConversation } from './balance.conversation';
+import { historyConversation } from './history.conversation';
+import { helpConversation } from './help.conversation';
+import { buyCreditsConversation } from './buy-credits.conversation';
 
 /**
  * START Conversation
@@ -44,7 +50,7 @@ export async function startConversation(
   });
 
   // Wait for first message from user (text or callback)
-  const firstMessage = await conversation.wait();
+  const firstMessage = await conversation.wait() as MyContext;
 
   // Check if it's a callback query (button press)
   if (firstMessage.callbackQuery) {
@@ -57,15 +63,64 @@ export async function startConversation(
   console.log('[START] Received first message:', prompt);
 
   // If user sent a command or button text, exit (they're using the menu)
-  if (
-    prompt.startsWith('/') ||
-    prompt === '🎨 Генерация' ||
-    prompt === '💰 Баланс' ||
-    prompt === '📜 История' ||
-    prompt === '❓ Помощь' ||
-    prompt === '💎 Купить кредиты'
-  ) {
-    console.log('[START] User used command or button, exiting conversation');
+  // Handle menu buttons and commands
+  if (prompt === KeyboardCommands.GENERATE) {
+    await generateConversation(conversation, firstMessage);
+    return;
+  }
+  if (prompt === KeyboardCommands.BALANCE) {
+    await balanceConversation(conversation, firstMessage);
+    return;
+  }
+  if (prompt === KeyboardCommands.HISTORY) {
+    await historyConversation(conversation, firstMessage);
+    return;
+  }
+  if (prompt === KeyboardCommands.HELP) {
+    await helpConversation(conversation, firstMessage);
+    return;
+  }
+  if (prompt === '💎 Купить кредиты') {
+    await buyCreditsConversation(conversation, firstMessage);
+    return;
+  }
+
+  if (prompt.startsWith('/')) {
+    console.log('[START] User used command, exiting conversation');
+
+    if (prompt === '/balance') await balanceConversation(conversation, firstMessage);
+    else if (prompt === '/generate') await generateConversation(conversation, firstMessage);
+    else if (prompt === '/history') await historyConversation(conversation, firstMessage);
+    else if (prompt === '/help') await helpConversation(conversation, firstMessage);
+    else if (prompt === '/buy' || prompt === '/buy_credits') await buyCreditsConversation(conversation, firstMessage);
+    else if (prompt === '/start') {
+      // For /start, we can just restart the current conversation or return to let the global handler pick it up?
+      // If we return, the conversation ends. The global handler for /start will run.
+      // But we are processing the message NOW.
+      // If we return, the message is consumed.
+      // So we should probably just recurse or do nothing (since we are in start).
+      // But startConversation shows the welcome message at the beginning.
+      // So calling startConversation(conversation, firstMessage) would show it again.
+      // But startConversation is THIS function. Recursion?
+      // Yes, we can recurse.
+      // await startConversation(conversation, firstMessage);
+      // But we need to be careful about infinite loops if not handled.
+      // Actually, simpler to just return and let the user trigger it again? 
+      // No, if we return, the current message processing is done.
+      // The user sent /start. We return. Conversation ends.
+      // The global handler for /start is NOT triggered because the conversation consumed the update.
+      // So we MUST handle it here.
+      // Let's just send the welcome message again by recursing.
+      // But I need to export startConversation to call it? It is exported.
+      // But I am inside it.
+      // I can just call startConversation(conversation, firstMessage).
+      // However, TS might complain about circular reference if I import it?
+      // I don't need to import it, it's in the scope.
+      // But wait, the function is defined as export async function...
+      // I can call it recursively.
+      await startConversation(conversation, firstMessage);
+    }
+
     return;
   }
 
@@ -107,9 +162,9 @@ export async function startConversation(
   if (user.credits < cost) {
     await ctx.reply(
       `💎 Недостаточно кредитов\n\n` +
-        `Требуется: ${cost}\n` +
-        `Доступно: ${user.credits}\n\n` +
-        `Пополните баланс: /buy`,
+      `Требуется: ${cost}\n` +
+      `Доступно: ${user.credits}\n\n` +
+      `Пополните баланс: /buy`,
       {
         reply_markup: {
           inline_keyboard: [
@@ -124,7 +179,7 @@ export async function startConversation(
   // Send processing message
   const statusMsg = await ctx.reply(
     `🎨 Генерирую изображение...\n⏱ Подождите 5-10 секунд\n\n` +
-      `Промпт: "${prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt}"`,
+    `Промпт: "${prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt}"`,
   );
 
   try {
@@ -187,21 +242,21 @@ export async function startConversation(
     } else {
       await ctx.reply(
         `✅ Изображение сгенерировано, но произошла ошибка при отправке.\n` +
-          `Generation ID: ${generation.id}`,
+        `Generation ID: ${generation.id}`,
       );
     }
   } catch (error) {
     await ctx.api
       .deleteMessage(ctx.chat.id, statusMsg.message_id)
-      .catch(() => {});
+      .catch(() => { });
 
     await ctx.reply(
       `❌ Ошибка при генерации изображения\n\n` +
-        `${error.message}\n\n` +
-        `Попробуйте:\n` +
-        `• Изменить промпт\n` +
-        `• Попробовать позже\n` +
-        `• Использовать /help для справки`,
+      `${error.message}\n\n` +
+      `Попробуйте:\n` +
+      `• Изменить промпт\n` +
+      `• Попробовать позже\n` +
+      `• Использовать /help для справки`,
     );
   }
 }

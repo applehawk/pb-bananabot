@@ -13,9 +13,6 @@ import { hydrate } from '@grammyjs/hydrate';
 import { MyContext, SessionData } from './grammy-context.interface';
 import { BotService } from './bot.service';
 import { UserService } from '../user/user.service';
-// Legacy VPN modules (disabled)
-// import { TariffService } from '../tariff/tariff.service';
-// import { PaymentService } from '../payment/payment.service';
 
 /**
  * GrammY Service
