@@ -77,7 +77,7 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:-bananabot_secret}
       DATABASE_NAME: ${DATABASE_NAME:-bananabot}
       DATABASE_URL: postgresql://${DATABASE_USER:-bananabot}:${DATABASE_PASSWORD:-bananabot_secret}@${DATABASE_HOST:-postgres}:${DATABASE_PORT:-5432}/${DATABASE_NAME:-bananabot}?schema=public
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://${REDIS_HOST:-localhost}:${REDIS_PORT:-5432}
     env_file:
       - .env
     ports:
