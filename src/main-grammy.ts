@@ -15,7 +15,9 @@ async function bootstrap() {
     );
   }
 
-  const app = await NestFactory.create(BotModule);
+  const app = await NestFactory.create(BotModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
 
   // Enable CORS with security-conscious defaults
   app.enableCors({
