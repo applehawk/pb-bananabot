@@ -27,6 +27,7 @@ RUN git submodule update --init --recursive prisma || true
 # Copy prisma submodule
 COPY prisma ./prisma
 
+
 # Generate Prisma Client to root node_modules
 # This ensures @prisma/client is available for the application
 RUN npx prisma generate --schema=./prisma/schema.prisma
