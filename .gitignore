@@ -1,5 +1,6 @@
 # Environment variables
 .env
+.env.deploy
 
 # Dependencies
 node_modules/
@@ -31,3 +32,4 @@ src/prisma/data/
 # IDE
 .vscode/settings.json
 .idea/
+env.json

@@ -11,6 +11,7 @@ COPY tsconfig*.json ./
 COPY nest-cli.json ./
 
 # Install dependencies
+RUN apk add --no-cache git
 RUN npm ci
 
 # Copy source code
@@ -18,6 +19,10 @@ COPY src ./src
 
 # Copy libs (local modules like yoomoney-client)
 COPY libs ./libs
+
+# Update .gitmodules
+COPY .gitmodules .gitmodules
+RUN git submodule update --init --recursive prisma || true
 
 # Copy prisma submodule
 COPY prisma ./prisma
