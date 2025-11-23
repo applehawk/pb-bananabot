@@ -163,11 +163,16 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
   /**
    * Start bot - should be called AFTER conversations are registered
    */
-  public startBot(): void {
+  public async startBot(): Promise<void> {
     if (this.botStarted) {
       this.logger.warn('Bot already started, ignoring duplicate start call');
       return;
     }
+
+    // Initialize bot to fetch bot info
+    this.logger.log('Initializing bot...');
+    await this.bot.init();
+    this.logger.log('Bot initialized successfully');
 
     if (!this.useWebhook) {
       this.logger.log('Starting bot in polling mode (development)');

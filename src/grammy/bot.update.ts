@@ -70,7 +70,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     this.logger.log('Bot update handlers registered');
 
     // IMPORTANT: Start bot after all handlers AND conversations are registered
-    this.grammyService.startBot();
+    await this.grammyService.startBot();
     this.logger.log('Bot started successfully');
   }
 
