@@ -1,254 +1,250 @@
-# Quick Start Guide - AI Image Generation Bot
+# BananaBot - Quick Start Guide
 
-## Что уже создано:
+Быстрое руководство по запуску и разработке BananaBot.
 
-### ✅ База данных (Prisma)
-- Полная схема для PostgreSQL
-- Модели: User, UserSettings, Generation, InputImage, Transaction, Referral, DailyBonus, CreditPackage, Analytics, PromoCode
-- Все enum типы и индексы
+## Установка и запуск
 
-### ✅ Конфигурация
-- .env.example с полным набором переменных
-- configuration.ts - загрузка конфигурации
-- validation.schema.ts - валидация с Joi
+### Первый запуск
 
-### ✅ Core Services
-- **DatabaseModule** - Prisma интеграция
-- **UserService** - управление пользователями, кредитами, настройками
-- **CreditsService** - начисление/списание кредитов, бонусы, транзакции
-- **GeminiService** - интеграция с Gemini AI для генерации изображений
-
-## Что нужно доделать:
-
-### 1. Generation Service (2-3 hours)
-```typescript
-// src/generation/generation.service.ts
-- orchestrate весь процесс генерации
-- вызов GeminiService
-- сохранение результатов в БД
-- обработка ошибок и рефанды
-
-// src/generation/storage/image-storage.service.ts
-- загрузка в S3/R2
-- получение публичных URL
-```
-
-### 2. Telegram Bot Core (3-4 hours)
-```typescript
-// src/telegram/telegram.service.ts
-- аналог grammy.service.ts
-- инициализация бота
-- регистрация handlers
-
-// src/telegram/bot.provider.ts
-- создание Grammy Bot instance
-- настройка middleware
-- conversations plugin
-
-// src/telegram/telegram-context.interface.ts
-- расширение Context с сервисами
-- SessionData для генерации
-```
-
-### 3. Bot Commands (2-3 hours)
-```typescript
-// Реализовать команды:
-- /start - регистрация + реферал
-- /generate - быстрая генерация
-- /balance - показать кредиты
-- /settings - настройки генерации
-- /buy - покупка кредитов
-- /history - история генераций
-- /help - справка
-```
-
-### 4. Handlers (2 hours)
-```typescript
-// Text handler - обработка промптов
-// Photo handler - image-to-image
-// Callback handler - inline кнопки
-```
-
-### 5. Payment Integration (2-3 hours)
-Адаптировать существующую систему:
-- Обновить под новую Prisma схему
-- Добавить Telegram Stars strategy
-- Добавить Crypto strategy
-
-### 6. Docker (1 hour)
-```yaml
-# docker-compose.yml
-- app (Node.js)
-- postgres
-- redis (optional)
-```
-
-## Установка и запуск:
-
-### Шаг 1: Установить зависимости
 ```bash
-npm install
-```
+# 1. Клонировать с submodules
+git clone --recurse-submodules git@github.com:applehawk/pb-bananabot.git
+cd pb-bananabot
 
-### Шаг 2: Настроить .env
-```bash
+# 2. Настроить окружение
 cp .env.example .env
-# Заполнить все необходимые ключи
+# Отредактируйте .env файл
+
+# 3. Установить зависимости
+make setup
+
+# 4. Запустить через Docker (рекомендуется)
+make docker-up
+
+# Или запустить локально
+make dev
 ```
 
-### Шаг 3: Запустить БД
-```bash
-# Локально PostgreSQL или через Docker
-docker run -d \
-  --name postgres \
-  -e POSTGRES_USER=user \
-  -e POSTGRES_PASSWORD=password \
-  -e POSTGRES_DB=image_gen_bot \
-  -p 5432:5432 \
-  postgres:16
-```
+### Проверка
 
-### Шаг 4: Миграции
-```bash
-npm run prisma:generate
-npm run prisma:migrate
-```
+- Bot: http://localhost:3000/health
+- Admin: http://localhost:3001
+- PostgreSQL: localhost:5432
+- Redis: localhost:6379
 
-### Шаг 5: Запуск
-```bash
-# Development
-npm run start:dev
+## Основные команды
 
-# Production
-npm run build
-npm run start:prod
-```
-
-## Структура проекта:
-
-```
-src/
-├── config/               ✅ DONE
-│   ├── configuration.ts
-│   └── validation.schema.ts
-├── database/             ✅ DONE
-│   ├── prisma.service.ts
-│   └── database.module.ts
-├── user/                 ✅ DONE
-│   ├── user.service.ts
-│   └── user.module.ts
-├── credits/              ✅ DONE
-│   ├── credits.service.ts
-│   └── credits.module.ts
-├── gemini/               ✅ DONE
-│   ├── gemini.service.ts
-│   ├── utils/
-│   │   └── prompt-enhancer.util.ts
-│   └── gemini.module.ts
-├── generation/           ⚠️ TODO
-│   ├── generation.service.ts
-│   ├── storage/
-│   │   └── image-storage.service.ts
-│   └── generation.module.ts
-├── telegram/             ⚠️ TODO
-│   ├── telegram.service.ts
-│   ├── bot.provider.ts
-│   ├── commands/
-│   ├── handlers/
-│   ├── conversations/
-│   └── telegram.module.ts
-├── payment/              ⚠️ ADAPT EXISTING
-│   └── ... (уже есть, нужно адаптировать)
-├── referral/             ⚠️ TODO
-│   ├── referral.service.ts
-│   └── referral.module.ts
-├── app.module.ts         ⚠️ TODO
-└── main.ts               ⚠️ TODO
-```
-
-## Приоритеты:
-
-### ВЫСОКИЙ (для MVP):
-1. ✅ Database & User Management  
-2. ✅ Credits System
-3. ✅ Gemini Integration
-4. ⚠️ Generation Orchestration
-5. ⚠️ Telegram Bot Core
-6. ⚠️ Basic Commands (/start, /generate, /balance)
-7. ⚠️ Text-to-Image Handler
-
-### СРЕДНИЙ:
-- Image-to-Image
-- Payment Integration
-- History Command
-- Settings
-
-### НИЗКИЙ:
-- Conversations
-- Referral System
-- Analytics
-- Admin Panel
-
-## Полезные команды:
+### Разработка бота
 
 ```bash
-# Генерация Prisma Client
-npm run prisma:generate
+# Запустить бот в dev режиме
+make dev
 
-# Создать миграцию
-npm run prisma:migrate
+# Собрать проект
+make build
 
-# Prisma Studio (GUI для БД)
-npm run prisma:studio
+# Запустить в production
+make start
 
-# Установить webhook
-npm run webhook:set
+# Остановить бот
+make stop
 
-# Запуск тестов
-npm test
-
-# Линтинг
-npm run lint
+# Перезапустить
+make restart
 ```
 
-## Следующие шаги:
+### Разработка админ-панели
 
-1. Завершить Generation Service
-2. Создать Telegram Bot Core
-3. Реализовать основные команды
-4. Протестировать text-to-image генерацию
-5. Добавить платежи
-6. Деплой
+```bash
+# Установить зависимости админки
+make admin-install
 
-## Примечания:
+# Запустить админку локально (dev mode)
+make admin-dev
 
-- Используется существующая архитектура Grammy из src/grammy/
-- Паттерн Strategy для платежей уже реализован
-- Prisma схема готова для production
-- Все сервисы полностью типизированы
+# Собрать для production
+make admin-build
 
-## Готовые API методы:
+# Запустить админку в Docker
+make admin-prod
 
-### UserService
-- `findByTelegramId(telegramId)` - найти пользователя
-- `upsert(data)` - создать/обновить
-- `updateCredits(userId, amount)` - изменить кредиты
-- `deductCredits(userId, amount)` - списать кредиты
-- `getSettings(userId)` - получить настройки
-- `getStatistics(userId)` - статистика
+# Остановить Docker контейнер админки
+make admin-stop
+```
 
-### CreditsService
-- `calculateCost(type, numImages, batchSize)` - рассчитать стоимость
-- `addCredits(userId, amount, type)` - добавить кредиты
-- `deductCredits(userId, amount, genId)` - списать
-- `refundCredits(userId, amount, reason)` - возврат
-- `grantReferralBonus(referrerId, referredId)` - реферальный бонус
-- `claimDailyBonus(userId)` - ежедневный бонус
+### Docker команды
 
-### GeminiService
-- `enhancePrompt(prompt)` - улучшить промпт
-- `generateFromText(params)` - text-to-image
-- `generateFromImage(params)` - image-to-image
-- `generateBatch(params)` - batch генерация
-- `healthCheck()` - проверка работы API
+```bash
+# Запустить все сервисы
+make docker-up
 
+# Остановить все сервисы
+make docker-down
+
+# Перезапустить сервисы
+make docker-restart
+
+# Показать логи
+make docker-logs
+
+# Пересобрать образы
+make docker-build
+
+# Полный deploy (обновить submodules + собрать + запустить)
+make deploy
+```
+
+### Работа с Submodules
+
+```bash
+# Обновить submodules до последних версий
+make submodules-update
+
+# Проверить статус submodules
+make submodules-status
+
+# Pull изменения в submodules
+make submodules-pull
+```
+
+## Редактирование Submodules
+
+### Изменить Prisma Schema
+
+```bash
+# 1. Войти в директорию
+cd prisma
+
+# 2. Отредактировать schema
+vim schema.prisma
+
+# 3. Создать миграцию
+npm run migrate:dev --name add_field
+
+# 4. Закоммитить и запушить
+git add .
+git commit -m "feat: Add new field"
+git push origin main
+
+# 5. Вернуться и обновить reference
+cd ..
+git add prisma
+git commit -m "chore: Update prisma submodule"
+git push origin imggenbot
+```
+
+### Изменить Admin Panel
+
+```bash
+# 1. Войти в директорию
+cd bananabot-admin
+
+# 2. Внести изменения
+vim app/page.tsx
+
+# 3. Закоммитить и запушить
+git add .
+git commit -m "feat: Update UI"
+git push origin main
+
+# 4. Вернуться и обновить reference
+cd ..
+git add bananabot-admin
+git commit -m "chore: Update admin submodule"
+git push origin imggenbot
+```
+
+## Структура проекта
+
+```
+bananabot/
+├── Makefile                    # Команды для управления
+├── docker-compose.yml          # Docker конфигурация
+├── .env                        # Переменные окружения
+│
+├── prisma/                     # Git submodule (Prisma schema)
+│   ├── schema.prisma
+│   └── migrations/
+│
+├── bananabot-admin/            # Git submodule (Admin panel)
+│   ├── app/
+│   ├── prisma/                 # Nested submodule
+│   └── Dockerfile
+│
+└── src/                        # Код бота
+    └── main.ts
+```
+
+## Полезные ссылки
+
+- 📖 [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) - Подробное руководство по Docker
+- 📖 [SUBMODULES_GUIDE.md](SUBMODULES_GUIDE.md) - Работа с Git Submodules
+- 📖 [README.md](README.md) - Основная документация
+
+## Частые проблемы
+
+### Submodules не загрузились
+
+```bash
+git submodule update --init --recursive
+# Или
+make submodules-update
+```
+
+### Docker контейнеры не запускаются
+
+```bash
+# Проверить логи
+make docker-logs
+
+# Пересобрать образы
+make docker-build
+make docker-up
+```
+
+### База данных недоступна
+
+```bash
+# Проверить статус PostgreSQL
+docker-compose ps postgres
+
+# Применить миграции вручную
+docker-compose exec bot sh -c "cd prisma && npx prisma migrate deploy"
+```
+
+### Порт занят
+
+Измените порты в `.env`:
+```env
+BOT_PORT=3010
+ADMIN_PORT=3011
+DATABASE_PORT=5433
+```
+
+## Команды быстрого доступа
+
+```bash
+# Посмотреть все доступные команды
+make help
+
+# Полная очистка и переустановка
+make clean-all
+make setup
+make docker-up
+
+# Быстрый рестарт при разработке
+make restart
+
+# Проверить состояние всех сервисов
+docker-compose ps
+```
+
+## Что дальше?
+
+1. Настройте переменные окружения в `.env`
+2. Запустите `make docker-up`
+3. Откройте http://localhost:3001 для админ-панели
+4. Начните разработку с `make dev`
+5. Изучите [SUBMODULES_GUIDE.md](SUBMODULES_GUIDE.md) для работы с submodules
+
+Удачной разработки! 🚀

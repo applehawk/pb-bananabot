@@ -27,7 +27,6 @@ RUN git submodule update --init --recursive prisma || true
 # Copy prisma submodule
 COPY prisma ./prisma
 
-
 # Generate Prisma Client to root node_modules
 # This ensures @prisma/client is available for the application
 RUN npx prisma generate --schema=./prisma/schema.prisma
@@ -59,16 +58,12 @@ RUN addgroup -g 1001 -S nodejs && \
 
 USER nestjs
 
-# Expose port (must match amvera.yml containerPort)
-EXPOSE 3000
-
 # Set environment variables
-ENV NODE_ENV=production \
-    PORT=3000
+ENV NODE_ENV=production
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "require('http').get('http://localhost:${process.env.PORT}/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start application with migrations
 CMD ["sh", "-c", "npx prisma migrate deploy --schema=./prisma/schema.prisma && node dist/src/main-grammy.js"]
