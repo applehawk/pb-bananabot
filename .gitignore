@@ -34,3 +34,4 @@ src/prisma/data/
 .idea/
 env.json
 deploy/yandex.cloud/.yc-config
+project.tar.gz
