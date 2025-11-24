@@ -49,6 +49,16 @@ help:
 	@echo "  make admin-prod     - Start only admin panel in Docker"
 	@echo "  make admin-stop     - Stop admin panel Docker container"
 	@echo ""
+	@echo "Yandex.Cloud commands:"
+	@echo "  make yc-build       - Build and push Docker image to Yandex.Cloud"
+	@echo "  make yc-deploy      - Deploy revision to Yandex.Cloud Serverless Containers"
+	@echo "  make yc-webhook     - Set webhook for Yandex.Cloud Serverless Container"
+	@echo "  make yc-logs        - Stream logs from Yandex.Cloud container"
+	@echo "  make vm-check       - Check status of Redis/Postgres on VM"
+	@echo "  make vm-fix-redis   - Fix Redis on VM (Restart and force master)"
+	@echo "  make vm-check-sg    - Check Security Group rules for VM"
+	@echo "  make vm-setup-sg    - Setup Security Group for VM (Allow Redis/Postgres)"
+	@echo ""
 	@echo "Docker commands (short aliases):"
 	@echo "  make up             - Alias for docker-up"
 	@echo "  make down           - Alias for docker-down"
@@ -256,6 +266,58 @@ admin-stop:
 	@echo "Stopping admin panel container..."
 	docker compose stop admin
 	@echo "✓ Admin panel stopped"
+
+# ============================================================================
+# Yandex.Cloud Deployment
+# ============================================================================
+
+# Build and push Docker image to Yandex.Cloud Container Registry
+yc-build:
+	@echo "Building and pushing to Yandex.Cloud..."
+	@./deploy/yandex.cloud/yc-build.sh
+	@echo "✓ Build and push complete"
+
+# Deploy revision to Yandex.Cloud Serverless Containers
+yc-deploy:
+	@echo "Deploying revision to Yandex.Cloud..."
+	@./deploy/yandex.cloud/yc-deploy-revision.sh
+	@echo "✓ Deployment complete"
+
+# Set webhook for Yandex.Cloud Serverless Container
+yc-webhook:
+	@echo "Setting webhook for Yandex.Cloud..."
+	@./deploy/yandex.cloud/set-webhook.sh
+
+# Stream logs from Yandex.Cloud Serverless Container
+yc-logs:
+	@echo "Streaming logs from Yandex.Cloud..."
+	@CONTAINER_ID=$$(yc serverless container get --name banana-bot-container --format json | grep -o '"id": "[^"]*"' | head -n 1 | cut -d'"' -f4); \
+	if [ -z "$$CONTAINER_ID" ]; then \
+		echo "Error: Container 'banana-bot-container' not found."; \
+		exit 1; \
+	fi; \
+	echo "Container ID: $$CONTAINER_ID"; \
+	yc logging read --resource-ids=$$CONTAINER_ID --follow
+
+# Check status of Docker containers on Yandex.Cloud VM (Redis/Postgres)
+vm-check:
+	@echo "Checking VM status..."
+	@./deploy/yandex.cloud/check-vm-status.sh
+
+# Fix Redis on VM (Restart and force master mode)
+vm-fix-redis:
+	@echo "Fixing Redis on VM..."
+	@./deploy/yandex.cloud/fix-redis-vm.sh
+
+# Check Security Group rules for VM
+vm-check-sg:
+	@echo "Checking Security Group rules..."
+	@./deploy/yandex.cloud/check-sg-rules.sh
+
+# Setup Security Group for VM (Allow Redis/Postgres)
+vm-setup-sg:
+	@echo "Setting up Security Group..."
+	@./deploy/yandex.cloud/setup-sg.sh
 
 # ============================================================================
 # Database Commands

@@ -169,10 +169,14 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    // Initialize bot to fetch bot info
-    this.logger.log('Initializing bot...');
-    await this.bot.init();
-    this.logger.log('Bot initialized successfully');
+    // Initialize bot to fetch bot info if not already initialized
+    if (!this.bot.botInfo) {
+      this.logger.log('Initializing bot...');
+      await this.bot.init();
+      this.logger.log('Bot initialized successfully');
+    } else {
+      this.logger.log('Bot already initialized (botInfo present)');
+    }
 
     if (!this.useWebhook) {
       this.logger.log('Starting bot in polling mode (development)');
@@ -200,8 +204,19 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     // to ensure it runs AFTER service injection
 
     this.logger.log(
-      'GrammYService initialized (bot not started yet - waiting for conversations)',
+      'GrammYService initialized. Starting bot initialization...',
     );
+
+    // Initialize bot (fetch bot info) early to ensure it's ready for webhooks
+    // This runs once the module is initialized, before the application starts listening
+    try {
+      await this.bot.init();
+      this.logger.log(`Bot initialized: @${this.bot.botInfo.username}`);
+    } catch (error) {
+      this.logger.error('Failed to initialize bot during module init:', error);
+      // We don't throw here to allow app to start, but webhook handling will fail
+      // Ideally, we might want to throw if bot is critical
+    }
   }
 
   /**

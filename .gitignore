@@ -33,3 +33,4 @@ src/prisma/data/
 .vscode/settings.json
 .idea/
 env.json
+deploy/yandex.cloud/.yc-config

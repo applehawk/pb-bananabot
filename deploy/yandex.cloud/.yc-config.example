@@ -1,0 +1,25 @@
+# Yandex.Cloud Deployment Configuration Example
+# Copy this file to .yc-config and fill in your values
+
+# VM Configuration
+VM_ID="your-vm-id-here"
+VM_SSH_KEY="~/.ssh/id_bananabot"
+VM_SSH_USER="ubuntu"
+
+# Serverless Container Configuration
+CONTAINER_NAME="banana-bot-container"
+
+# Security Group Configuration
+SECURITY_GROUP_NAME="bananabot-sg"
+
+# Yandex Lockbox Secret Configuration
+SECRET_ID="your-secret-id-here"
+SECRET_VERSION_ID="your-secret-version-id-here"
+
+# Registry Configuration (optional - will be auto-detected if not set)
+# REGISTRY_NAME="bananabot-registry"
+# REGISTRY_ID=""
+
+# Network Configuration (optional - will be auto-detected if not set)
+# NETWORK_ID=""
+# SERVICE_ACCOUNT_ID=""
