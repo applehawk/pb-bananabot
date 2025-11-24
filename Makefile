@@ -19,13 +19,15 @@ help:
 	@echo "  make start          - Run in production mode (updates submodules first)"
 	@echo "  make ps           # Show running services"
 	@echo "  make gc-provision     # Provision Google Cloud VM"
-	@echo "  make gc-deploy        # Deploy code to Google Cloud VM"
-	@echo "  make gc-status        # Check Google Cloud VM status"
-	@echo "  make gc-provision     # Provision Google Cloud VM"
-	@echo "  make gc-deploy        # Deploy code to Google Cloud VM"
+	@echo "  make gc-deploy        # Deploy code to Google Cloud VM (bot + admin)"
+	@echo "  make gc-deploy-bot    # Deploy only bot to Google Cloud VM"
+	@echo "  make gc-deploy-admin  # Deploy only admin to Google Cloud VM"
+	@echo "  make gc-deploy-nginx  # Deploy only nginx configuration"
 	@echo "  make gc-status        # Check Google Cloud VM status"
 	@echo "  make gc-ssl           # Setup SSL (Let's Encrypt) for Google Cloud VM"
 	@echo "  make gc-firewall      # Setup Firewall rules for Google Cloud VM"
+	@echo "  make gc-cleanup       # Clean up Docker system on Google Cloud VM"
+	@echo "  make gc-resize-disk   # Resize VM disk (stops VM temporarily)"
 	@echo "  make restart        - Stop and start the bot"
 	@echo "  make test           - Run tests"
 	@echo ""
@@ -438,9 +440,21 @@ gc-provision:
 	./deploy/google.cloud/setup-firewall.sh
 	./deploy/google.cloud/provision.sh
 
-# Deploy code to Google Cloud VM
+# Deploy code to Google Cloud VM (bot + admin)
 gc-deploy:
 	./deploy/google.cloud/deploy.sh
+
+# Deploy only bot to Google Cloud VM
+gc-deploy-bot:
+	./deploy/google.cloud/deploy-bot.sh
+
+# Deploy only admin to Google Cloud VM
+gc-deploy-admin:
+	./deploy/google.cloud/deploy-admin.sh
+
+# Deploy only nginx configuration to Google Cloud VM
+gc-deploy-nginx:
+	./deploy/google.cloud/deploy-nginx.sh
 
 # Check Google Cloud VM status
 gc-status:
@@ -453,4 +467,12 @@ gc-ssl:
 # Setup Firewall rules for Google Cloud VM
 gc-firewall:
 	./deploy/google.cloud/setup-firewall.sh
+
+# Clean up Docker system on Google Cloud VM
+gc-cleanup:
+	./deploy/google.cloud/cleanup.sh
+
+# Resize VM disk (stops VM temporarily)
+gc-resize-disk:
+	./deploy/google.cloud/resize-disk.sh
 
