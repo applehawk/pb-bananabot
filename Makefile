@@ -17,7 +17,15 @@ help:
 	@echo "  make build          - Build the project (updates submodules first)"
 	@echo "  make dev            - Run in development mode"
 	@echo "  make start          - Run in production mode (updates submodules first)"
-	@echo "  make stop           - Stop running bot process"
+	@echo "  make ps           # Show running services"
+	@echo "  make gc-provision     # Provision Google Cloud VM"
+	@echo "  make gc-deploy        # Deploy code to Google Cloud VM"
+	@echo "  make gc-status        # Check Google Cloud VM status"
+	@echo "  make gc-provision     # Provision Google Cloud VM"
+	@echo "  make gc-deploy        # Deploy code to Google Cloud VM"
+	@echo "  make gc-status        # Check Google Cloud VM status"
+	@echo "  make gc-ssl           # Setup SSL (Let's Encrypt) for Google Cloud VM"
+	@echo "  make gc-firewall      # Setup Firewall rules for Google Cloud VM"
 	@echo "  make restart        - Stop and start the bot"
 	@echo "  make test           - Run tests"
 	@echo ""
@@ -420,3 +428,29 @@ setup: submodules-update install admin-install
 # Setup with database initialization
 setup-db: setup db-generate db-migrate
 	@echo "✓ Full setup with database complete"
+
+# ============================================================================
+# Google Cloud Deployment
+# ============================================================================
+
+# Provision Google Cloud VM
+gc-provision:
+	./deploy/google.cloud/setup-firewall.sh
+	./deploy/google.cloud/provision.sh
+
+# Deploy code to Google Cloud VM
+gc-deploy:
+	./deploy/google.cloud/deploy.sh
+
+# Check Google Cloud VM status
+gc-status:
+	./deploy/google.cloud/check_status.sh
+
+# Setup SSL for Google Cloud VM
+gc-ssl:
+	./deploy/google.cloud/setup-ssl.sh
+
+# Setup Firewall rules for Google Cloud VM
+gc-firewall:
+	./deploy/google.cloud/setup-firewall.sh
+

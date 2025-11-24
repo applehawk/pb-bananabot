@@ -59,9 +59,9 @@ services:
   # Telegram Bot (NestJS + Grammy)
   bot:
     image: bananabot:local
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: bananabot-bot
     restart: unless-stopped
     depends_on:
