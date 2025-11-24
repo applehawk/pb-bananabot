@@ -97,9 +97,6 @@ export async function generateConversation(
         messageText = `✍️ Напиши описание для генерации картинки и отправь его!`;
       }
     } else {
-      // Image mode
-      messageText = `🖼 <b>Режим: Изображение + Текст</b>\n\n`;
-
       if (inputImageFileId) {
         messageText += `✅ Изображение загружено\n`;
       } else {
@@ -118,20 +115,21 @@ export async function generateConversation(
 
     if (readyToGenerate) {
       if (canGenerate) {
+        // Aspect Ratio Buttons
+        const ratios = ['1:1', '16:9', '9:16', '3:4', '4:3'];
+        ratios.forEach((r, i) => {
+          const label = r === currentRatio ? `✅ ${r}` : r;
+          keyboard.text(label, `aspect_${r}`);
+          if ((i + 1) % 3 === 0) keyboard.row();
+        });
+        if (ratios.length % 3 !== 0) keyboard.row();
+
         keyboard.text('🎨 Сгенерировать!', 'generate_trigger').row();
+
       } else {
         keyboard.text('💳 Купить кредиты', 'buy_credits').row();
       }
     }
-
-    // Aspect Ratio Buttons
-    const ratios = ['1:1', '16:9', '9:16', '3:4', '4:3'];
-    ratios.forEach((r, i) => {
-      const label = r === currentRatio ? `✅ ${r}` : r;
-      keyboard.text(label, `aspect_${r}`);
-      if ((i + 1) % 3 === 0) keyboard.row();
-    });
-    if (ratios.length % 3 !== 0) keyboard.row();
 
     // Mode switch button
     keyboard.row();
