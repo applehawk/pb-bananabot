@@ -8,12 +8,13 @@ ZONE=${ZONE:-"europe-north1-c"}
 
 # Colors
 GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 echo -e "${GREEN}Deploying BOT to $INSTANCE_NAME...${NC}"
 
-# Prepare project files
-echo -e "${GREEN}Preparing project files...${NC}"
+# Prepare project files (только исходники, без зависимостей)
+echo -e "${GREEN}Preparing source files...${NC}"
 tar --exclude='node_modules' \
     --exclude='.git' \
     --exclude='dist' \
@@ -22,11 +23,14 @@ tar --exclude='node_modules' \
     --exclude='postgres_data' \
     --exclude='redis_data' \
     --exclude='bananabot-admin' \
-    -czf project.tar.gz .
+    --exclude='*.log' \
+    --exclude='.turbo' \
+    --exclude='.cache' \
+    -czf bot-src.tar.gz src/ libs/ prisma/ package*.json tsconfig*.json nest-cli.json .gitmodules Dockerfile
 
 # Upload files
-echo -e "${GREEN}Uploading files to VM...${NC}"
-gcloud compute scp project.tar.gz $INSTANCE_NAME:~/ --zone=$ZONE --quiet
+echo -e "${GREEN}Uploading source files to VM...${NC}"
+gcloud compute scp bot-src.tar.gz $INSTANCE_NAME:~/ --zone=$ZONE --quiet
 
 # Upload .env file
 if [ -f .env.deploy ]; then
@@ -36,39 +40,33 @@ elif [ -f .env ]; then
     echo -e "${GREEN}Found .env, using it...${NC}"
     gcloud compute scp .env $INSTANCE_NAME:~/bananabot.env --zone=$ZONE --quiet
 else
-    echo "WARNING: No .env or .env.deploy file found! You will need to configure it on the server."
+    echo -e "${YELLOW}WARNING: No .env or .env.deploy file found!${NC}"
 fi
 
 # Clean up local tarball
-rm project.tar.gz
+rm bot-src.tar.gz
 
 # Run update on VM
 echo -e "${GREEN}Updating BOT on VM...${NC}"
 gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="
-    # Setup Project Directory
-    mkdir -p ~/bananabot
-    tar -xzf ~/project.tar.gz -C ~/bananabot
+    cd ~/bananabot
+    
+    # Extract only source files
+    echo 'Extracting source files...'
+    tar -xzf ~/bot-src.tar.gz
+    rm ~/bot-src.tar.gz
     
     # Move .env if uploaded
     if [ -f ~/bananabot.env ]; then
-        mv ~/bananabot.env ~/bananabot/.env
+        mv ~/bananabot.env .env
     fi
 
-    cd ~/bananabot
-
-    # Use Google Cloud Nginx Config
-    if [ -f deploy/google.cloud/nginx.conf ]; then
-        cp deploy/google.cloud/nginx.conf nginx.conf
-    fi
-
-    # Rebuild BOT service only
-    echo 'Cleaning up old bot images...'
-    sudo docker compose stop bot || true
-    sudo docker compose rm -f bot || true
-    sudo docker image prune -af || true
+    # Rebuild BOT service with cache
+    echo 'Rebuilding BOT service (using cache)...'
+    sudo docker compose build bot
     
-    echo 'Rebuilding BOT service...'
-    sudo docker compose up -d --build bot
+    echo 'Restarting BOT container...'
+    sudo docker compose up -d bot
 
     echo 'BOT deployment complete!'
 "

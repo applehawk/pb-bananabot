@@ -19,42 +19,38 @@ if [ ! -d "bananabot-admin" ]; then
     exit 1
 fi
 
-# Prepare admin files
-echo -e "${GREEN}Preparing admin panel files...${NC}"
-tar --exclude='node_modules' \
+# Upload admin files using rsync
+echo -e "${GREEN}Syncing admin files to VM...${NC}"
+# Ensure target directory exists
+gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="mkdir -p ~/bananabot/bananabot-admin"
+
+# Sync files
+# --delete: remove files on destination that are not in source
+# --exclude: skip unnecessary files
+rsync -avz --delete \
+    --exclude='node_modules' \
     --exclude='.next' \
     --exclude='.git' \
     --exclude='dist' \
     --exclude='.turbo' \
     --exclude='.cache' \
     --exclude='*.log' \
-    -czf admin.tar.gz bananabot-admin/
-
-# Upload admin files
-echo -e "${GREEN}Uploading admin files to VM...${NC}"
-gcloud compute scp admin.tar.gz $INSTANCE_NAME:~/ --zone=$ZONE --quiet
-
-# Clean up local tarball
-rm admin.tar.gz
+    -e "gcloud compute ssh --zone=$ZONE --quiet" \
+    bananabot-admin/ $INSTANCE_NAME:~/bananabot/bananabot-admin/
 
 # Run update on VM
 echo -e "${GREEN}Updating ADMIN on VM...${NC}"
 gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="
     cd ~/bananabot
     
-    # Extract admin panel
-    echo 'Extracting admin panel...'
-    tar -xzf ~/admin.tar.gz
-    rm ~/admin.tar.gz
-
-    # Rebuild ADMIN service only
-    echo 'Cleaning up old admin images...'
-    sudo docker compose stop admin || true
-    sudo docker compose rm -f admin || true
-    sudo docker image prune -af || true
-    
     echo 'Rebuilding ADMIN service...'
+    # Build and restart admin service
+    # Docker will use cache for unchanged layers
     sudo docker compose up -d --build admin
+    
+    # Prune only dangling images (not all unused ones) to save space but keep cache
+    echo 'Cleaning up dangling images...'
+    sudo docker image prune -f || true
 
     echo 'ADMIN deployment complete!'
 "
