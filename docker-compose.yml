@@ -33,7 +33,7 @@ services:
     networks:
       - bananabot-network
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${DATABASE_USER:-bananabot}']
+      test: [ 'CMD-SHELL', 'pg_isready -U ${DATABASE_USER:-bananabot}' ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -51,7 +51,7 @@ services:
       - bananabot-network
     command: redis-server --appendonly yes
     healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
+      test: [ 'CMD', 'redis-cli', 'ping' ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -89,18 +89,20 @@ services:
       - ./logs:/app/logs
       - ./prisma:/app/prisma
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    command: sh -c "npx prisma migrate deploy --schema=./prisma/schema.prisma && node dist/src/main-grammy.js"
+    command: node dist/src/main-grammy.js
 
   # Admin Panel (Next.js)
   admin:
     build:
       context: ./bananabot-admin
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_BOT_USERNAME: ${NEXT_PUBLIC_BOT_USERNAME}
     container_name: bananabot-admin
     restart: unless-stopped
     depends_on:
@@ -113,12 +115,16 @@ services:
       DATABASE_URL: postgresql://${DATABASE_USER:-bananabot}:${DATABASE_PASSWORD:-bananabot_secret}@postgres:5432/${DATABASE_NAME:-bananabot}?schema=public
       PORT: ${ADMIN_PORT:-3001}
       HOSTNAME: "0.0.0.0"
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3001/admin}
+      NEXT_PUBLIC_BOT_USERNAME: ${NEXT_PUBLIC_BOT_USERNAME}
     ports:
       - '${ADMIN_PORT:-3001}:3001'
     networks:
       - bananabot-network
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/api/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
