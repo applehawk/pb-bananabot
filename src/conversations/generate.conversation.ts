@@ -155,7 +155,17 @@ export async function generateConversation(
 
     // Handle text input
     if (ctx2.message?.text) {
-      prompt = ctx2.message.text;
+      const incomingText = ctx2.message.text;
+
+      // Check if user pressed any main keyboard button - if so, exit conversation
+      const keyboardButtonValues = Object.values(KeyboardCommands);
+      if (keyboardButtonValues.includes(incomingText as any)) {
+        // User pressed a main keyboard button - exit conversation
+        await ctx.api.deleteMessage(ctx.chat.id, msg.message_id).catch(() => { });
+        return; // Exit conversation, let global handlers process the button
+      }
+
+      prompt = incomingText;
       await ctx2.deleteMessage().catch(() => { });
       await refreshUser(); // Refresh cost/credits
 

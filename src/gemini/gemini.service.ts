@@ -8,6 +8,7 @@ export interface GenerateImageParams {
   aspectRatio?: string;
   numberOfImages?: number;
   inputImages?: Array<{ data: Buffer; mimeType: string }>;
+  modelName?: string;
 }
 
 export interface GenerationResult {
@@ -23,28 +24,30 @@ export interface GenerationResult {
 export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
   private genAI: GoogleGenerativeAI;
-  private model: any;
 
   constructor(private readonly config: ConfigService) {
     const apiKey = this.config.get<string>('gemini.apiKey');
-    const modelName = this.config.get<string>('gemini.model');
 
     if (!apiKey) {
       throw new Error('GEMINI_API_KEY is not configured');
     }
 
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({
-      model: modelName,
-    });
+    this.logger.log('Gemini AI initialized');
+  }
 
-    this.logger.log('Gemini AI initialized with model: ' + modelName);
+  /**
+   * Get model instance for a specific model name
+   */
+  private getModel(modelName?: string): any {
+    const model = modelName || this.config.get<string>('gemini.model');
+    return this.genAI.getGenerativeModel({ model });
   }
 
   /**
    * Enhance prompt with AI
    */
-  async enhancePrompt(prompt: string): Promise<string> {
+  async enhancePrompt(prompt: string, modelName?: string): Promise<string> {
     try {
       const enhancementPrompt =
         'You are an expert at writing prompts for AI image generation.\n' +
@@ -55,7 +58,8 @@ export class GeminiService {
         '"\n\n' +
         'Return ONLY the enhanced prompt, nothing else.';
 
-      const result = await this.model.generateContent(enhancementPrompt);
+      const model = this.getModel(modelName);
+      const result = await model.generateContent(enhancementPrompt);
       const response = await result.response;
       const enhanced = response.text().trim();
 
@@ -80,6 +84,7 @@ export class GeminiService {
       negativePrompt,
       aspectRatio = '1:1',
       numberOfImages = 1,
+      modelName,
     } = params;
 
     const shortPrompt =
@@ -95,7 +100,8 @@ export class GeminiService {
         fullPrompt += '\n\nNegative prompt (avoid these): ' + negativePrompt;
       }
 
-      const result = await this.model.generateContent({
+      const model = this.getModel(modelName);
+      const result = await model.generateContent({
         contents: [
           {
             parts: [{ text: fullPrompt }],
@@ -150,7 +156,7 @@ export class GeminiService {
   async generateFromImage(
     params: GenerateImageParams,
   ): Promise<GenerationResult> {
-    const { prompt, inputImages = [], aspectRatio = '1:1' } = params;
+    const { prompt, inputImages = [], aspectRatio = '1:1', modelName } = params;
 
     if (inputImages.length === 0) {
       throw new Error(
@@ -175,7 +181,8 @@ export class GeminiService {
         });
       }
 
-      const result = await this.model.generateContent({
+      const model = this.getModel(modelName);
+      const result = await model.generateContent({
         contents: [
           {
             parts: contents,
@@ -243,11 +250,11 @@ export class GeminiService {
       } catch (error) {
         this.logger.error(
           'Batch generation ' +
-            (i + 1) +
-            '/' +
-            numberOfImages +
-            ' failed: ' +
-            error.message,
+          (i + 1) +
+          '/' +
+          numberOfImages +
+          ' failed: ' +
+          error.message,
         );
       }
     }
@@ -269,7 +276,8 @@ export class GeminiService {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const result = await this.model.generateContent({
+      const model = this.getModel();
+      const result = await model.generateContent({
         contents: [
           {
             role: 'user',

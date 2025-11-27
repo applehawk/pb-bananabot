@@ -32,7 +32,7 @@ export class GenerationService {
     private readonly creditsService: CreditsService,
     private readonly geminiService: GeminiService,
     private readonly imageStorage: ImageStorageService,
-  ) {}
+  ) { }
 
   /**
    * Generate image from text (Text-to-Image)
@@ -95,16 +95,18 @@ export class GenerationService {
       // 5. Generate image via Gemini
       const result = isBatch
         ? await this.geminiService.generateBatch({
-            prompt,
-            negativePrompt: generation.negativePrompt,
-            aspectRatio: generation.aspectRatio,
-            numberOfImages,
-          })
+          prompt,
+          negativePrompt: generation.negativePrompt,
+          aspectRatio: generation.aspectRatio,
+          numberOfImages,
+          modelName: settings.geminiModel,
+        })
         : await this.geminiService.generateFromText({
-            prompt,
-            negativePrompt: generation.negativePrompt,
-            aspectRatio: generation.aspectRatio,
-          });
+          prompt,
+          negativePrompt: generation.negativePrompt,
+          aspectRatio: generation.aspectRatio,
+          modelName: settings.geminiModel,
+        });
 
       // 6. Upload to storage
       let imageUrl: string;
@@ -247,6 +249,7 @@ export class GenerationService {
           data: img.buffer,
           mimeType: img.mimeType,
         })),
+        modelName: settings.geminiModel,
       });
 
       // 7. Upload result

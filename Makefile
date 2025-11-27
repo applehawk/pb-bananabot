@@ -246,23 +246,23 @@ docker-up: db-generate
 # Stop all services
 docker-down:
 	@echo "Stopping all services..."
-	docker-compose down
+	docker compose down
 	@echo "✓ All services stopped"
 
 # Restart all services
 docker-restart:
 	@echo "Restarting all services..."
-	docker-compose restart
+	docker compose restart
 	@echo "✓ All services restarted"
 
 # Show logs from all services
 docker-logs:
-	docker-compose logs -f
+	docker compose logs -f
 
 # Rebuild all Docker images
 docker-build:
 	@echo "Rebuilding all Docker images..."
-	docker-compose build --no-cache
+	docker compose build --no-cache
 	@echo "✓ Docker images rebuilt"
 
 # Start only admin panel in Docker (production)
@@ -403,7 +403,7 @@ ps: docker-ps
 # Show status of Docker services
 docker-ps:
 	@echo "Docker services status:"
-	docker-compose ps
+	docker compose ps
 
 # ============================================================================
 # Submodules - Additional Commands

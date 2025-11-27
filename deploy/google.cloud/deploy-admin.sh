@@ -27,7 +27,7 @@ gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="mkdir -p ~/ban
 # Sync files
 # --delete: remove files on destination that are not in source
 # --exclude: skip unnecessary files
-rsync -avz --delete \
+tar -cz \
     --exclude='node_modules' \
     --exclude='.next' \
     --exclude='.git' \
@@ -35,8 +35,9 @@ rsync -avz --delete \
     --exclude='.turbo' \
     --exclude='.cache' \
     --exclude='*.log' \
-    -e "gcloud compute ssh --zone=$ZONE --quiet" \
-    bananabot-admin/ $INSTANCE_NAME:~/bananabot/bananabot-admin/
+    -C bananabot-admin . \
+| gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --quiet \
+    --command="tar -xz -C ~/bananabot/bananabot-admin"
 
 # Run update on VM
 echo -e "${GREEN}Updating ADMIN on VM...${NC}"
