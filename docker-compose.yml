@@ -110,6 +110,8 @@ services:
         condition: service_healthy
       bot:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${DATABASE_USER:-bananabot}:${DATABASE_PASSWORD:-bananabot_secret}@postgres:5432/${DATABASE_NAME:-bananabot}?schema=public
