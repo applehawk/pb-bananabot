@@ -24,19 +24,34 @@ export async function generateConversation(
   let inputImageFileId: string | null = null;
   let isSelectingMode = false;
 
-  // Пытаемся извлечь промпт из текста команды
-  if (ctx.message?.text) {
+  // Check for initial input (text, photo, caption)
+  if (ctx.message) {
     const text = ctx.message.text;
-    // Убираем префикс команды /generate и пробелы
-    const extractedPrompt = text.replace(/^\/generate\s*/, '').trim();
+    const caption = ctx.message.caption;
+    const photo = ctx.message.photo;
 
-    // Игнорируем текст, если это название кнопки или команды
-    const ignoredTexts = [
-      KeyboardCommands.GENERATE,
-      `/${CommandEnum.GENERATE}`,
-    ];
-    if (extractedPrompt && !ignoredTexts.includes(extractedPrompt)) {
-      prompt = extractedPrompt;
+    // 1. Check for Photo
+    if (photo && photo.length > 0) {
+      mode = 'image';
+      // Get the largest photo
+      inputImageFileId = photo[photo.length - 1].file_id;
+      if (caption) {
+        prompt = caption.trim();
+      }
+    }
+    // 2. Check for Text (only if not photo, or if photo didn't have caption - though photo usually has caption field)
+    else if (text) {
+      // Убираем префикс команды /generate и пробелы
+      const extractedPrompt = text.replace(/^\/generate\s*/, '').trim();
+
+      // Игнорируем текст, если это название кнопки или команды
+      const ignoredTexts = [
+        KeyboardCommands.GENERATE,
+        `/${CommandEnum.GENERATE}`,
+      ];
+      if (extractedPrompt && !ignoredTexts.includes(extractedPrompt)) {
+        prompt = extractedPrompt;
+      }
     }
   }
 
