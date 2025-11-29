@@ -1,7 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { GrammYService } from '../grammy/grammy.service';
 import { CommandEnum } from '../enum/command.enum';
-import { startConversation } from './start.conversation';
 import { generateConversation } from './generate.conversation';
 import { balanceConversation } from './balance.conversation';
 import { helpConversation } from './help.conversation';
@@ -29,17 +28,13 @@ export class ConversationsRegistryService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     this.logger.log('Registering conversations...');
 
-    // Register START conversation
-    this.grammyService.registerConversation(
-      CommandEnum.START,
-      startConversation,
-    );
-
-    // Register image generation conversations
+    // Register GENERATE conversation
     this.grammyService.registerConversation(
       CommandEnum.GENERATE,
       generateConversation,
     );
+
+    // Register other conversations
     this.grammyService.registerConversation(
       CommandEnum.BALANCE,
       balanceConversation,

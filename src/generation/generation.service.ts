@@ -17,7 +17,7 @@ export interface GenerateTextToImageParams {
 export interface GenerateImageToImageParams {
   userId: string;
   prompt: string;
-  inputImages: Array<{ buffer: Buffer; mimeType: string }>;
+  inputImages: Array<{ buffer: Buffer; mimeType: string; fileId?: string }>;
   negativePrompt?: string;
   aspectRatio?: string;
 }
@@ -234,10 +234,16 @@ export class GenerationService {
         await this.prisma.inputImage.create({
           data: {
             generationId: generation.id,
-            fileId: `temp_${i}`, // Will be updated with actual Telegram file_id
+            fileId: inputImages[i].fileId ?? null,
             order: i,
           },
         });
+
+        if (!inputImages[i].fileId) {
+          this.logger.warn(
+            `Input image #${i} for generation ${generation.id} has no telegram fileId; regeneration from telegram will not be available.`,
+          );
+        }
       }
 
       // 6. Generate via Gemini

@@ -12,6 +12,7 @@ import { UserService } from '../user/user.service';
 // import { TariffService } from '../tariff/tariff.service'; // Legacy VPN module
 import { PrismaService } from '../database/prisma.service';
 import { CommandEnum } from '../enum/command.enum';
+import { getMainKeyboard } from './keyboards/main.keyboard';
 
 import { GrammYServiceExtension } from './grammy-service-extension';
 
@@ -27,6 +28,7 @@ import { GrammYServiceExtension } from './grammy-service-extension';
 export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
   private readonly logger = new Logger(BotUpdate.name);
   private readonly adminChatId: number;
+
 
   constructor(
     private readonly grammyService: GrammYService,
@@ -67,6 +69,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     this.registerCommands();
     this.registerCallbackHandlers();
     this.registerTextHandlers();
+    this.registerPhotoHandlers();
     this.logger.log('Bot update handlers registered');
 
     // IMPORTANT: Start bot after all handlers AND conversations are registered
@@ -141,6 +144,46 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
   }
 
   /**
+   * Register photo message handlers
+   */
+  private registerPhotoHandlers(): void {
+    const bot = this.grammyService.bot;
+
+    // Handle photo messages
+    bot.on('message:photo', async (ctx) => {
+      await this.handlePhotoMessage(ctx);
+    });
+  }
+
+  /**
+   * Photo message handler
+   * Simply enters the generation conversation.
+   * The conversation itself handles multiple photos (media groups).
+   */
+  private async handlePhotoMessage(ctx: MyContext): Promise<void> {
+    try {
+      if (ctx.chat?.type !== 'private') return;
+
+      const photo = ctx.message?.photo;
+      if (!photo || photo.length === 0) return;
+
+      // Check if conversation is already active to prevent restarting it
+      // This handles the case where multiple photos (album) are sent
+      const active = await ctx.conversation.active();
+      if (active[CommandEnum.GENERATE]) {
+        this.logger.log('Generate conversation already active, skipping enter() for additional photo');
+        return;
+      }
+
+      // The conversation will check ctx.message for the first photo
+      // and then wait for subsequent photos if it's a media group
+      await ctx.conversation.enter(CommandEnum.GENERATE);
+    } catch (error) {
+      this.logger.error('Error handling photo message:', error);
+    }
+  }
+
+  /**
    * /start command handler
    */
   private async handleStart(ctx: MyContext): Promise<void> {
@@ -155,8 +198,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
       return;
     }
 
-    // Reset session and conversation state
-    // Note: We need to completely reset the session to clear any stale conversation state
+    // Reset session
     ctx.session = {
       messageId: undefined,
       tariffId: undefined,
@@ -165,8 +207,40 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     // Upsert user
     await this.botService.upsertUser(ctx);
 
-    // Enter START conversation
-    await ctx.conversation.enter(CommandEnum.START);
+    // Send Welcome Message
+    const credits = (await this.userService.findByTelegramId(ctx.from!.id))?.credits || 0;
+
+    const welcomeMessage = `🤖 Добро пожаловать в **@BananaArtBot**!
+
+Что я умею:
+• Напишите текст → получите изображение
+• Фото + текст → изображение с учетом референса и описания
+• Несколько фото + текст → изображение в стиле/составе референсов
+
+Подходит для:
+• обложек *YouTube*
+• *виртуальной примерки (ваше фото + аксессуары + текст с описанием сцены)* (Instagram—стиль)
+• продуктовых *Instagram—постов*
+• *рекламных креативов* для Telegram и соцсетей
+
+💡 Примеры:
+• «YouTube—обложка, тема гаджеты»
+• «примерь эти очки на мне»
+• «премиальная карточка парфюма»
+• «креатив для рекламы доставки»
+
+⚡ *Отправьте фото и текст — и начните прямо сейчас!* 
+
+💎 Баланс: **${credits}** кредитов
+
+🎯 Особенность: Бот анализирует людей на ваших фотографиях и создает новые изображения с теми же людьми в новых сценариях!
+
+⚡ Начните прямо сейчас — отправьте фото с промптом!`;
+
+    await ctx.reply(welcomeMessage, {
+      parse_mode: 'HTML',
+      reply_markup: getMainKeyboard(),
+    });
   }
 
   /**
@@ -269,12 +343,22 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
         callbackData.startsWith('pay:') ||
         callbackData.startsWith('check_payment:') ||
         callbackData === 'cancel_purchase' ||
-        callbackData === 'back_to_packages';
+        callbackData === 'back_to_packages' ||
+        callbackData === 'generate_trigger' || // Handled by generate conversation
+        callbackData.startsWith('aspect_') || // Handled by generate conversation
+        callbackData.startsWith('mode_') || // Handled by generate conversation
+        callbackData === 'set_mode'; // Handled by generate conversation
 
       // If this is internal conversation data, don't try to enter a conversation
       // The active conversation's waitFor() will handle it
       if (isConversationInternalData) {
         this.logger.log(`Callback is conversation-internal data, letting active conversation handle it`);
+        return;
+      }
+
+      // Handle regeneration specially
+      if (callbackData.startsWith('regenerate_')) {
+        await ctx.conversation.enter(CommandEnum.GENERATE);
         return;
       }
 
@@ -302,17 +386,43 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
 
       this.logger.log(`Text message: ${ctx.message?.text}`);
 
-      // Check if text matches any button text and enter corresponding scene
       const messageText = ctx.message?.text;
+
+      // Handle Main Keyboard Buttons
+      if (messageText === '💰 Баланс') {
+        await ctx.conversation.enter(CommandEnum.BALANCE);
+        return;
+      }
+      if (messageText === '📜 История') {
+        await ctx.conversation.enter(CommandEnum.HISTORY);
+        return;
+      }
+      if (messageText === '❓ Помощь') {
+        await ctx.conversation.enter(CommandEnum.HELP);
+        return;
+      }
+      if (messageText === '💎 Купить кредиты') {
+        await ctx.conversation.enter(CommandEnum.BUY_CREDITS);
+        return;
+      }
+
+      // Check if text matches any button text and enter corresponding scene
       if (messageText === '📱в меню') {
         // Special handling for HOME button
         const existUser = await this.userService.findByTelegramId(ctx.from?.id);
         if (existUser) {
           await ctx.conversation.enter(CommandEnum.HOME);
         } else {
-          await ctx.conversation.enter(CommandEnum.START);
+          await this.handleStart(ctx);
         }
+        return;
       }
+
+      // If it's not a command and not a button, assume it's a prompt for generation
+      if (messageText && !messageText.startsWith('/')) {
+        await ctx.conversation.enter(CommandEnum.GENERATE);
+      }
+
     } catch (error) {
       this.logger.error('Error handling text message:', error);
     }

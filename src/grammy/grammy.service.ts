@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Bot, session } from 'grammy';
+import { run, sequentialize } from '@grammyjs/runner';
 import { RedisAdapter } from '@grammyjs/storage-redis';
 import Redis from 'ioredis';
 import { conversations, createConversation } from '@grammyjs/conversations';
@@ -77,6 +78,14 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
 
     // Session management - must be first
     // Using a session key version to invalidate old sessions after service injection changes
+
+    // Sequentialize updates for the same chat to prevent race conditions (e.g. media groups)
+    this.bot.use(sequentialize((ctx) => {
+      const chat = ctx.chat?.id.toString();
+      const user = ctx.from?.id.toString();
+      return [chat, user].filter((v): v is string => v !== undefined);
+    }));
+
     this.bot.use(
       session({
         initial: (): SessionData => ({
@@ -179,14 +188,14 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (!this.useWebhook) {
-      this.logger.log('Starting bot in polling mode (development)');
-      // Start polling without blocking - don't await
-      this.bot.start({
-        onStart: (info) => {
-          this.logger.log(`Bot started: @${info.username} (${info.id})`);
-        },
-      });
-      this.logger.log('Bot polling started in background');
+      this.logger.log('Starting bot in polling mode (development) with runner');
+      // Start polling with runner for concurrent updates
+      run(this.bot);
+      this.logger.log('Bot runner started in background');
+
+      if (this.bot.botInfo) {
+        this.logger.log(`Bot started: @${this.bot.botInfo.username} (${this.bot.botInfo.id})`);
+      }
     } else {
       this.logger.log('Bot configured for webhook mode (production)');
       this.logger.warn('Remember to set webhook URL via setWebhook script');

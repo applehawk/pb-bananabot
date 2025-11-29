@@ -24,7 +24,6 @@ export class ImageGenService implements OnModuleInit {
     this.logger.log('ImageGenService.onModuleInit() - registering commands...');
     this.registerCommands();
     this.registerKeyboardHandlers();
-    this.registerPhotoHandler();
     this.logger.log('Image generation commands registered');
   }
 
@@ -34,12 +33,8 @@ export class ImageGenService implements OnModuleInit {
   private registerCommands(): void {
     const bot = this.grammyService.bot;
 
-    // /generate command - delegates to conversation
-    bot.command('generate', async (ctx) => {
-      this.logger.log(`[COMMAND HANDLER] ctx.match: "${ctx.match}"`);
-      // ctx.match is automatically available in conversation context
-      await ctx.conversation.enter(CommandEnum.GENERATE);
-    });
+    // Note: /generate is now handled within the START conversation
+    // Users can send text/photos directly without needing a separate command
 
     // /balance command - delegates to conversation
     bot.command('balance', async (ctx) => {
@@ -63,11 +58,8 @@ export class ImageGenService implements OnModuleInit {
   private registerKeyboardHandlers(): void {
     const bot = this.grammyService.bot;
 
-    // Handler for "🎨 Генерация" button
-    bot.hears(KeyboardCommands.GENERATE, async (ctx) => {
-      this.logger.log('[KEYBOARD] Generate button pressed');
-      await ctx.conversation.enter(CommandEnum.GENERATE);
-    });
+    // Note: Generate button has been removed from keyboard
+    // Users can now directly send text/photos for generation
 
     // Handler for "💰 Баланс" button
     bot.hears(KeyboardCommands.BALANCE, async (ctx) => {
@@ -88,21 +80,4 @@ export class ImageGenService implements OnModuleInit {
     });
   }
 
-  /**
-   * Register photo handler for image-to-image
-   */
-  private registerPhotoHandler(): void {
-    const bot = this.grammyService.bot;
-
-    bot.on('message:photo', async (ctx) => {
-      // Photo handler implementation
-      this.logger.log('Photo received for image-to-image generation');
-
-      await ctx.reply(
-        '🖼 Фото получено!\n\n' +
-          'Функция Image-to-Image находится в разработке.\n' +
-          'Скоро будет доступна!',
-      );
-    });
-  }
 }

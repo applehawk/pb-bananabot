@@ -25,6 +25,10 @@ export interface SessionData {
   generationMode?: GenerationMode; // Current generation mode
   imageCount?: number; // Number of images to generate (for MULTI_IMAGE mode)
   quickBuy?: boolean; // Flag for quick purchase flow (skip steps)
+
+  // Media group pre-collection (before entering conversation)
+  mediaGroupPhotos?: string[]; // file_ids collected from media group
+  mediaGroupCaption?: string; // Caption from media group
 }
 
 /**
