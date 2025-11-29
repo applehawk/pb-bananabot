@@ -22,11 +22,35 @@ export async function generateConversation(
         let prompt = '';
         let mode: GenerationMode = 'text';
         let inputImageFileIds: string[] = []; // Support multiple images from albums
-        let isSelectingMode = false;
+        let skipAspectRatioSelection = false; // Flag to skip aspect ratio selection if using reply
 
         // 1. Initialize state from the trigger message
+        // Check for reply message first
+        if (ctx.message?.reply_to_message) {
+            const replyMsg = ctx.message.reply_to_message;
+
+            // Extract images from replied message
+            if (replyMsg.photo && replyMsg.photo.length > 0) {
+                mode = 'image';
+                inputImageFileIds.push(replyMsg.photo[replyMsg.photo.length - 1].file_id);
+            }
+
+            // Extract prompt from current message or replied message
+            if (ctx.message.text) {
+                prompt = ctx.message.text.trim();
+            } else if (ctx.message.caption) {
+                prompt = ctx.message.caption.trim();
+            } else if (replyMsg.caption) {
+                prompt = replyMsg.caption.trim();
+            } else if (replyMsg.text) {
+                prompt = replyMsg.text.trim();
+            }
+
+            // Skip aspect ratio selection if we have everything we need
+            skipAspectRatioSelection = true;
+        }
         // Check the trigger message
-        if (ctx.message) {
+        else if (ctx.message) {
             const text = ctx.message.text;
             const caption = ctx.message.caption;
             const photo = ctx.message.photo;
@@ -47,7 +71,7 @@ export async function generateConversation(
         } else if (ctx.callbackQuery?.data?.startsWith('regenerate_')) {
             // Handle regeneration trigger immediately
             const generationId = ctx.callbackQuery.data.split('_')[1];
-            await handleRegeneration(conversation, ctx, generationId);
+            await handleRegeneration(conversation, generationId);
             return; // Exit after regeneration
         }
 
@@ -79,24 +103,23 @@ export async function generateConversation(
         await refreshUser();
         let currentRatio = user?.settings?.aspectRatio || '1:1';
 
+        // If using reply with all data present (including prompt!), skip UI and generate immediately
+        // Otherwise, show UI to collect missing prompt
+        if (skipAspectRatioSelection && prompt && (mode === 'text' || inputImageFileIds.length > 0)) {
+            await refreshUser();
+            if (user && user.credits >= cost) {
+                const chatId = ctx.chat?.id ?? 0;
+                await performGeneration(conversation, chatId, user, prompt, mode, inputImageFileIds, currentRatio, cost);
+                return;
+            }
+        }
+
         // Helper to build UI
         const buildUI = () => {
             const canGenerate = user && user.credits >= cost;
             const keyboard = new InlineKeyboard();
 
-            if (isSelectingMode) {
-                keyboard.text(mode === 'text' ? '✅ Текст' : 'Текст', 'mode_text');
-                keyboard.text(mode === 'image' ? '✅ Изображение+Текст' : 'Изображение+Текст', 'mode_image');
-                keyboard.row();
-                keyboard.text('🔙 Назад', 'mode_back');
 
-                return {
-                    text: '⚙️ <b>Выберите режим генерации:</b>\n\n' +
-                        '<b>Текст:</b> Генерация изображения по текстовому описанию.\n' +
-                        '<b>Изображение+Текст:</b> Генерация на основе вашего изображения и текста.',
-                    keyboard
-                };
-            }
 
             let messageText = '';
             if (mode === 'text') {
@@ -134,8 +157,7 @@ export async function generateConversation(
                     keyboard.text('💳 Купить кредиты', 'buy_credits').row();
                 }
             }
-            keyboard.row();
-            keyboard.text('⚙️ Режим', 'set_mode');
+
 
             if (readyToGenerate) {
                 if (!canGenerate) {
@@ -169,35 +191,10 @@ export async function generateConversation(
                 const data = ctx2.callbackQuery.data;
                 const callbackId = ctx2.callbackQuery.id;
 
-                if (data === 'set_mode') {
-                    isSelectingMode = true;
-                    const ui = buildUI();
-                    if (msgMeta?.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui, callbackId);
-                    continue;
-                }
-                if (data === 'mode_text') {
-                    mode = 'text'; isSelectingMode = false;
-                    await refreshUser();
-                    const ui = buildUI();
-                    if (msgMeta?.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui, callbackId);
-                    continue;
-                }
-                if (data === 'mode_image') {
-                    mode = 'image'; isSelectingMode = false;
-                    await refreshUser();
-                    const ui = buildUI();
-                    if (msgMeta?.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui, callbackId);
-                    continue;
-                }
-                if (data === 'mode_back') {
-                    isSelectingMode = false;
-                    const ui = buildUI();
-                    if (msgMeta?.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui, callbackId);
-                    continue;
-                }
+
                 if (data.startsWith('regenerate_')) {
                     const generationId = data.split('_')[1];
-                    await handleRegeneration(conversation, ctx, generationId);
+                    await handleRegeneration(conversation, generationId);
                     // Delete UI
                     await conversation.external(async (externalCtx) => {
                         try {
@@ -208,6 +205,8 @@ export async function generateConversation(
                     });
                     return; // Exit
                 }
+                // User selects aspect ratio during generation
+                // This automatically saves as their default preference (convenient UX)
                 if (data.startsWith('aspect_')) {
                     const selected = data.split('_')[1];
                     currentRatio = selected;
@@ -289,38 +288,40 @@ export async function generateConversation(
             else if (text) {
                 const incomingText = ctx2.message.text;
                 const keyboardButtonValues = Object.values(KeyboardCommands);
+
+                // Check if user pressed main keyboard button - exit conversation
                 if (keyboardButtonValues.includes(incomingText as any)) {
-                    // User pressed main keyboard button - exit conversation to let global handler take over
                     if (msgMeta?.messageId) {
                         await conversation.external(async (externalCtx) => {
                             await externalCtx.api.deleteMessage(msgMeta.chatId, msgMeta.messageId);
                         });
-                        return;
                     }
-
-                    prompt = incomingText;
-
-                    await conversation.external(async (externalCtx) => {
-                        try {
-                            await externalCtx.api.deleteMessage(ctx2.chat.id, ctx2.message!.message_id);
-                        } catch {
-                            console.log('Failed to delete message');
-                        };
-                    });
-
-                    await refreshUser();
-                    const ui = buildUI();
-                    if (msgMeta?.messageId) {
-                        await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui);
-                    }
-                    continue;
+                    return;
                 }
 
+                // Otherwise, treat as prompt
+                prompt = incomingText;
+
+                await conversation.external(async (externalCtx) => {
+                    try {
+                        await externalCtx.api.deleteMessage(ctx2.chat.id, ctx2.message!.message_id);
+                    } catch {
+                        console.log('Failed to delete message');
+                    };
+                });
+
+                await refreshUser();
+                const ui = buildUI();
+                if (msgMeta?.messageId) {
+                    await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui);
+                }
+                continue;
             }
         }
 
         // Generation Logic
-        await performGeneration(conversation, ctx, user, prompt, mode, inputImageFileIds, currentRatio, cost);
+        const chatId = ctx.chat?.id ?? 0;
+        await performGeneration(conversation, chatId, user, prompt, mode, inputImageFileIds, currentRatio, cost);
     } catch (error: any) {
         await conversation.external(async (externalCtx) => {
             console.error('[GENERATE] Conversation CRASHED:', error);
@@ -362,7 +363,7 @@ async function answerCallback(conversation: any, callbackId: string, text?: stri
     });
 }
 
-async function handleRegeneration(conversation: any, ctx: any, generationId: string) {
+async function handleRegeneration(conversation: any, generationId: string) {
     const originalGeneration = await conversation.external(async (externalCtx: any) => {
         const gen = await externalCtx.generationService.getById(generationId);
         if (!gen) return null;
@@ -396,12 +397,12 @@ async function handleRegeneration(conversation: any, ctx: any, generationId: str
         }
     }
 
-    const { user, cost } = await conversation.external(async (exCtx: any) => {
+    const { user, cost, chatId } = await conversation.external(async (exCtx: any) => {
         const telegramId = exCtx.from?.id;
-        if (!telegramId) return { user: null, cost: 0 };
+        if (!telegramId) return { user: null, cost: 0, chatId: 0 };
 
         const u = await exCtx.userService.findByTelegramId(telegramId);
-        if (!u) return { user: null, cost: 0 };
+        if (!u) return { user: null, cost: 0, chatId: 0 };
 
         let c = 0;
         if (mode === 'text') {
@@ -412,10 +413,11 @@ async function handleRegeneration(conversation: any, ctx: any, generationId: str
             c = exCtx.creditsService.calculateCost(type, numImages, 1);
         }
 
-        // Return serializable user subset
+        // Return serializable user subset and chatId
         return {
             user: { id: u.id, credits: u.credits },
-            cost: c
+            cost: c,
+            chatId: exCtx.chat?.id ?? 0
         };
     });
 
@@ -425,12 +427,12 @@ async function handleRegeneration(conversation: any, ctx: any, generationId: str
     }
 
     await conversation.external(async (ext: any) => ext.reply('🔄 Повторная генерация...'));
-    await performGeneration(conversation, ctx, user, prompt, mode, inputImageFileIds, currentRatio, cost);
+    await performGeneration(conversation, chatId, user, prompt, mode, inputImageFileIds, currentRatio, cost);
 }
 
 async function performGeneration(
     conversation: any,
-    ctx: any,
+    chatId: number,
     user: any,
     prompt: string,
     mode: GenerationMode,
@@ -443,7 +445,7 @@ async function performGeneration(
             `🎨 Генерирую изображение...\n⏱ Подождите 5-10 секунд\n\n` +
             `Промпт: "${prompt.length > 100 ? prompt.substring(0, 100) + '...' : prompt}"`,
         );
-        return { chatId: m.chat?.id ?? ctx.chat?.id, messageId: m.message_id ?? undefined };
+        return { chatId: m.chat?.id ?? chatId, messageId: m.message_id ?? undefined };
     });
 
     try {
@@ -517,9 +519,8 @@ async function performGeneration(
                             inline_keyboard: [
                                 [
                                     { text: '🔄 Вариация', callback_data: `regenerate_${generation.id}` },
-                                    { text: '⚙️ Параметры', callback_data: 'settings' },
+                                    { text: '📜 История', callback_data: 'history' },
                                 ],
-                                [{ text: '📜 История', callback_data: 'history' }],
                             ],
                         },
                     });
@@ -548,7 +549,7 @@ async function performGeneration(
         }
     } catch (error: any) {
         await conversation.external(async (externalCtx: any) => {
-            try { await externalCtx.api.deleteMessage(ctx.chat.id, statusMsg.message_id); } catch { }
+            try { await externalCtx.api.deleteMessage(chatId, statusMsg.message_id); } catch { }
         });
         await conversation.external(async (externalCtx: any) => {
             try {

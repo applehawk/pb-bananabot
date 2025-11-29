@@ -11,6 +11,7 @@ export function getMainKeyboard() {
     .text('📜 История')
     .row()
     .text('❓ Помощь')
+    .text('⚙️ Настройки')
     .resized()
     .persistent();
 }
@@ -22,4 +23,5 @@ export const KeyboardCommands = {
   BALANCE: '💰 Баланс',
   HISTORY: '📜 История',
   HELP: '❓ Помощь',
+  SETTINGS: '⚙️ Настройки',
 } as const;

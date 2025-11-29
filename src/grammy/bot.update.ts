@@ -345,9 +345,9 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
         callbackData === 'cancel_purchase' ||
         callbackData === 'back_to_packages' ||
         callbackData === 'generate_trigger' || // Handled by generate conversation
-        callbackData.startsWith('aspect_') || // Handled by generate conversation
-        callbackData.startsWith('mode_') || // Handled by generate conversation
-        callbackData === 'set_mode'; // Handled by generate conversation
+        callbackData.startsWith('aspect_') || // Handled by generate/settings conversation
+        callbackData === 'save_settings' || // Handled by settings conversation
+        callbackData === 'close_settings'; // Handled by settings conversation
 
       // If this is internal conversation data, don't try to enter a conversation
       // The active conversation's waitFor() will handle it
@@ -399,6 +399,10 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
       }
       if (messageText === '❓ Помощь') {
         await ctx.conversation.enter(CommandEnum.HELP);
+        return;
+      }
+      if (messageText === '⚙️ Настройки') {
+        await ctx.conversation.enter(CommandEnum.SETTINGS);
         return;
       }
       if (messageText === '💎 Купить кредиты') {

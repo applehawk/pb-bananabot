@@ -6,6 +6,7 @@ import { balanceConversation } from './balance.conversation';
 import { helpConversation } from './help.conversation';
 import { historyConversation } from './history.conversation';
 import { buyCreditsConversation } from './buy-credits.conversation';
+import { settingsConversation } from './settings.conversation';
 
 /**
  * Conversations Registry Service
@@ -47,6 +48,10 @@ export class ConversationsRegistryService implements OnModuleInit {
     this.grammyService.registerConversation(
       CommandEnum.BUY_CREDITS,
       buyCreditsConversation,
+    );
+    this.grammyService.registerConversation(
+      CommandEnum.SETTINGS,
+      settingsConversation,
     );
 
     this.logger.log('All conversations registered successfully');
