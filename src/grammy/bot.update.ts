@@ -5,6 +5,7 @@ import {
   OnApplicationBootstrap,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NextFunction } from 'grammy'; // Импортируем тип NextFunction
 import { GrammYService } from './grammy.service';
 import { MyContext } from './grammy-context.interface';
 import { BotService } from './bot.service';
@@ -126,8 +127,8 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     const bot = this.grammyService.bot;
 
     // Handle all callback queries (inline button clicks)
-    bot.on('callback_query:data', async (ctx) => {
-      await this.handleCallbackQuery(ctx);
+    bot.on('callback_query:data', async (ctx, next) => {
+      await this.handleCallbackQuery(ctx, next);
     });
   }
 
@@ -321,7 +322,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
   /**
    * Callback query handler (inline keyboard buttons)
    */
-  private async handleCallbackQuery(ctx: MyContext): Promise<void> {
+  private async handleCallbackQuery(ctx: MyContext, next: NextFunction): Promise<void> {
     try {
       // Only handle private chats
       if (ctx.chat?.type !== 'private') {
@@ -353,6 +354,8 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
       // The active conversation's waitFor() will handle it
       if (isConversationInternalData) {
         this.logger.log(`Callback is conversation-internal data, letting active conversation handle it`);
+        // ВАЖНО: Передаем управление дальше, чтобы conversation.waitFor мог перехватить событие
+        await next();
         return;
       }
 

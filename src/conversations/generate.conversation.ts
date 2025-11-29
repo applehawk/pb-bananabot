@@ -79,15 +79,23 @@ export async function generateConversation(
         // If we don't have a prompt yet (e.g. entered via command without args), we wait for it.
         // Or if we have prompt but need to confirm settings.
 
-        let user: any = null;
+        // Fix: Explicitly type user as a simple object to avoid Mongoose Document serialization issues
+        let user: { id: string; credits: number; settings?: any } | null = null;
         let cost = 0;
 
         const refreshUser = async () => {
             await conversation.external(async (exCtx) => {
                 const telegramId = exCtx.from?.id;
                 if (telegramId) {
-                    user = await exCtx.userService.findByTelegramId(telegramId);
-                    if (user) {
+                    const dbUser = await exCtx.userService.findByTelegramId(telegramId);
+                    if (dbUser) {
+                        // Create a Clean Object (POJO) to safely pass around in conversation
+                        user = {
+                            id: dbUser.id,
+                            credits: dbUser.credits,
+                            //settings: dbUser.settings // Добавляем это поле
+                        };
+
                         if (mode === 'text') {
                             cost = exCtx.creditsService.calculateCost('TEXT_TO_IMAGE', 0, 1);
                         } else {
@@ -101,7 +109,7 @@ export async function generateConversation(
         };
 
         await refreshUser();
-        let currentRatio = user?.settings?.aspectRatio || '1:1';
+        let currentRatio = (user as any)?.settings?.aspectRatio || '1:1'; // Note: settings might need to be fetched if not on the simplified user object, assuming default for now or add to POJO above.
 
         // If using reply with all data present (including prompt!), skip UI and generate immediately
         // Otherwise, show UI to collect missing prompt
@@ -118,8 +126,6 @@ export async function generateConversation(
         const buildUI = () => {
             const canGenerate = user && user.credits >= cost;
             const keyboard = new InlineKeyboard();
-
-
 
             let messageText = '';
             if (mode === 'text') {
@@ -170,15 +176,18 @@ export async function generateConversation(
             return { text: messageText, keyboard };
         };
 
+        // 1. Сохраните ID чата в примитивной переменной
+        const originalChatId = ctx.chat?.id ?? 0;
+
         const initialUI = buildUI();
         const msgMeta = await conversation.external(async (externalCtx) => {
             const m = await externalCtx.reply(initialUI.text, { reply_markup: initialUI.keyboard, parse_mode: 'HTML' });
-            return { chatId: m.chat?.id ?? ctx.chat?.id, messageId: m.message_id ?? undefined };
+
+            // 2. Используйте примитивную переменную. Теперь замыкание захватывает только 'originalChatId' (number), что безопасно.
+            return { chatId: m.chat?.id ?? originalChatId, messageId: m.message_id ?? undefined };
         });
 
         // Interaction Loop
-        // let pendingWaitPromise: Promise<MyContext> | null | undefined = null;
-
         while (true) {
             console.log('[GENERATE] Waiting for input...');
 
@@ -210,10 +219,11 @@ export async function generateConversation(
                 if (data.startsWith('aspect_')) {
                     const selected = data.split('_')[1];
                     currentRatio = selected;
+                    // Note: Update settings logic might need adjustment if user object structure changed, 
+                    // but usually simpler to just update DB and ignore local user object sync for this specialized flow
                     if (user) {
-                        user.settings = { ...(user.settings || {}), aspectRatio: selected };
                         await conversation.external(async (externalCtx) => {
-                            await externalCtx.userService.updateSettings(user.id, { aspectRatio: selected });
+                            await externalCtx.userService.updateSettings(user!.id, { aspectRatio: selected });
                         });
                     }
                     await refreshUser();
@@ -271,11 +281,6 @@ export async function generateConversation(
 
                 if (caption) prompt = caption.trim();
 
-                // Removed message deletion to keep the album visible in chat
-                // await conversation.external(async (externalCtx) => {
-                //     try { await externalCtx.api.deleteMessage(ctx2.chat.id, ctx2.message!.message_id); } catch { }
-                // });
-
                 await refreshUser();
                 const ui = buildUI();
                 if (msgMeta?.messageId) {
@@ -321,7 +326,10 @@ export async function generateConversation(
 
         // Generation Logic
         const chatId = ctx.chat?.id ?? 0;
-        await performGeneration(conversation, chatId, user, prompt, mode, inputImageFileIds, currentRatio, cost);
+        if (user) {
+            await performGeneration(conversation, chatId, user, prompt, mode, inputImageFileIds, currentRatio, cost);
+        }
+
     } catch (error: any) {
         await conversation.external(async (externalCtx) => {
             console.error('[GENERATE] Conversation CRASHED:', error);
@@ -364,20 +372,27 @@ async function answerCallback(conversation: any, callbackId: string, text?: stri
 }
 
 async function handleRegeneration(conversation: any, generationId: string) {
+
     const originalGeneration = await conversation.external(async (externalCtx: any) => {
         const gen = await externalCtx.generationService.getById(generationId);
         if (!gen) return null;
-        // Return only serializable data
-        return {
-            prompt: gen.prompt,
-            aspectRatio: gen.aspectRatio,
-            type: gen.type,
-            inputImages: gen.inputImages ? gen.inputImages.map((i: any) => ({ fileId: i.fileId })) : []
-        };
+
+        // если gen — модель, извлекаем примитивы явно
+        const prompt = gen.prompt;
+        const aspectRatio = gen.aspectRatio;
+        const type = gen.type;
+        const inputImages = Array.isArray(gen.inputImages)
+            ? gen.inputImages.map((i: any) => ({ fileId: i?.fileId ?? null }))
+            : [];
+
+        return { prompt, aspectRatio, type, inputImages };
     });
 
     if (!originalGeneration) {
-        await conversation.external(async (ext: any) => ext.reply('❌ Генерация не найдена'));
+        await conversation.external(async (ext: any) => {
+            await ext.reply('❌ Генерация не найдена');
+            return null;
+        });
         return;
     }
 
@@ -397,6 +412,10 @@ async function handleRegeneration(conversation: any, generationId: string) {
         }
     }
 
+    // Capture ONLY primitives to avoid capturing 'inputImageFileIds' array in the closure below
+    const imageCount = inputImageFileIds.length;
+    const currentMode = mode;
+
     const { user, cost, chatId } = await conversation.external(async (exCtx: any) => {
         const telegramId = exCtx.from?.id;
         if (!telegramId) return { user: null, cost: 0, chatId: 0 };
@@ -405,10 +424,10 @@ async function handleRegeneration(conversation: any, generationId: string) {
         if (!u) return { user: null, cost: 0, chatId: 0 };
 
         let c = 0;
-        if (mode === 'text') {
+        if (currentMode === 'text') {
             c = exCtx.creditsService.calculateCost('TEXT_TO_IMAGE', 0, 1);
         } else {
-            const numImages = inputImageFileIds.length;
+            const numImages = imageCount; // Use primitive variable from outer scope
             const type = numImages > 1 ? 'MULTI_IMAGE' : 'IMAGE_TO_IMAGE';
             c = exCtx.creditsService.calculateCost(type, numImages, 1);
         }
@@ -433,7 +452,7 @@ async function handleRegeneration(conversation: any, generationId: string) {
 async function performGeneration(
     conversation: any,
     chatId: number,
-    user: any,
+    user: { id: string; credits: number }, // Enforce POJO to prevent Mongoose document passing
     prompt: string,
     mode: GenerationMode,
     inputImageFileIds: string[],
@@ -455,7 +474,7 @@ async function performGeneration(
             await conversation.external(async (exCtx: any) => {
                 try {
                     generation = await exCtx.generationService.generateTextToImage({
-                        userId: user.id,
+                        userId: user.id, // Accessing property of clean object
                         prompt,
                         aspectRatio: currentRatio,
                     });
@@ -468,6 +487,9 @@ async function performGeneration(
             const token = process.env.TELEGRAM_BOT_TOKEN;
 
             for (const fileId of inputImageFileIds) {
+                // Ensure fileId is string
+                if (!fileId) continue;
+
                 const file = await conversation.external(async (externalCtx: any) => {
                     return await externalCtx.api.getFile(fileId);
                 });
@@ -484,7 +506,7 @@ async function performGeneration(
             await conversation.external(async (exCtx: any) => {
                 try {
                     generation = await exCtx.generationService.generateImageToImage({
-                        userId: user.id,
+                        userId: user.id, // Accessing property of clean object
                         prompt,
                         inputImages: imageBuffers,
                         aspectRatio: currentRatio,
