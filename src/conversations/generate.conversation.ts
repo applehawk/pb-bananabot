@@ -305,47 +305,102 @@ async function answerCallback(conversation: any, callbackId: string, text?: stri
     });
 }
 
+/**
+ * ИСПРАВЛЕННАЯ ФУНКЦИЯ REGENERATION
+ * Выполняет все запросы к БД в одном внешнем блоке, чтобы избежать DataCloneError
+ */
+/**
+ * ИСПРАВЛЕННАЯ ФУНКЦИЯ REGENERATION
+ * Использует строгую "плоскую" структуру возврата, чтобы избежать DataCloneError
+ */
 async function handleRegeneration(conversation: any, generationId: string) {
-    const genData = await conversation.external(async (ext: any) => {
-        const g = await ext.generationService.getById(generationId);
-        if (!g) return null;
+
+    // Получаем данные в "плоском" виде (только примитивы)
+    const flatData = await conversation.external(async (exCtx: any) => {
+        const dbUser = await exCtx.userService.findByTelegramId(exCtx.from?.id);
+        if (!dbUser) return null;
+
+        const gen = await exCtx.generationService.getById(generationId);
+        if (!gen) return null;
+
+        const u = dbUser as any;
+        const inputImageFileIds = Array.isArray(gen.inputImages)
+            ? gen.inputImages.map((i: any) => String(i.fileId)).filter(Boolean)
+            : [];
+
+        const mode = (gen.type === 'IMAGE_TO_IMAGE' || gen.type === 'MULTI_IMAGE') ? 'image' : 'text';
+        const imgCount = inputImageFileIds.length;
+
+        // Расчет стоимости
+        let cost = 0;
+        if (mode === 'text') {
+            cost = exCtx.creditsService.calculateCost('TEXT_TO_IMAGE', 0, 1);
+        } else {
+            const type = imgCount > 1 ? 'MULTI_IMAGE' : 'IMAGE_TO_IMAGE';
+            cost = exCtx.creditsService.calculateCost(type, imgCount, 1);
+        }
+
+        // ВОЗВРАЩАЕМ ТОЛЬКО ПРИМИТИВЫ. Никаких вложенных объектов DB.
         return {
-            prompt: g.prompt,
-            aspectRatio: g.aspectRatio,
-            type: g.type,
-            inputImages: Array.isArray(g.inputImages) ? g.inputImages.map((i: any) => ({ fileId: i?.fileId })) : []
+            userId: String(u.id),
+            credits: Number(u.credits),
+            settingsAspectRatio: u.settings ? String(u.settings.aspectRatio) : undefined,
+            genPrompt: String(gen.prompt),
+            genAspectRatio: String(gen.aspectRatio),
+            genMode: String(mode),
+            genInputImageFileIds: inputImageFileIds,
+            cost: Number(cost),
+            chatId: Number(exCtx.chat?.id ?? 0)
         };
     });
 
-    if (!genData) return conversation.external((c: any) => c.reply('❌ Генерация не найдена'));
-
-    const inputImageFileIds = genData.inputImages.map((i: any) => i.fileId).filter(Boolean);
-    const mode: GenerationMode = (genData.type === 'IMAGE_TO_IMAGE' || genData.type === 'MULTI_IMAGE') ? 'image' : 'text';
-
-    if (mode === 'image' && !inputImageFileIds.length) {
-        return conversation.external((c: any) => c.reply('❌ Исходные файлы недоступны'));
+    if (!flatData) {
+        return conversation.external(async (c: any) => {
+            await c.reply('❌ Генерация не найдена или ошибка пользователя');
+            return null;
+        });
     }
 
-    // Capture primitives only
-    const imgCount = inputImageFileIds.length;
+    // Восстанавливаем объекты локально
+    const user: SafeUser = {
+        id: flatData.userId,
+        credits: flatData.credits,
+        settings: flatData.settingsAspectRatio ? { aspectRatio: flatData.settingsAspectRatio } : undefined
+    };
 
-    const { user, cost, chatId } = await conversation.external(async (exCtx: any) => {
-        const u = await exCtx.userService.findByTelegramId(exCtx.from?.id);
-        if (!u) return { user: null, cost: 0, chatId: 0 };
+    if (user.credits < flatData.cost) {
+        return conversation.external(async (c: any) => {
+            await c.reply('❌ Недостаточно кредитов');
+            return null;
+        });
+    }
 
-        let c = 0;
-        if (mode === 'text') c = exCtx.creditsService.calculateCost('TEXT_TO_IMAGE', 0, 1);
-        else c = exCtx.creditsService.calculateCost(imgCount > 1 ? 'MULTI_IMAGE' : 'IMAGE_TO_IMAGE', imgCount, 1);
-
-        return { user: { id: u.id, credits: u.credits }, cost: c, chatId: exCtx.chat?.id ?? 0 };
+    await conversation.external(async (c: any) => {
+        await c.reply('🔄 Повторная генерация...');
+        return null;
     });
 
-    if (!user || user.credits < cost) {
-        return conversation.external((c: any) => c.reply('❌ Недостаточно кредитов'));
-    }
+    await performGeneration(
+        conversation,
+        flatData.chatId,
+        user,
+        flatData.genPrompt,
+        flatData.genMode as GenerationMode,
+        flatData.genInputImageFileIds,
+        flatData.genAspectRatio,
+        flatData.cost
+    );
+}
 
-    await conversation.external((c: any) => c.reply('🔄 Повторная генерация...'));
-    await performGeneration(conversation, chatId, user, genData.prompt, mode, inputImageFileIds, genData.aspectRatio, cost);
+// ... импорты остаются прежними ...
+
+// Интерфейс для результата генерации (только примитивы!)
+interface GenerationResult {
+    id: string;
+    processingTime: number;
+    imageUrl?: string | null;
+    fileId?: string | null;
+    imageDataBase64?: string | null; // Передаем картинку как base64 строку, а не Buffer
 }
 
 async function performGeneration(
@@ -358,47 +413,106 @@ async function performGeneration(
     currentRatio: string,
     cost: number
 ) {
+    // 1. Отправляем сообщение о статусе
     const statusMsg = await conversation.external(async (ctx: any) => {
-        const m = await ctx.reply(`🎨 Генерирую...\n⏱ 5-10 секунд\n\n"${prompt.slice(0, 100)}..."`);
+        const m = await ctx.reply(
+            `🎨 Генерирую...\n⏱ 5-10 секунд\n\n"${prompt.length > 100 ? prompt.slice(0, 100) + '...' : prompt}"`
+        );
         return { chatId: m.chat.id, messageId: m.message_id };
     });
 
     try {
-        let generation: any = null;
+        // 2. Выполняем генерацию внутри ОДНОГО блока external
+        // Это предотвращает сохранение тяжелых буферов картинок в историю разговора
+        // и гарантирует возврат чистого объекта.
+        const result: GenerationResult = await conversation.external(async (ctx: any) => {
+            let gen: any;
 
-        if (mode === 'text') {
-            await conversation.external(async (ctx: any) => {
-                generation = await ctx.generationService.generateTextToImage({ userId: user.id, prompt, aspectRatio: currentRatio });
-            });
-        } else {
-            const token = process.env.TELEGRAM_BOT_TOKEN;
-            const imageBuffers = [];
+            if (mode === 'text') {
+                gen = await ctx.generationService.generateTextToImage({
+                    userId: user.id,
+                    prompt,
+                    aspectRatio: currentRatio,
+                });
+            } else {
+                // Логика скачивания и подготовки картинок перенесена ВНУТРЬ external
+                const imageBuffers: Array<{ buffer: Buffer; mimeType: string; fileId?: string }> = [];
+                const token = process.env.TELEGRAM_BOT_TOKEN;
 
-            for (const fileId of inputImageFileIds) {
-                if (!fileId) continue;
-                const file = await conversation.external((ctx: any) => ctx.api.getFile(fileId));
-                const bufferData = await conversation.external(async () => (await axios.get(`https://api.telegram.org/file/bot${token}/${file.file_path}`, { responseType: 'arraybuffer' })).data);
-                imageBuffers.push({ buffer: Buffer.from(bufferData), mimeType: 'image/jpeg', fileId });
+                for (const fileId of inputImageFileIds) {
+                    if (!fileId) continue;
+
+                    // Используем ctx.api прямо здесь, без вложенных external
+                    const file = await ctx.api.getFile(fileId);
+                    const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+
+                    const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+                    const buffer = Buffer.from(response.data);
+
+                    imageBuffers.push({
+                        buffer,
+                        mimeType: 'image/jpeg',
+                        fileId
+                    });
+                }
+
+                gen = await ctx.generationService.generateImageToImage({
+                    userId: user.id,
+                    prompt,
+                    inputImages: imageBuffers,
+                    aspectRatio: currentRatio,
+                });
             }
 
-            await conversation.external(async (ctx: any) => {
-                generation = await ctx.generationService.generateImageToImage({ userId: user.id, prompt, inputImages: imageBuffers, aspectRatio: currentRatio });
-            });
-        }
+            // ВАЖНО: Возвращаем "чистый" объект (DTO), а не объект Prisma.
+            // Если imageData (Buffer) существует, конвертируем в base64 строку для безопасной передачи.
+            return {
+                id: String(gen.id),
+                processingTime: Number(gen.processingTime),
+                imageUrl: gen.imageUrl ? String(gen.imageUrl) : null,
+                fileId: gen.fileId ? String(gen.fileId) : null,
+                imageDataBase64: gen.imageData ? gen.imageData.toString('base64') : null
+            };
+        });
 
+        // 3. Удаляем сообщение о статусе
         await deleteUiMessage(conversation, statusMsg);
 
-        const caption = `🎨 ${prompt}\n\n💎 -${cost} кр.\n💰 Баланс: ${user.credits - cost}\n⏱ ${(generation.processingTime / 1000).toFixed(1)}с`;
-        const keyboard = { inline_keyboard: [[{ text: '🔄 Вариация', callback_data: `regenerate_${generation.id}` }, { text: '📜 История', callback_data: 'history' }]] };
+        // 4. Формируем ответ
+        const caption =
+            `🎨 ${prompt}\n\n` +
+            `💎 Использовано: ${cost} кр.\n` +
+            `💰 Осталось: ${user.credits - cost} кр.\n` +
+            `⏱ ${(result.processingTime / 1000).toFixed(1)}с`;
 
+        const keyboard = {
+            inline_keyboard: [[
+                { text: '🔄 Вариация', callback_data: `regenerate_${result.id}` },
+                { text: '📜 История', callback_data: 'history' }
+            ]]
+        };
+
+        // 5. Отправляем результат (imageSource может быть URL, File ID или Buffer)
         await conversation.external(async (ctx: any) => {
-            const source = generation.fileId || generation.imageUrl;
-            if (source) await ctx.replyWithPhoto(source, { caption, reply_markup: keyboard });
-            else if (generation.imageData) await ctx.replyWithPhoto(new InputFile(Buffer.from(generation.imageData, 'base64')), { caption, reply_markup: keyboard });
+            const source = result.fileId || result.imageUrl;
+
+            if (source) {
+                await ctx.replyWithPhoto(source, { caption, reply_markup: keyboard });
+            } else if (result.imageDataBase64) {
+                // Конвертируем обратно из base64 в Buffer для отправки
+                const buffer = Buffer.from(result.imageDataBase64, 'base64');
+                await ctx.replyWithPhoto(new InputFile(buffer), { caption, reply_markup: keyboard });
+            } else {
+                await ctx.reply(`✅ Генерация ID: ${result.id} завершена, но нет изображения для отображения.`);
+            }
+            return null;
         });
 
     } catch (error: any) {
         await deleteUiMessage(conversation, statusMsg);
-        await conversation.external((ctx: any) => ctx.reply(`❌ Ошибка генерации:\n${error.message}`));
+        await conversation.external(async (ctx: any) => {
+            await ctx.reply(`❌ Ошибка генерации:\n${error.message || 'Неизвестная ошибка'}`);
+            return null;
+        });
     }
 }
