@@ -25,6 +25,7 @@ export async function balanceConversation(
     if (user) {
       transactions = await ctx.creditsService.getTransactionHistory(user.id, 5);
     }
+    return null;
   });
 
   if (!user) {
@@ -67,7 +68,7 @@ export async function balanceConversation(
         [
           {
             text: '📜 Полная история',
-            callback_data: 'transactions_history',
+            callback_data: 'history',
           },
         ],
       ],

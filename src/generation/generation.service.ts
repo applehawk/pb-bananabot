@@ -99,13 +99,13 @@ export class GenerationService {
           negativePrompt: generation.negativePrompt,
           aspectRatio: generation.aspectRatio,
           numberOfImages,
-          modelName: settings.geminiModel,
+          modelName: settings.geminiModelId,
         })
         : await this.geminiService.generateFromText({
           prompt,
           negativePrompt: generation.negativePrompt,
           aspectRatio: generation.aspectRatio,
-          modelName: settings.geminiModel,
+          modelName: settings.geminiModelId,
         });
 
       // 6. Upload to storage
@@ -255,7 +255,7 @@ export class GenerationService {
           data: img.buffer,
           mimeType: img.mimeType,
         })),
-        modelName: settings.geminiModel,
+        modelName: settings.geminiModelId,
       });
 
       // 7. Upload result

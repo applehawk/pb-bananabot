@@ -251,8 +251,9 @@ export async function generateConversation(
             // Обработка Текста
             if (ctx2.message?.text) {
                 const text = ctx2.message.text;
-                // Проверка на выход в меню
-                if (Object.values(KeyboardCommands).includes(text as any)) {
+
+                // Проверка на команды выхода
+                if (text === '/start' || text === '/reset' || Object.values(KeyboardCommands).includes(text as any)) {
                     await deleteUiMessage(conversation, msgMeta);
                     return;
                 }

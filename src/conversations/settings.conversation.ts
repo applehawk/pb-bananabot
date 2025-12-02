@@ -13,14 +13,14 @@ export async function settingsConversation(
         if (!telegramId) return;
 
         // Получаем пользователя (безопасный объект)
-        let user: { id: string, settings?: { aspectRatio?: string } } | null = null;
-        await conversation.external(async (exCtx) => {
+        const user = await conversation.external(async (exCtx) => {
             const u = await exCtx.userService.findByTelegramId(telegramId);
             if (u) {
                 // FIX: Приведение к any для доступа к settings
                 const uAny = u as any;
-                user = { id: u.id, settings: uAny.settings };
+                return { id: u.id, settings: uAny.settings };
             }
+            return null;
         });
 
         if (!user) {
@@ -55,34 +55,56 @@ export async function settingsConversation(
 
         // Loop
         while (true) {
-            const ctx2 = await conversation.waitFor('callback_query:data');
+            const ctx2 = await conversation.waitFor(['callback_query:data', 'message:text']);
+
+            // Проверка на команды выхода
+            if (ctx2.message?.text) {
+                const text = ctx2.message.text;
+                if (text === '/start' || text === '/reset') {
+                    await conversation.external(async (ext) => {
+                        try { await ext.api.deleteMessage(msgMeta.chatId, msgMeta.messageId); } catch (e) { console.error('[SETTINGS] Failed to delete message:', e); }
+                    });
+                    return;
+                }
+            }
+
             const data = ctx2.callbackQuery?.data;
             const callbackId = ctx2.callbackQuery?.id;
             if (!data || !callbackId) continue;
 
             if (data.startsWith('aspect_')) {
                 currentRatio = data.split('_')[1];
-                await conversation.external((ext) => ext.api.answerCallbackQuery(callbackId).catch(() => { }));
+                await conversation.external(async (ext) => {
+                    try { await ext.api.answerCallbackQuery(callbackId); } catch (e) { console.error('[SETTINGS] Failed to answer callback:', e); }
+                    return null;
+                });
 
                 const ui = buildSettingsUI();
-                await conversation.external((ext) => ext.api.editMessageText(msgMeta.chatId, msgMeta.messageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'Markdown' }).catch(() => { }));
+                await conversation.external(async (ext) => {
+                    try {
+                        await ext.api.editMessageText(msgMeta.chatId, msgMeta.messageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'Markdown' });
+                    } catch (e) { console.error('[SETTINGS] Failed to edit message:', e); }
+                    return null;
+                });
                 continue;
             }
 
             if (data === 'save_settings') {
                 await conversation.external(async (ext) => {
                     await ext.userService.updateSettings(user!.id, { aspectRatio: currentRatio });
-                    await ext.api.answerCallbackQuery(callbackId, { text: '✅ Настройки сохранены!' }).catch(() => { });
-                    await ext.api.deleteMessage(msgMeta.chatId, msgMeta.messageId).catch(() => { });
+                    try { await ext.api.answerCallbackQuery(callbackId, { text: '✅ Настройки сохранены!' }); } catch (e) { console.error('[SETTINGS] Failed to answer callback with text:', e); }
+                    try { await ext.api.deleteMessage(msgMeta.chatId, msgMeta.messageId); } catch (e) { console.error('[SETTINGS] Failed to delete message:', e); }
                     await ext.reply(`✅ Настройки сохранены!\n📐 Формат: **${currentRatio}**`, { parse_mode: 'Markdown' });
+                    return null;
                 });
                 return;
             }
 
             if (data === 'close_settings') {
                 await conversation.external(async (ext) => {
-                    await ext.api.answerCallbackQuery(callbackId).catch(() => { });
-                    await ext.api.deleteMessage(msgMeta.chatId, msgMeta.messageId).catch(() => { });
+                    try { await ext.api.answerCallbackQuery(callbackId); } catch (e) { console.error('[SETTINGS] Failed to answer callback:', e); }
+                    try { await ext.api.deleteMessage(msgMeta.chatId, msgMeta.messageId); } catch (e) { console.error('[SETTINGS] Failed to delete message:', e); }
+                    return null;
                 });
                 return;
             }

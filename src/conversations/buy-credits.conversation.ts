@@ -42,7 +42,8 @@ export async function buyCreditsConversation(
   let targetPackageId: string | undefined;
   let targetPaymentMethod: string | undefined;
 
-  if (ctx.session.quickBuy) {
+  // Safely access session
+  if (ctx.session && ctx.session.quickBuy) {
     if (packages.length > 0) {
       targetPackageId = packages[0].id;
       targetPaymentMethod = 'yoomoney';
