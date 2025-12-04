@@ -1,6 +1,3 @@
-[submodule "prisma"]
-	path = prisma
-	url = git@github.com:applehawk/bananabot-prisma.git
 [submodule "bananabot-admin"]
 	path = bananabot-admin
 	url = git@github.com:applehawk/bananabot-admin.git

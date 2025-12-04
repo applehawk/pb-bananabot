@@ -37,7 +37,7 @@ export class GenerationService {
   /**
    * Generate image from text (Text-to-Image)
    */
-  async generateTextToImage(params: GenerateTextToImageParams) {
+  async generateTextToImage(params: GenerateTextToImageParams): Promise<any> {
     const {
       userId,
       prompt,
@@ -183,7 +183,7 @@ export class GenerationService {
   /**
    * Generate image from image + text (Image-to-Image)
    */
-  async generateImageToImage(params: GenerateImageToImageParams) {
+  async generateImageToImage(params: GenerateImageToImageParams): Promise<any> {
     const { userId, prompt, inputImages, negativePrompt, aspectRatio } = params;
 
     const startTime = Date.now();
@@ -328,7 +328,7 @@ export class GenerationService {
   /**
    * Get user's generation history
    */
-  async getHistory(userId: string, limit: number = 20) {
+  async getHistory(userId: string, limit: number = 20): Promise<any[]> {
     return this.prisma.generation.findMany({
       where: {
         userId,
@@ -345,7 +345,7 @@ export class GenerationService {
   /**
    * Get generation by ID
    */
-  async getById(id: string) {
+  async getById(id: string): Promise<any> {
     return this.prisma.generation.findUnique({
       where: { id },
       include: {
@@ -363,7 +363,7 @@ export class GenerationService {
   /**
    * Cancel generation
    */
-  async cancel(id: string, userId: string) {
+  async cancel(id: string, userId: string): Promise<any> {
     const generation = await this.prisma.generation.findFirst({
       where: { id, userId },
     });

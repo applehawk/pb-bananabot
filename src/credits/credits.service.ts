@@ -14,7 +14,7 @@ export class CreditsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-  ) {}
+  ) { }
 
   /**
    * Calculate credit cost for generation
@@ -62,7 +62,7 @@ export class CreditsService {
     type: TransactionType,
     paymentMethod: PaymentMethod = 'FREE',
     metadata?: any,
-  ) {
+  ): Promise<any> {
     return this.prisma.$transaction(async (tx) => {
       // Update user credits
       const user = await tx.user.update({
@@ -101,7 +101,7 @@ export class CreditsService {
     amount: number,
     generationId: string,
     metadata?: any,
-  ) {
+  ): Promise<any> {
     return this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: userId },
@@ -153,7 +153,7 @@ export class CreditsService {
   /**
    * Refund credits (failed generation)
    */
-  async refundCredits(userId: string, amount: number, reason: string) {
+  async refundCredits(userId: string, amount: number, reason: string): Promise<any> {
     return this.addCredits(userId, amount, 'REFUND', 'FREE', { reason });
   }
 
@@ -241,8 +241,8 @@ export class CreditsService {
       const lastClaim = dailyBonus.lastClaimDate;
       const daysSinceLastClaim = lastClaim
         ? Math.floor(
-            (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60 * 24),
-          )
+          (now.getTime() - lastClaim.getTime()) / (1000 * 60 * 60 * 24),
+        )
         : 999;
 
       if (daysSinceLastClaim < 1) {
@@ -292,7 +292,7 @@ export class CreditsService {
   /**
    * Get user transaction history
    */
-  async getTransactionHistory(userId: string, limit: number = 20) {
+  async getTransactionHistory(userId: string, limit: number = 20): Promise<any[]> {
     return this.prisma.transaction.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },

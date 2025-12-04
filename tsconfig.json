@@ -18,6 +18,9 @@
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
+      "@prisma/client": [
+        "bananabot-admin/node_modules/.prisma/client"
+      ],
       "@app/yoomoney-client": [
         "libs/yoomoney-client/src"
       ],

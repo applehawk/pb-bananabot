@@ -24,8 +24,8 @@ COPY libs ./libs
 COPY .gitmodules .gitmodules
 RUN git submodule update --init --recursive prisma || true
 
-# Copy prisma submodule
-COPY prisma ./prisma
+# Copy prisma from bananabot-admin submodule
+COPY bananabot-admin/prisma ./prisma
 
 # Generate Prisma Client to root node_modules
 # This ensures @prisma/client is available for the application
@@ -53,8 +53,8 @@ RUN mkdir -p /data && chmod 755 /data
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001 && \
-    chown -R nestjs:nodejs /app /data
+  adduser -S nestjs -u 1001 && \
+  chown -R nestjs:nodejs /app /data
 
 USER nestjs
 

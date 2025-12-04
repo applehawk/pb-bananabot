@@ -169,7 +169,7 @@ export class UserService {
   /**
    * Get user statistics
    */
-  async getStatistics(userId: string) {
+  async getStatistics(userId: string): Promise<any> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {

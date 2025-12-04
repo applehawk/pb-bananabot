@@ -2,6 +2,7 @@
         submodules-update submodules-status submodules-pull submodules-init \
         admin-dev admin-prod admin-install admin-build admin-stop \
         docker-up docker-down docker-restart docker-logs docker-build docker-ps \
+        docker-prune docker-prune-all docker-prune-volumes docker-prune-build \
         db-generate db-migrate db-studio db-push db-reset \
         webhook-set webhook-delete \
         up down logs ps restart
@@ -58,6 +59,12 @@ help:
 	@echo "  make docker-ps      - Show status of all Docker services"
 	@echo "  make admin-prod     - Start only admin panel in Docker"
 	@echo "  make admin-stop     - Stop admin panel Docker container"
+	@echo ""
+	@echo "Docker cleanup commands:"
+	@echo "  make docker-prune        - Remove unused containers, networks, images (dangling)"
+	@echo "  make docker-prune-all    - Remove ALL unused images (aggressive cleanup)"
+	@echo "  make docker-prune-volumes - Remove unused volumes"
+	@echo "  make docker-prune-build  - Remove build cache"
 	@echo ""
 	@echo "Yandex.Cloud commands:"
 	@echo "  make yc-build       - Build and push Docker image to Yandex.Cloud"
@@ -278,6 +285,46 @@ admin-stop:
 	@echo "✓ Admin panel stopped"
 
 # ============================================================================
+# Docker Cleanup Commands
+# ============================================================================
+
+# Remove unused Docker data (containers, networks, dangling images)
+docker-prune:
+	@echo "Removing unused Docker data (containers, networks, dangling images)..."
+	docker system prune -f
+	@echo "✓ Docker cleanup complete"
+
+# Remove ALL unused images (aggressive cleanup)
+docker-prune-all:
+	@echo "⚠️  WARNING: This will remove ALL unused Docker images!"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		docker system prune -a -f; \
+		echo "✓ Aggressive Docker cleanup complete"; \
+	else \
+		echo "Cancelled"; \
+	fi
+
+# Remove unused volumes
+docker-prune-volumes:
+	@echo "⚠️  WARNING: This will remove unused Docker volumes!"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		docker volume prune -f; \
+		echo "✓ Docker volumes cleaned"; \
+	else \
+		echo "Cancelled"; \
+	fi
+
+# Remove build cache
+docker-prune-build:
+	@echo "Removing Docker build cache..."
+	docker builder prune -f
+	@echo "✓ Docker build cache cleaned"
+
+# ============================================================================
 # Yandex.Cloud Deployment
 # ============================================================================
 
@@ -336,24 +383,24 @@ vm-setup-sg:
 # Generate Prisma Client
 db-generate:
 	@echo "Generating Prisma Client..."
-	cd prisma && npx prisma generate
+	cd bananabot-admin && make prisma-generate
 	@echo "✓ Prisma Client generated"
 
 # Create and apply migration
 db-migrate:
 	@echo "Creating and applying migration..."
-	cd prisma && npx prisma migrate dev
+	cd bananabot-admin/prisma && npx prisma migrate dev
 	@echo "✓ Migration applied"
 
 # Open Prisma Studio
 db-studio:
 	@echo "Opening Prisma Studio..."
-	cd prisma && npx prisma studio
+	cd bananabot-admin/prisma && npx prisma studio
 
 # Push schema changes without migration
 db-push:
 	@echo "Pushing schema changes..."
-	cd prisma && npx prisma db push
+	cd bananabot-admin/prisma && npx prisma db push
 	@echo "✓ Schema pushed"
 
 # Reset database (⚠️ deletes all data)
@@ -362,7 +409,7 @@ db-reset:
 	@read -p "Are you sure? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		cd prisma && npx prisma migrate reset --force; \
+		cd bananabot-admin/prisma && npx prisma migrate reset --force; \
 		echo "✓ Database reset complete"; \
 	else \
 		echo "Cancelled"; \
