@@ -29,6 +29,8 @@ COPY bananabot-admin/prisma ./prisma
 
 # Generate Prisma Client to root node_modules
 # This ensures @prisma/client is available for the application
+# Remove the symlink created by postinstall as it is invalid in Docker
+RUN rm -rf node_modules/.prisma
 RUN npx prisma generate --schema=./prisma/schema.prisma
 
 # Build application
@@ -42,6 +44,8 @@ WORKDIR /app
 # Install only production dependencies
 COPY package*.json ./
 RUN npm ci --only=production && npm cache clean --force
+# Remove invalid symlink created by postinstall
+RUN rm -rf node_modules/.prisma
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
