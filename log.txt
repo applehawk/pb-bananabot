@@ -1,0 +1,1697 @@
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Applying migration `20251204151500_add_universal_tariff_schema`
+bananabot-admin  | Error: P3018
+bananabot-admin  | 
+bananabot-admin  | A migration failed to apply. New migrations cannot be applied before the error is recovered from. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | 
+bananabot-admin  | Migration name: 20251204151500_add_universal_tariff_schema
+bananabot-admin  | 
+bananabot-admin  | Database error code: 42701
+bananabot-admin  | 
+bananabot-admin  | Database error:
+bananabot-admin  | ERROR: column "password" of relation "AdminUser" already exists
+bananabot-admin  | 
+bananabot-admin  | DbError { severity: "ERROR", parsed_severity: Some(Error), code: SqlState(E42701), message: "column \"password\" of relation \"AdminUser\" already exists", detail: None, hint: None, position: None, where_: None, schema: None, table: None, column: None, datatype: None, constraint: None, file: Some("tablecmds.c"), line: Some(7347), routine: Some("check_for_column_name_collision") }
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | npm notice
+bananabot-admin  | npm notice New major version of npm available! 10.8.2 -> 11.6.4
+bananabot-admin  | npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.4
+bananabot-admin  | npm notice To update run: npm install -g npm@11.6.4
+bananabot-admin  | npm notice
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
+bananabot-admin  | Prisma schema loaded from prisma/schema.prisma
+bananabot-admin  | Datasource "db": PostgreSQL database "bananabot", schema "public" at "postgres:5432"
+bananabot-admin  | 
+bananabot-admin  | 9 migrations found in prisma/migrations
+bananabot-admin  | 
+bananabot-admin  | Error: P3009
+bananabot-admin  | 
+bananabot-admin  | migrate found failed migrations in the target database, new migrations will not be applied. Read more about how to resolve migration issues in a production database: https://pris.ly/d/migrate-resolve
+bananabot-admin  | The `20251204151500_add_universal_tariff_schema` migration started at 2025-12-05 19:46:04.591674 UTC failed
+bananabot-admin  | 
+bananabot-admin  | 
