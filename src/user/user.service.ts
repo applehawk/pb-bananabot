@@ -69,7 +69,12 @@ export class UserService {
 
     // Create new user
     const referralCode = nanoid(8);
-    const freeCredits = parseInt(process.env.FREE_CREDITS || '3', 10);
+
+    // Get free credits amount from system settings
+    const systemSettings = await this.prisma.systemSettings.findUnique({
+      where: { key: 'singleton' },
+    });
+    const freeCredits = systemSettings?.freeCreditsAmount ?? 3;
 
     const user = await this.prisma.user.create({
       data: {

@@ -94,7 +94,80 @@ export class CreditsService {
   }
 
   /**
-   * Deduct credits from user (generation)
+   * Calculate credit cost for generation based on tokens
+   */
+  async calculateTokenCost(
+    modelId: string,
+    inputTokens: number,
+    outputTokens: number,
+    userId: string,
+    options?: { isImageGeneration?: boolean; isHighRes?: boolean; numberOfImages?: number },
+  ): Promise<{
+    totalCostUsd: number;
+    creditsToDeduct: number;
+    details: any;
+  }> {
+    // 1. Get Model Tariff
+    const model = await this.prisma.modelTariff.findUnique({
+      where: { modelId },
+    });
+
+    if (!model) {
+      throw new Error(`Model tariff not found for ${modelId}`);
+    }
+
+    // 2. Get User for personal margin
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error(`User not found ${userId}`);
+    }
+
+    // 3. Get System Settings for global margin
+    const systemSettings = await this.prisma.systemSettings.findUnique({
+      where: { key: 'singleton' },
+    });
+
+    // 4. Use shared cost calculator
+    const { calculateGenerationCost } = await import('../utils/cost-calculator');
+
+    const result = calculateGenerationCost({
+      model: {
+        modelId: model.modelId,
+        inputPrice: model.inputPrice,
+        outputPrice: model.outputPrice,
+        outputImagePrice: model.outputImagePrice,
+        modelMargin: model.modelMargin,
+        creditPriceUsd: model.creditPriceUsd,
+        hasImageGeneration: model.hasImageGeneration,
+        inputImageTokens: model.inputImageTokens,
+        imageTokensLowRes: model.imageTokensLowRes,
+        imageTokensHighRes: model.imageTokensHighRes,
+      },
+      systemSettings: {
+        systemMargin: systemSettings?.systemMargin || 0,
+        creditsPerUsd: systemSettings?.creditsPerUsd || 100,
+        usdRubRate: systemSettings?.usdRubRate || 100,
+      },
+      userMargin: user.personalMargin,
+      inputTokens,
+      outputTokens,
+      isImageGeneration: options?.isImageGeneration ?? model.hasImageGeneration,
+      isHighRes: options?.isHighRes,
+      numberOfImages: options?.numberOfImages,
+    });
+
+    return {
+      totalCostUsd: result.totalCostUsd,
+      creditsToDeduct: result.creditsToDeduct,
+      details: result.details,
+    };
+  }
+
+  /**
+   * Deduct credits from user (generation) - DEPRECATED, use commitCredits instead
    */
   async deductCredits(
     userId: string,
@@ -111,6 +184,7 @@ export class CreditsService {
         throw new Error('User not found');
       }
 
+      // Allow negative balance? No.
       if (user.credits < amount) {
         throw new Error('Insufficient credits');
       }
@@ -148,6 +222,117 @@ export class CreditsService {
 
       return { user: updatedUser, transaction };
     });
+  }
+
+  /**
+   * Reserve credits before generation starts
+   * Reserved credits cannot be used for other operations
+   */
+  async reserveCredits(userId: string, amount: number): Promise<void> {
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const availableCredits = user.credits - user.reservedCredits;
+      if (availableCredits < amount) {
+        throw new Error(
+          `Insufficient credits. Required: ${amount.toFixed(2)}, Available: ${availableCredits.toFixed(2)}`,
+        );
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          reservedCredits: {
+            increment: amount,
+          },
+        },
+      });
+
+      this.logger.log(`Reserved ${amount} credits for user ${userId}`);
+    });
+  }
+
+  /**
+   * Commit reserved credits after successful generation
+   * Releases the reservation and deducts the actual cost
+   */
+  async commitCredits(
+    userId: string,
+    reservedAmount: number,
+    actualCost: number,
+    generationId: string,
+    metadata?: any,
+  ): Promise<any> {
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Release reservation and deduct actual cost
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          reservedCredits: {
+            decrement: reservedAmount,
+          },
+          credits: {
+            decrement: actualCost,
+          },
+          totalGenerated: {
+            increment: 1,
+          },
+        },
+      });
+
+      // Create transaction record
+      const transaction = await tx.transaction.create({
+        data: {
+          userId,
+          type: 'GENERATION_COST',
+          creditsAdded: -actualCost,
+          paymentMethod: 'FREE',
+          status: 'COMPLETED',
+          metadata: {
+            ...metadata,
+            generationId,
+            reservedAmount,
+          },
+          completedAt: new Date(),
+        },
+      });
+
+      this.logger.log(
+        `Committed ${actualCost} credits for user ${userId} (reserved: ${reservedAmount})`,
+      );
+
+      return { user: updatedUser, transaction };
+    });
+  }
+
+  /**
+   * Release reserved credits (on failed generation)
+   */
+  async releaseCredits(userId: string, amount: number): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        reservedCredits: {
+          decrement: amount,
+        },
+      },
+    });
+
+    this.logger.log(`Released ${amount} reserved credits for user ${userId}`);
   }
 
   /**
