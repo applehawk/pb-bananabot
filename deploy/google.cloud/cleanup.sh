@@ -20,8 +20,8 @@ gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="
     echo 'Pruning Docker system (images, containers, networks)...'
     sudo docker system prune -af
 
-    echo 'Pruning Docker volumes...'
-    sudo docker volume prune -f
+    # echo 'Pruning Docker volumes...'
+    # sudo docker volume prune -f
 
     echo 'Disk usage after cleanup:'
     df -h /

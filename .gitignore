@@ -2,6 +2,9 @@
 .env
 .env.deploy
 
+# Backups
+backups/
+
 # Dependencies
 node_modules/
 

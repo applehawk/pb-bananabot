@@ -29,6 +29,8 @@ help:
 	@echo "  make gc-firewall      # Setup Firewall rules for Google Cloud VM"
 	@echo "  make gc-cleanup       # Clean up Docker system on Google Cloud VM"
 	@echo "  make gc-resize-disk   # Resize VM disk (stops VM temporarily)"
+	@echo "  make gc-backup        # Backup database from Google Cloud VM"
+	@echo "  make gc-restore       # Restore database (FILE=path/to/backup.sql.gz)"
 	@echo "  make restart        - Stop and start the bot"
 	@echo "  make test           - Run tests"
 	@echo ""
@@ -523,3 +525,14 @@ gc-cleanup:
 gc-resize-disk:
 	./deploy/google.cloud/resize-disk.sh
 
+# Backup database from Google Cloud VM
+gc-backup:
+	./deploy/google.cloud/backup-db.sh
+
+# Restore database to Google Cloud VM
+gc-restore:
+	@if [ -z "$(FILE)" ]; then \
+		./deploy/google.cloud/restore-db.sh; \
+	else \
+		./deploy/google.cloud/restore-db.sh $(FILE); \
+	fi
