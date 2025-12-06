@@ -445,33 +445,29 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
       const updateId = ctx.update.update_id;
       this.logger.log(`[handleCallbackQuery] Update ID: ${updateId}, Callback: ${callbackData}`);
 
+      // Handle cancel purchase globally (PRIORITY)
+      if (callbackData === 'cancel_purchase') {
+        try {
+          await ctx.deleteMessage();
+          await ctx.answerCallbackQuery();
+        } catch (e) {
+          // ignore error if message already deleted
+          await ctx.answerCallbackQuery().catch(() => { });
+        }
+        return;
+      }
+
       // Check if callback data contains conversation-internal data (e.g., select_package:id, pay:method:id)
       // These should NOT trigger a new conversation - they're handled by waitFor() inside conversations
       const isConversationInternalData =
         callbackData.startsWith('select_package:') ||
         callbackData.startsWith('pay:') ||
-        callbackData === 'cancel_purchase' ||
+        // callbackData === 'cancel_purchase' || // Handled globally above
         callbackData === 'back_to_packages' ||
         callbackData === 'generate_trigger' || // Handled by generate conversation
         callbackData.startsWith('aspect_') || // Handled by generate/settings conversation
         callbackData === 'save_settings' || // Handled by settings conversation
         callbackData === 'close_settings'; // Handled by settings conversation
-
-      // If this is internal conversation data, don't try to enter a conversation
-      // The active conversation's waitFor() will handle it
-      if (isConversationInternalData) {
-        this.logger.log(`Callback is conversation-internal data, letting active conversation handle it`);
-        // ВАЖНО: Передаем управление дальше, чтобы conversation.waitFor мог перехватить событие
-        await next();
-        return;
-      }
-
-      // Handle cancel purchase globally
-      if (callbackData === 'cancel_purchase') {
-        await ctx.deleteMessage();
-        await ctx.answerCallbackQuery();
-        return;
-      }
 
       // Handle payment check globally (non-blocking)
       if (callbackData.startsWith('check_payment:')) {

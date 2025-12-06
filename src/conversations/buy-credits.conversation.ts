@@ -92,9 +92,9 @@ export async function buyCreditsConversation(
       reply_markup: keyboard,
     });
 
-    // URL buttons don't return callbacks to the bot.
-    // The user is redirected to the payment page immediately.
-    // We can stop the conversation here.
+    // In this "fire and forget" mode, the conversation ends immediately.
+    // The "cancel_purchase" button is handled by the global callback handler in bot.update.ts
+    // The payment URL buttons are handled by the client (browser).
     return;
   }
 }
