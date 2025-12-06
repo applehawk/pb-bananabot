@@ -144,11 +144,10 @@ export async function generateConversation(
                     };
 
                     if (state.mode === 'text') {
-                        cost = exCtx.creditsService.calculateCost('TEXT_TO_IMAGE', 0, 1);
+                        cost = await exCtx.generationService.estimateCost(u.id, { mode: 'text', numberOfImages: 1 });
                     } else {
                         const count = state.inputImageFileIds.length;
-                        const type = count > 1 ? 'MULTI_IMAGE' : 'IMAGE_TO_IMAGE';
-                        cost = exCtx.creditsService.calculateCost(type, count, 1);
+                        cost = await exCtx.generationService.estimateCost(u.id, { mode: 'image', numberOfImages: count });
                     }
                 }
             });
@@ -162,7 +161,7 @@ export async function generateConversation(
             (state.mode === 'text' || state.inputImageFileIds.length > 0)) {
             await refreshData();
             if (user && user.credits >= cost) {
-                await performGeneration(conversation, ctx.chat?.id ?? 0, user, state.prompt, state.mode, state.inputImageFileIds, currentRatio, cost);
+                await performGeneration(conversation, ctx.chat?.id ?? 0, user, state.prompt, state.mode, state.inputImageFileIds, currentRatio);
                 return;
             }
         }
@@ -270,7 +269,7 @@ export async function generateConversation(
 
         // Запуск генерации
         if (user) {
-            await performGeneration(conversation, ctx.chat?.id ?? 0, user, state.prompt, state.mode, state.inputImageFileIds, currentRatio, cost);
+            await performGeneration(conversation, ctx.chat?.id ?? 0, user, state.prompt, state.mode, state.inputImageFileIds, currentRatio);
         }
 
     } catch (error: any) {
@@ -335,10 +334,9 @@ async function handleRegeneration(conversation: any, generationId: string) {
         // Расчет стоимости
         let cost = 0;
         if (mode === 'text') {
-            cost = exCtx.creditsService.calculateCost('TEXT_TO_IMAGE', 0, 1);
+            cost = await exCtx.generationService.estimateCost(String(u.id), { mode: 'text', numberOfImages: 1 });
         } else {
-            const type = imgCount > 1 ? 'MULTI_IMAGE' : 'IMAGE_TO_IMAGE';
-            cost = exCtx.creditsService.calculateCost(type, imgCount, 1);
+            cost = await exCtx.generationService.estimateCost(String(u.id), { mode: 'image', numberOfImages: imgCount });
         }
 
         // ВОЗВРАЩАЕМ ТОЛЬКО ПРИМИТИВЫ. Никаких вложенных объектов DB.
@@ -388,8 +386,7 @@ async function handleRegeneration(conversation: any, generationId: string) {
         flatData.genPrompt,
         flatData.genMode as GenerationMode,
         flatData.genInputImageFileIds,
-        flatData.genAspectRatio,
-        flatData.cost
+        flatData.genAspectRatio
     );
 }
 
@@ -402,6 +399,7 @@ interface GenerationResult {
     imageUrl?: string | null;
     fileId?: string | null;
     imageDataBase64?: string | null; // Передаем картинку как base64 строку, а не Buffer
+    creditsUsed: number;
 }
 
 async function performGeneration(
@@ -411,8 +409,7 @@ async function performGeneration(
     prompt: string,
     mode: GenerationMode,
     inputImageFileIds: string[],
-    currentRatio: string,
-    cost: number
+    currentRatio: string
 ) {
     // 1. Отправляем сообщение о статусе
     const statusMsg = await conversation.external(async (ctx: any) => {
@@ -472,7 +469,8 @@ async function performGeneration(
                 processingTime: Number(gen.processingTime),
                 imageUrl: gen.imageUrl ? String(gen.imageUrl) : null,
                 fileId: gen.fileId ? String(gen.fileId) : null,
-                imageDataBase64: gen.imageData ? gen.imageData.toString('base64') : null
+                imageDataBase64: gen.imageData ? gen.imageData.toString('base64') : null,
+                creditsUsed: Number(gen.creditsUsed || 0)
             };
         });
 
@@ -482,8 +480,8 @@ async function performGeneration(
         // 4. Формируем ответ
         const caption =
             `🎨 ${prompt}\n\n` +
-            `💎 Использовано: ${cost} кр.\n` +
-            `💰 Осталось: ${user.credits - cost} кр.\n` +
+            `💎 Использовано: ${result.creditsUsed} кр.\n` +
+            `💰 Осталось: ${(user.credits - result.creditsUsed).toFixed(5)} кр.\n` +
             `⏱ ${(result.processingTime / 1000).toFixed(1)}с`;
 
         const keyboard = {

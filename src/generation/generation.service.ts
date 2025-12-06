@@ -4,7 +4,7 @@ import { UserService } from '../user/user.service';
 import { CreditsService } from '../credits/credits.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { ImageStorageService } from './storage/image-storage.service';
-import { GenerationType, GenerationStatus } from '@prisma/client';
+import { GenerationType, GenerationStatus, ModelTariff } from '@prisma/client';
 
 export interface GenerateTextToImageParams {
   userId: string;
@@ -33,6 +33,50 @@ export class GenerationService {
     private readonly geminiService: GeminiService,
     private readonly imageStorage: ImageStorageService,
   ) { }
+
+  /**
+   * Estimate cost for generation
+   */
+  async estimateCost(
+    userId: string,
+    params: {
+      mode: 'text' | 'image';
+      numberOfImages: number;
+    }
+  ): Promise<number> {
+    const { mode, numberOfImages } = params;
+
+    // 1. Get user settings
+    const settings = await this.userService.getSettings(userId);
+    const modelId = settings?.selectedModelId || 'gemini-2.5-flash-image'; // Fallback default
+
+    // 2. Get Model Tariff
+    const modelTariff = await this.prisma.modelTariff.findUnique({
+      where: { modelId },
+    });
+
+    if (!modelTariff) {
+      // Return a safe default or 0 if pricing is broken, to avoid blocking UI
+      this.logger.warn(`Model tariff not found for estimation: ${modelId}`);
+      return 0;
+    }
+
+    // 3. Estimate tokens
+    const { inputTokens, outputTokens } = this.calculateEstimatedTokens(modelTariff, settings, {
+      mode,
+      numberOfImages,
+    });
+
+    // 4. Calculate
+    const cost = await this.creditsService.calculateTokenCost(
+      modelId,
+      inputTokens,
+      outputTokens,
+      userId
+    );
+
+    return cost.creditsToDeduct;
+  }
 
   /**
    * Generate image from text (Text-to-Image)
@@ -68,18 +112,16 @@ export class GenerationService {
 
     // 3. Estimate cost (Pre-check)
     const isBatch = numberOfImages > 1;
-    // Use default token counts from tariff if available, otherwise some safe defaults
 
-    const estimatedInputTokens = modelTariff.inputImageTokens || 100; // Text prompt is small usually
-    const perImageTokens = settings.hdQuality
-      ? (modelTariff.imageTokensHighRes || 1000)
-      : (modelTariff.imageTokensLowRes || modelTariff.imageTokensHighRes || 1000);
-    const estimatedOutputTokens = perImageTokens;
+    const { inputTokens: estimatedInputTokens, outputTokens: estimatedOutputTokens } = this.calculateEstimatedTokens(modelTariff, settings, {
+      mode: 'text',
+      numberOfImages,
+    });
 
     const estimatedCost = await this.creditsService.calculateTokenCost(
       modelId,
       estimatedInputTokens,
-      estimatedOutputTokens * numberOfImages,
+      estimatedOutputTokens,
       userId
     );
 
@@ -150,11 +192,8 @@ export class GenerationService {
       // For now, use tariff defaults based on resolution/model.
       // Assuming result might have usageMetadata in future.
 
-      const inputTokens = estimatedInputTokens; // Approximation for prompt
-      const perImageTokensFinal = settings.hdQuality
-        ? (modelTariff.imageTokensHighRes || 0)
-        : (modelTariff.imageTokensLowRes || modelTariff.imageTokensHighRes || 0);
-      const outputTokens = perImageTokensFinal * numberOfImages;
+      const inputTokens = estimatedInputTokens;
+      const outputTokens = estimatedOutputTokens; // Use estimated as actual for now since we don't have usage metadata
 
       const finalCost = await this.creditsService.calculateTokenCost(
         modelId,
@@ -263,13 +302,10 @@ export class GenerationService {
       numInputImages > 1 ? 'MULTI_IMAGE' : 'IMAGE_TO_IMAGE';
 
     // Estimate tokens:
-    // Input: (Input Image Tokens * Num Input Images) + Prompt Tokens (approx 100)
-    // Output: Output Image Tokens (High Res default)
-    const estimatedInputTokens = (modelTariff.inputImageTokens || 258) * numInputImages + 100;
-    const perImageTokens = settings.hdQuality
-      ? (modelTariff.imageTokensHighRes || 1000)
-      : (modelTariff.imageTokensLowRes || modelTariff.imageTokensHighRes || 1000);
-    const estimatedOutputTokens = perImageTokens;
+    const { inputTokens: estimatedInputTokens, outputTokens: estimatedOutputTokens } = this.calculateEstimatedTokens(modelTariff, settings, {
+      mode: 'image',
+      numberOfImages: numInputImages,
+    });
 
     const estimatedCost = await this.creditsService.calculateTokenCost(
       modelId,
@@ -515,5 +551,32 @@ export class GenerationService {
       processing,
       successRate: total > 0 ? ((completed / total) * 100).toFixed(2) : 0,
     };
+  }
+
+  /**
+   * Helper: Calculate estimated tokens based on mode and settings
+   */
+  private calculateEstimatedTokens(
+    modelTariff: ModelTariff,
+    settings: any,    // UserSettings
+    params: { mode: 'text' | 'image'; numberOfImages: number }
+  ): { inputTokens: number; outputTokens: number } {
+    const { mode, numberOfImages } = params;
+
+    const perImageTokens = settings?.hdQuality
+      ? (modelTariff.imageTokensHighRes || 1000)
+      : (modelTariff.imageTokensLowRes || modelTariff.imageTokensHighRes || 1000);
+
+    if (mode === 'text') {
+      const inputTokens = modelTariff.inputImageTokens || 100;
+      const outputTokens = perImageTokens * numberOfImages;
+      return { inputTokens, outputTokens };
+    } else {
+      // Image to Image
+      // Input: (Input Image Tokens * Num Input Images) + Prompt Tokens (approx 100)
+      const inputTokens = (modelTariff.inputImageTokens || 258) * numberOfImages + 100;
+      const outputTokens = perImageTokens; // Always 1 output image for img2img currently
+      return { inputTokens, outputTokens };
+    }
   }
 }

@@ -1,22 +1,11 @@
+import { ModelTariff } from '@prisma/client';
+
 /**
  * Cost Calculation Utility
  * 
  * Shared logic for calculating generation costs based on ModelTariff.
  * Used by both CreditsService and test scripts.
  */
-
-export interface ModelTariffData {
-    modelId: string;
-    inputPrice: number | null;
-    outputPrice: number | null;
-    outputImagePrice: number | null;
-    modelMargin: number;
-    creditPriceUsd: number | null;
-    hasImageGeneration: boolean;
-    inputImageTokens: number | null;
-    imageTokensLowRes: number | null;
-    imageTokensHighRes: number | null;
-}
 
 export interface SystemSettingsData {
     systemMargin: number;
@@ -25,7 +14,7 @@ export interface SystemSettingsData {
 }
 
 export interface CostCalculationParams {
-    model: ModelTariffData;
+    model: ModelTariff;
     systemSettings: SystemSettingsData;
     userMargin: number;
     inputTokens: number;
@@ -140,7 +129,7 @@ export function calculateGenerationCost(params: CostCalculationParams): CostCalc
  * Estimate tokens for image generation based on model tariff.
  */
 export function estimateImageTokens(
-    model: ModelTariffData,
+    model: ModelTariff,
     isHighRes: boolean = false,
     numberOfInputImages: number = 0,
 ): { inputTokens: number; outputTokens: number } {

@@ -134,18 +134,7 @@ export class CreditsService {
     const { calculateGenerationCost } = await import('../utils/cost-calculator');
 
     const result = calculateGenerationCost({
-      model: {
-        modelId: model.modelId,
-        inputPrice: model.inputPrice,
-        outputPrice: model.outputPrice,
-        outputImagePrice: model.outputImagePrice,
-        modelMargin: model.modelMargin,
-        creditPriceUsd: model.creditPriceUsd,
-        hasImageGeneration: model.hasImageGeneration,
-        inputImageTokens: model.inputImageTokens,
-        imageTokensLowRes: model.imageTokensLowRes,
-        imageTokensHighRes: model.imageTokensHighRes,
-      },
+      model,
       systemSettings: {
         systemMargin: systemSettings?.systemMargin || 0,
         creditsPerUsd: systemSettings?.creditsPerUsd || 100,
