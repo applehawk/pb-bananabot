@@ -27,8 +27,9 @@ export class YooMoneyClient {
     // The user specifically pointed to YOOMONEY_TOKEN.
 
     this.receiver = this.configService.get('YOOMONEY_WALLET');
-    this.successURL = this.configService.get('YOOMONEY_SUCCESS_URL') ||
-      (this.configService.get('DOMAIN') + '/payment/yoomoney/success');
+    // We always want to receive the callback on our server to validate the payment immediately
+    // The actual final redirect to the bot/frontend is handled by the controller using YOOMONEY_SUCCESS_URL
+    this.successURL = this.configService.get('DOMAIN') + '/payment/yoomoney/success';
 
     this.yooMoney = new API(this.token);
   }

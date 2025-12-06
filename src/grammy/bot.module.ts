@@ -17,6 +17,8 @@ import { UserModule } from '../user/user.module';
 // Configuration
 import configuration from '../config/configuration';
 
+import { BroadcastService } from './broadcast.service';
+
 /**
  * Bot Module (grammY version)
  *
@@ -41,6 +43,7 @@ import configuration from '../config/configuration';
   controllers: [],
   providers: [
     BotUpdate,
+    BroadcastService,
   ],
   exports: [],
 })
