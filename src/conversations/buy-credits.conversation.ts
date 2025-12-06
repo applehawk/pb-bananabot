@@ -60,8 +60,8 @@ export async function buyCreditsConversation(
   // --- Package Selection ---
   if (!targetPackageId) {
     let message = `💎 <b>Покупка кредитов</b>\n\n`;
-    message += `Ваш текущий баланс: <b>${user.credits.toFixed(1)}</b> кредитов\n\n`;
-    message += `📦 <b>Доступные пакеты:</b>\n\n`;
+    message += `Ваш текущий баланс: <b>${user.credits.toFixed(1)}</b> руб.\n\n`;
+    message += `📦 <b>Доступные пакеты пополнения баланса:</b>\n\n`;
 
     const keyboard = new InlineKeyboard();
 
@@ -70,17 +70,16 @@ export async function buyCreditsConversation(
       const discount = pkg.discount > 0 ? ` (-${pkg.discount}%)` : '';
 
       message += `${badge}<b>${pkg.name}</b>\n`;
-      message += `  💎 ${pkg.credits} кредитов\n`;
-      message += `  💰 ${pkg.priceYooMoney || pkg.price} руб.${discount}\n`;
+      message += `  💎 ${pkg.priceYooMoney || pkg.price} руб.${discount}\n`;
       if (pkg.description) {
         message += `  📝 <i>${pkg.description}</i>\n`;
       }
       message += `\n`;
 
-      const payUrl = paymentUrls[pkg.id] || 'https://yoomoney.ru'; // Fallback
+      const payUrl = paymentUrls[pkg.id];
 
       keyboard.url(
-        `${badge}${pkg.name} - ${pkg.credits} кр.`,
+        `${badge}${pkg.name} - ${pkg.credits} руб.`,
         payUrl
       );
       keyboard.row();

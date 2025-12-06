@@ -39,3 +39,6 @@ env.json
 deploy/yandex.cloud/.yc-config
 project.tar.gz
 bot-src.tar.gz
+yoomoney/script2.js
+yoomoney/auth.html
+yoomoney/script1.js

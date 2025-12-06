@@ -13,6 +13,7 @@ import { createHash } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { YooMoneyClient } from '@app/yoomoney-client';
 import { PaymentStrategyFactory } from './strategies/factory/payment-strategy.factory';
+import { GrammYService } from '../grammy/grammy.service'; // Fix import path if needed
 import { UserService } from '../user/user.service';
 import { CreditsService } from '../credits/credits.service';
 import { PrismaService } from '../database/prisma.service';
@@ -39,6 +40,7 @@ export class PaymentService {
     private readonly prisma: PrismaService,
     private readonly paymentStrategyFactory: PaymentStrategyFactory,
     private readonly yooMoney: YooMoneyClient,
+    private readonly grammyService: GrammYService,
   ) { }
 
   generateInitPayUrl(userId: number, chatId: number, tariffId: string): string {
@@ -225,6 +227,18 @@ export class PaymentService {
         TransactionStatus.COMPLETED,
         true,
       );
+
+      // NOTIFY USER
+      try {
+        await this.grammyService.bot.api.sendMessage(
+          Number(transaction.userId), // telegramId
+          `✅ <b>Оплата прошла успешно!</b>\n\nВам начислено <b>${transaction.creditsAdded}</b> рублей.` +
+          `\nТекущий баланс: ${(await this.userService.findByTelegramId(BigInt(transaction.userId)))?.credits.toFixed(1)} руб.`,
+          { parse_mode: 'HTML' }
+        );
+      } catch (e) {
+        this.logger.error(`Failed to send payment notification to ${transaction.userId}`, e);
+      }
 
       this.logger.log(`Payment ${paymentId} processing completed`);
     } else if (!isPaid && externalStatus !== transaction.status) {

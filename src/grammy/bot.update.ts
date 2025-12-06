@@ -358,6 +358,13 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
         return;
       }
 
+      // Handle cancel purchase globally
+      if (callbackData === 'cancel_purchase') {
+        await ctx.deleteMessage();
+        await ctx.answerCallbackQuery();
+        return;
+      }
+
       // Handle payment check globally (non-blocking)
       if (callbackData.startsWith('check_payment:')) {
         const paymentId = callbackData.split(':')[1];
