@@ -106,6 +106,7 @@ export class CreditsService {
     totalCostUsd: number;
     creditsToDeduct: number;
     details: any;
+    costRub: number;
   }> {
     // 1. Get Model Tariff
     const model = await this.prisma.modelTariff.findUnique({
@@ -151,6 +152,7 @@ export class CreditsService {
     return {
       totalCostUsd: result.totalCostUsd,
       creditsToDeduct: result.creditsToDeduct,
+      costRub: result.costRub,
       details: result.details,
     };
   }
@@ -472,5 +474,39 @@ export class CreditsService {
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
+  }
+
+  /**
+   * Estimate cost for image generation (for UI display)
+   */
+  async estimateImageGenCost(
+    userId: string,
+    modelId: string,
+    isHighRes: boolean = false,
+  ): Promise<number> {
+    // 1. Get Model Tariff
+    const model = await this.prisma.modelTariff.findUnique({
+      where: { modelId },
+    });
+
+    if (!model) {
+      this.logger.warn(`Model tariff not found for ${modelId} during estimation`);
+      return 0;
+    }
+
+    // 2. Estimate tokens
+    const { estimateImageTokens } = await import('../utils/cost-calculator');
+    const { inputTokens, outputTokens } = estimateImageTokens(model, isHighRes, 0);
+
+    // 3. Calculate cost
+    const { costRub } = await this.calculateTokenCost(
+      modelId,
+      inputTokens,
+      outputTokens,
+      userId,
+      { isImageGeneration: true, isHighRes },
+    );
+
+    return costRub;
   }
 }

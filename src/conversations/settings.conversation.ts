@@ -32,7 +32,24 @@ export async function settingsConversation(
         let isHdQuality = user.settings?.hdQuality || false;
         let selectedModelId = user.settings?.selectedModelId || 'gemini-2.5-flash-image';
 
-        const buildSettingsUI = () => {
+        // Helper to fetch prices
+        const fetchPrices = async (hd: boolean) => {
+            return await conversation.external(async (ext) => {
+                const [costPro, costSimple] = await Promise.all([
+                    ext.creditsService.estimateImageGenCost(user!.id, 'gemini-3-pro-image-preview', hd),
+                    ext.creditsService.estimateImageGenCost(user!.id, 'gemini-2.5-flash-image', hd)
+                ]);
+                return {
+                    pro: Math.round(costPro),
+                    simple: Math.round(costSimple)
+                };
+            });
+        };
+
+        // Initial price fetch
+        let prices = await fetchPrices(isHdQuality);
+
+        const buildSettingsUI = (currentPrices: { pro: number, simple: number }) => {
             const keyboard = new InlineKeyboard();
             ASPECT_RATIOS.forEach((r, i) => {
                 keyboard.text(r === currentRatio ? `✅ ${r}` : r, `aspect_${r}`);
@@ -53,8 +70,8 @@ export async function settingsConversation(
             keyboard.text('🔙 Назад', 'close_settings');
 
             const modelDesc = isPro
-                ? 'Продвинутая (Gemini 3.0 Pro) (~16 руб/шт)'
-                : 'Простая (Gemini 2.5 Flash) (~5 руб/шт)';
+                ? `Продвинутая (Gemini 3.0 Pro) (~${currentPrices.pro} руб/шт)`
+                : `Простая (Gemini 2.5 Flash) (~${currentPrices.simple} руб/шт)`;
 
             return {
                 text: `⚙️ **Настройки**\n\n📐 **Соотношение сторон:** ${currentRatio}\n💎 **Качество:** ${isHdQuality ? '4K (HD)' : '2K (Standard)'}\n🤖 **Модель:** ${modelDesc}\n\nВыберите параметры:`,
@@ -62,7 +79,7 @@ export async function settingsConversation(
             };
         };
 
-        const initialUI = buildSettingsUI();
+        const initialUI = buildSettingsUI(prices);
         const msgMeta = await conversation.external(async (ext) => {
             const m = await ext.reply(initialUI.text, { reply_markup: initialUI.keyboard, parse_mode: 'Markdown' });
             return { chatId: m.chat.id, messageId: m.message_id };
@@ -94,7 +111,7 @@ export async function settingsConversation(
                     return null;
                 });
 
-                const ui = buildSettingsUI();
+                const ui = buildSettingsUI(prices);
                 await conversation.external(async (ext) => {
                     try {
                         await ext.api.editMessageText(msgMeta.chatId, msgMeta.messageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'Markdown' });
@@ -106,12 +123,16 @@ export async function settingsConversation(
 
             if (data === 'toggle_hd') {
                 isHdQuality = !isHdQuality;
+
+                // Refresh prices for new HD setting
+                prices = await fetchPrices(isHdQuality);
+
                 await conversation.external(async (ext) => {
                     try { await ext.api.answerCallbackQuery(callbackId); } catch (e) { console.error('[SETTINGS] Failed to answer callback:', e); }
                     return null;
                 });
 
-                const ui = buildSettingsUI();
+                const ui = buildSettingsUI(prices);
                 await conversation.external(async (ext) => {
                     try {
                         await ext.api.editMessageText(msgMeta.chatId, msgMeta.messageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'Markdown' });
@@ -126,12 +147,14 @@ export async function settingsConversation(
                     ? 'gemini-3-pro-image-preview'
                     : 'gemini-2.5-flash-image';
 
+                // No need to fetch prices, model toggle just changes selection
+
                 await conversation.external(async (ext) => {
                     try { await ext.api.answerCallbackQuery(callbackId); } catch (e) { console.error('[SETTINGS] Failed to answer callback:', e); }
                     return null;
                 });
 
-                const ui = buildSettingsUI();
+                const ui = buildSettingsUI(prices);
                 await conversation.external(async (ext) => {
                     try {
                         await ext.api.editMessageText(msgMeta.chatId, msgMeta.messageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'Markdown' });
@@ -151,7 +174,10 @@ export async function settingsConversation(
                     try { await ext.api.answerCallbackQuery(callbackId, { text: '✅ Настройки сохранены!' }); } catch (e) { console.error('[SETTINGS] Failed to answer callback with text:', e); }
                     try { await ext.api.deleteMessage(msgMeta.chatId, msgMeta.messageId); } catch (e) { console.error('[SETTINGS] Failed to delete message:', e); }
 
-                    const modelName = selectedModelId === 'gemini-3-pro-image-preview' ? 'Продвинутая' : 'Простая';
+                    const modelName = selectedModelId === 'gemini-3-pro-image-preview'
+                        ? 'Продвинутая'
+                        : 'Простая';
+
                     await ext.reply(`✅ Настройки сохранены!\n📐 Формат: **${currentRatio}**\n💎 Качество: **${isHdQuality ? '4K' : '2K'}**\n🤖 Модель: **${modelName}**`, { parse_mode: 'Markdown' });
                     return null;
                 });

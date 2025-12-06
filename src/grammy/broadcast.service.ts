@@ -33,13 +33,21 @@ export class BroadcastService {
 
             this.logger.log(`Starting broadcast ${broadcast.id}: "${broadcast.message.substring(0, 20)}..."`);
 
-            // Update status to PROCESSING
+            // Determine filter
+            const whereClause: any = {};
+            if (broadcast.targetNotSubscribed) {
+                whereClause.isSubscribed = false;
+            }
+
+            // Update status to PROCESSING with accurate count
+            const totalCount = await this.prisma.user.count({ where: whereClause });
+
             await this.prisma.broadcast.update({
                 where: { id: broadcast.id },
                 data: {
                     status: 'PROCESSING',
                     startedAt: new Date(),
-                    totalUsers: await this.prisma.user.count(), // Approximate total
+                    totalUsers: totalCount,
                 },
             });
 
@@ -51,6 +59,7 @@ export class BroadcastService {
 
             while (true) {
                 const users = await this.prisma.user.findMany({
+                    where: whereClause,
                     take: batchSize,
                     skip: cursor ? 1 : 0,
                     cursor: cursor ? { id: cursor } : undefined,

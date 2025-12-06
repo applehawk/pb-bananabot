@@ -17,6 +17,8 @@ import { getMainKeyboard } from './keyboards/main.keyboard';
 
 import { GrammYServiceExtension } from './grammy-service-extension';
 
+import { SubscriptionService } from './subscription.service';
+
 /**
  * Bot Update Handler (grammY version)
  *
@@ -36,6 +38,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     private readonly botService: BotService,
     private readonly configService: ConfigService,
     private readonly userService: UserService,
+    private readonly subscriptionService: SubscriptionService,
     // private readonly tariffService: TariffService, // Legacy VPN module
     private readonly prisma: PrismaService,
     // Inject extension to force instantiation before BotUpdate runs
@@ -67,6 +70,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
 
     // Register handlers HERE to ensure they run after conversations middleware
     // (which is registered in GrammYServiceExtension constructor or onModuleInit)
+    this.registerMiddleware();
     this.registerCommands();
     this.registerCallbackHandlers();
     this.registerTextHandlers();
@@ -76,6 +80,113 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     // IMPORTANT: Start bot after all handlers AND conversations are registered
     await this.grammyService.startBot();
     this.logger.log('Bot started successfully');
+  }
+
+  /**
+   * Register global middleware
+   */
+  private registerMiddleware(): void {
+    const bot = this.grammyService.bot;
+
+    bot.use(async (ctx, next) => {
+      // Only check for private chats
+      if (ctx.chat?.type !== 'private') {
+        return next();
+      }
+
+      // Skip for admin
+      if (this.isAdmin(ctx)) {
+        return next();
+      }
+
+      // Skip for specific commands/callbacks if needed (e.g. /start to allow restart)
+      // checking subscription on /start is actually good, but maybe we want to allow it?
+      // User request: "before start of bot check". So yes, check always.
+
+      // We need user ID. Upsert ensures user exists, but middleware runs early.
+      // BotService.upsertUser is usually called in /start.
+      // We might need to ensure user exists or just use telegram ID.
+      // SubscriptionService uses telegram ID mostly.
+
+      if (!ctx.from) return next();
+
+      try {
+        // We need DB ID for caching. If user not in DB, we can't check cache properly except failing.
+        // But we can try to find user by Telegram ID.
+        const user = await this.userService.findByTelegramId(ctx.from.id);
+        if (!user) {
+          // New user, let them pass to /start which creates user?
+          // Or explicitly check?
+          // If we block /start, they can't create account.
+          // Let's allow /start to run first.
+          if (ctx.message?.text === '/start') {
+            return next();
+          }
+        }
+
+        const userId = user?.id || ''; // If no user, we can't cache.
+
+        const hasAccess = await this.subscriptionService.checkSubscriptionAccess(ctx, userId, BigInt(ctx.from.id));
+
+        if (hasAccess) {
+          return next();
+        }
+
+        // Access denied
+        const channelId = await this.subscriptionService.getChannelId();
+        const channelLink = channelId?.startsWith('@')
+          ? `https://t.me/${channelId.substring(1)}`
+          : `https://t.me/c/${channelId}`; // Approximate, ideally use invite link
+
+        // Better link generation if possible, or just use ID text?
+        // Usually channels are public usernames.
+
+        await ctx.reply(
+          '🚫 *Доступ ограничен!*\n\nДля использования бота необходимо подписаться на наш канал.',
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: '📢 Подписаться на канал', url: `https://t.me/${channelId?.replace('@', '')}` }
+                ],
+                [
+                  { text: '✅ Я подписался', callback_data: 'check_subscription' }
+                ]
+              ]
+            }
+          }
+        );
+
+        // Stop propagation
+        return;
+
+      } catch (error) {
+        this.logger.error('Error in subscription middleware', error);
+        return next(); // Fail open if error
+      }
+    });
+
+    // Handle the check button
+    bot.callbackQuery('check_subscription', async (ctx) => {
+      try {
+        await ctx.answerCallbackQuery();
+        const user = await this.userService.findByTelegramId(ctx.from.id);
+        const userId = user?.id || '';
+        const hasAccess = await this.subscriptionService.checkSubscriptionAccess(ctx, userId, BigInt(ctx.from.id));
+
+        if (hasAccess) {
+          await ctx.reply('✅ Спасибо! Подписка подтверждена. Вы можете пользоваться ботом.');
+          // Optional: delete the block message?
+          try { await ctx.deleteMessage(); } catch { }
+        } else {
+          await ctx.reply('❌ Вы все еще не подписаны на канал. Пожалуйста, подпишитесь и нажмите кнопку снова.');
+        }
+      } catch (error) {
+        this.logger.error('Error in check_subscription callback', error);
+      }
+    });
+
   }
 
   /**
