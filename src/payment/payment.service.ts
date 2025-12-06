@@ -321,14 +321,7 @@ export class PaymentService {
     ) {
       this.logger.log(`YooMoney payment ${label} confirmed via webhook`);
 
-      // Mark as paid
-      await this.updatePaymentStatus(
-        label,
-        TransactionStatus.COMPLETED,
-        true,
-      );
-
-      // Credit user
+      // Trigger standard validation (credits user + updates status)
       await this.validatePayment(label);
 
       return true;

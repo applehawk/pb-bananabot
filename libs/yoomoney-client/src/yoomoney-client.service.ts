@@ -6,8 +6,6 @@ import {
   OperationDetailsParameters,
   OperationHistoryParameters,
   OperationHistoryResponse,
-  YMFormPaymentType,
-  YMPaymentFormBuilder,
 } from 'yoomoney-sdk';
 
 @Injectable()
@@ -40,19 +38,48 @@ export class YooMoneyClient {
     paymentId: string,
     comment: string,
   ): string {
-    const builder = new YMPaymentFormBuilder({
-      quickPayForm: 'donate',
-      sum: amount,
-      successURL: this.successURL,
-      paymentType: YMFormPaymentType.FromCard,
+    // Manually build the form to ensure correct parameters and URL
+    // https://yoomoney.ru/docs/payment-buttons/using-api/forms
+
+    if (!this.receiver) {
+      throw new Error('YOOMONEY_WALLET is not defined in environment variables');
+    }
+
+    // Check if successURL already has query params
+    const hasQuery = this.successURL.includes('?');
+    const successUrlWithReturn = `${this.successURL}${hasQuery ? '&' : '?'}paymentId=${paymentId}&client=1`;
+
+    const formFields = {
       receiver: this.receiver,
+      'quickpay-form': 'button',
+      paymentType: 'AC', // Bank card by default
+      sum: amount.toString(),
       label: paymentId,
-      formComment: 'Пополнение OpenPNBot',
       targets: comment,
-    });
+      formcomment: 'Пополнение BaniBani AI',
+      successURL: successUrlWithReturn,
+      'need-fio': 'false',
+      'need-email': 'false',
+      'need-phone': 'false',
+      'need-address': 'false',
+    };
 
+    const inputs = Object.entries(formFields)
+      .map(([key, value]) => `<input type="hidden" name="${key}" value="${value}" />`)
+      .join('\n');
 
-    return builder.buildHtml();
+    const formId = `form_${paymentId}`;
+
+    return `
+      <form method="POST" action="https://yoomoney.ru/quickpay/confirm" id="${formId}">
+        ${inputs}
+      </form>
+      <script>
+        (function() {
+          document.getElementById('${formId}').submit();
+        })();
+      </script>
+    `.trim();
   }
 
   generatePaymentUrl(
@@ -60,6 +87,10 @@ export class YooMoneyClient {
     paymentId: string,
     comment: string,
   ): string {
+    // Check if successURL already has query params
+    const hasQuery = this.successURL.includes('?');
+    const successUrlWithReturn = `${this.successURL}${hasQuery ? '&' : '?'}paymentId=${paymentId}&client=1`;
+
     // Generate direct URL for QuickPay
     // https://yoomoney.ru/quickpay/confirm.xml?receiver=...&quickpay-form=donate&targets=...&sum=...
     const params = new URLSearchParams({
@@ -69,7 +100,7 @@ export class YooMoneyClient {
       paymentType: 'AC', // Bank card
       sum: amount.toString(),
       label: paymentId,
-      successURL: this.successURL,
+      successURL: successUrlWithReturn,
     });
 
     return `https://yoomoney.ru/quickpay/confirm.xml?${params.toString()}`;

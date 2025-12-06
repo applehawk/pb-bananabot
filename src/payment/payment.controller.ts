@@ -31,7 +31,17 @@ export class PaymentController {
   }
 
   @Get('yoomoney/success')
-  success(@Res() res: Response) {
+  async success(
+    @Query('paymentId') paymentId: string,
+    @Res() res: Response
+  ) {
+    if (paymentId) {
+      try {
+        await this.paymentService.validatePayment(paymentId);
+      } catch (e) {
+        console.error('Failed to validate payment on success redirect:', e);
+      }
+    }
     return res.redirect(this.successRedirectUrl);
   }
 

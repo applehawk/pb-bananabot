@@ -109,7 +109,19 @@ async function run() {
 
     console.clear();
 
+
     const auth = new Auth(clientId, redirectUrl, clientSecret);
+
+
+    let authHtmlContent = "";
+    app.get("/start", (req, res) => {
+        console.log("Received request for /start");
+        res.send(authHtmlContent);
+    });
+
+    // Store local URL for debugging
+    const localUrl = `http://localhost:${port}`;
+    _(`Local server running at ${localUrl}`);
 
     app.all(redirectListener, async (req, res) => {
         const query = req.query;
@@ -211,11 +223,35 @@ async function run() {
         // Use default array if no scopes selected to avoid errors, or rely on sdk handling
         const finalScope = scope.length > 0 ? scope : undefined;
 
-        // Note: getAuthUrl might expect scopes as array or string depending on version. 
-        // yoomoney-sdk 2.2.0 docs/source usually just joins them. 
-        const url = auth.getAuthUrl(finalScope, instanceName);
 
-        _("\n\n URL авторизации (откройте в браузере):", url);
+        // Generate HTML with auto-submitting form (POST)
+        const postUrl = "https://yoomoney.ru/oauth/authorize";
+        const scopesStr = Array.isArray(finalScope) ? finalScope.join(" ") : (finalScope || "");
+
+        authHtmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YooMoney Authorization</title>
+</head>
+<body onload="document.getElementById('authForm').submit()">
+    <h2>Redirecting to YooMoney...</h2>
+    <form id="authForm" action="${postUrl}" method="POST">
+        <input type="hidden" name="client_id" value="${clientId}">
+        <input type="hidden" name="response_type" value="code">
+        <input type="hidden" name="redirect_uri" value="${redirectUrl}">
+        <input type="hidden" name="scope" value="${scopesStr}">
+        ${instanceName ? `<input type="hidden" name="instance_name" value="${instanceName}">` : ""}
+        <button type="submit">Authorize</button>
+    </form>
+</body>
+</html>
+`;
+
+        const startUrl = new URL("/start", url).toString();
+        const localStartUrl = `${localUrl}/start`;
+        _("\n\n URL авторизации (откройте в браузере):", startUrl);
+        _(" Или откройте локально (если туннель не работает):", localStartUrl);
         _(" (Waiting for redirect callback...)");
 
         const { action } = await inquirer.prompt({
@@ -223,11 +259,43 @@ async function run() {
             type: "list",
             message: "Ожидание токена. Выберите действие",
             choices: [
+                { name: "Ввести код вручную (если авто-переход не сработал)", value: "manual" },
                 { name: "Получить новый токен", value: "new" },
                 { name: "Выйти", value: "exit" }
             ]
         });
 
         if (action === "exit") process.exit(0);
+
+        if (action === "manual") {
+            const { code } = await inquirer.prompt({
+                name: "code",
+                message: "Вставьте код подтверждения (из URL, параметр code=...):",
+                type: "input",
+                filter: (input) => input.trim()
+            });
+
+            if (code) {
+                try {
+                    const token = await auth.exchangeCode2Token(code);
+                    console.log("\n\n", "Получен токен:", token, "\n\n");
+                } catch (error) {
+                    console.error("Ошибка получения токена:", error.message || error);
+                }
+
+                // Allow user to exit after success
+                const { nextAction } = await inquirer.prompt({
+                    name: "nextAction",
+                    type: "list",
+                    message: "Что делать дальше?",
+                    choices: [
+                        { name: "Выйти", value: "exit" },
+                        { name: "Начать заново", value: "restart" }
+                    ]
+                });
+
+                if (nextAction === "exit") process.exit(0);
+            }
+        }
     }
 }

@@ -8,8 +8,7 @@ import { PrismaModule } from 'src/prisma/prisma.module';
 import { UserModule } from 'src/user/user.module';
 import { CreditsModule } from 'src/credits/credits.module';
 import { PaymentStrategyFactory } from './strategies/factory/payment-strategy.factory';
-// Legacy modules disabled
-// import { PaymentScheduler } from './payment.scheduler';
+import { PaymentScheduler } from './payment.scheduler';
 
 @Module({
   imports: [
@@ -22,9 +21,9 @@ import { PaymentStrategyFactory } from './strategies/factory/payment-strategy.fa
   providers: [
     PaymentService,
     PaymentStrategyFactory,
-    // PaymentScheduler, // Disabled - used VPN subscription logic
+    PaymentScheduler,
   ],
   controllers: [PaymentController],
   exports: [PaymentService],
 })
-export class PaymentModule {}
+export class PaymentModule { }
