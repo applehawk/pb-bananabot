@@ -26,6 +26,8 @@ import { PrismaService } from '../database/prisma.service';
  * - Webhook notifications from payment providers
  * - Credit crediting after successful payment
  */
+import { CryptoHelper } from '../utils/crypto.helper';
+
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
@@ -38,6 +40,26 @@ export class PaymentService {
     private readonly paymentStrategyFactory: PaymentStrategyFactory,
     private readonly yooMoney: YooMoneyClient,
   ) { }
+
+  generateInitPayUrl(userId: number, chatId: number, tariffId: string): string {
+    const domain = this.configService.get('DOMAIN');
+    const secret = this.configService.get('YOOMONEY_SECRET') || 'default_secret'; // Fallback or strict? Better strict but user said fallback ok.
+
+    const params = {
+      userId,
+      chatId,
+      tariffId,
+      timestamp: Date.now(),
+    };
+
+    const sign = CryptoHelper.signParams(params, secret);
+    const query = new URLSearchParams({
+      ...params as any,
+      sign,
+    }).toString();
+
+    return `${domain}/payment/init?${query}`;
+  }
 
   /**
    * Get all pending payments (transactions)

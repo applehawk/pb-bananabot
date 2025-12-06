@@ -37,8 +37,8 @@ tar -cz \
     --command="tar -xz -C ~/bananabot/bananabot-admin"
 
 # Diagnose DB State
-echo -e "\n${GREEN}=== Diagnosing Database State ===${NC}"
-gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --command="cd ~/bananabot && docker compose exec -T bananabot-admin npx tsx scripts/diagnose-db-state.ts"
+# echo -e "\n${GREEN}=== Diagnosing Database State ===${NC}"
+# gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --command="cd ~/bananabot && docker compose run --rm --entrypoint '' admin npx tsx scripts/diagnose-db-state.ts"
 
 # Upload .env file
 if [ -f .env.deploy ]; then

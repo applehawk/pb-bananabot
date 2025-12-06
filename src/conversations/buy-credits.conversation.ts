@@ -71,9 +71,15 @@ export async function buyCreditsConversation(
       }
       message += `\n`;
 
-      keyboard.text(
+      const payUrl = (ctx as any).paymentService.generateInitPayUrl(
+        telegramId,
+        ctx.chat?.id || telegramId, // Fallback to user ID if chat ID is missing? Or is conversation context ensuring chat?
+        pkg.id
+      );
+
+      keyboard.url(
         `${badge}${pkg.name} - ${pkg.credits} кр.`,
-        `select_package:${pkg.id}`,
+        payUrl
       );
       keyboard.row();
     }
@@ -85,154 +91,9 @@ export async function buyCreditsConversation(
       reply_markup: keyboard,
     });
 
-    const packageResponse = await conversation.waitFor('callback_query:data');
-    const callbackData = packageResponse.callbackQuery.data;
-    await packageResponse.answerCallbackQuery();
-
-    if (callbackData === 'cancel_purchase') {
-      await ctx.deleteMessage();
-      return;
-    }
-
-    if (!callbackData.startsWith('select_package:')) {
-      await ctx.reply('❌ Пожалуйста, выберите пакет из меню.');
-      return;
-    }
-
-    targetPackageId = callbackData.replace('select_package:', '');
-  }
-
-  // Fetch specific package details
-  const selectedPackage = await conversation.external(async (ctx) => {
-    const paymentService = (ctx as any).paymentService;
-    if (paymentService && targetPackageId) {
-      return await paymentService.getCreditPackage(targetPackageId);
-    }
-    return null;
-  });
-
-  if (!selectedPackage) {
-    await ctx.reply('❌ Выбранный пакет не найден (возможно, он был удален).');
+    // URL buttons don't return callbacks to the bot.
+    // The user is redirected to the payment page immediately.
+    // We can stop the conversation here.
     return;
   }
-
-  // --- Payment Method Selection ---
-  if (!targetPaymentMethod) {
-    let paymentMessage = `💎 <b>${selectedPackage.name}</b>\n\n`;
-    paymentMessage += `Кредиты: ${selectedPackage.credits}\n\n`;
-    paymentMessage += `📱 <b>Выберите способ оплаты:</b>\n\n`;
-
-    const paymentKeyboard = new InlineKeyboard();
-
-    if (selectedPackage.priceYooMoney) {
-      paymentKeyboard.text(
-        `💳 YooMoney - ${selectedPackage.priceYooMoney} руб.`,
-        `pay:yoomoney:${targetPackageId}`,
-      );
-      paymentKeyboard.row();
-    }
-
-    paymentKeyboard.text('🔙 Назад', 'back_to_packages');
-    paymentKeyboard.text('❌ Отмена', 'cancel_purchase');
-
-    await ctx.reply(paymentMessage, {
-      parse_mode: 'HTML',
-      reply_markup: paymentKeyboard,
-    });
-
-    const paymentResponse = await conversation.waitFor('callback_query:data');
-    const paymentData = paymentResponse.callbackQuery.data;
-    await paymentResponse.answerCallbackQuery();
-
-    if (paymentData === 'cancel_purchase') {
-      await ctx.deleteMessage();
-      return;
-    }
-
-    if (paymentData === 'back_to_packages') {
-      await buyCreditsConversation(conversation, ctx);
-      return;
-    }
-
-    if (!paymentData.startsWith('pay:')) {
-      await ctx.reply('❌ Неверный выбор.');
-      return;
-    }
-
-    const [, method] = paymentData.split(':');
-    targetPaymentMethod = method;
-  }
-
-  if (!targetPackageId || !targetPaymentMethod) return;
-
-
-  // --- Create Payment ---
-
-  await ctx.reply('⏳ Создаю платеж...');
-
-  let transaction: any = null;
-  let paymentSystem: PaymentSystemEnum;
-
-  // Determine enum based on string
-  switch (targetPaymentMethod) {
-    case 'yoomoney': paymentSystem = PaymentSystemEnum.YOOMONEY; break;
-    case 'stars': paymentSystem = PaymentSystemEnum.STARS; break;
-    case 'crypto': paymentSystem = PaymentSystemEnum.CRYPTO; break;
-    default: return;
-  }
-
-  try {
-    transaction = await conversation.external(async (ctx) => {
-      const paymentService = (ctx as any).paymentService;
-      return await paymentService.createPayment(String(telegramId), targetPackageId, paymentSystem);
-    });
-
-    if (!transaction) throw new Error('Transaction is null');
-
-  } catch (error) {
-    await ctx.reply('❌ Ошибка создания платежа. Попробуйте позже.');
-    return;
-  }
-
-  // --- Handle Specific Methods ---
-
-  if (paymentSystem === PaymentSystemEnum.YOOMONEY) {
-    const metadata = transaction.metadata as any;
-    // FIX: Use pre-generated URL from metadata, or fallback to extraction if missing (backward compatibility)
-    const payUrl = metadata.url || extractPaymentUrl(metadata?.form || '');
-
-    await ctx.reply(
-      `✅ <b>Платеж создан!</b>\n\n` +
-      `💳 Сумма: ${transaction.amount} руб.\n` +
-      `🔗 <a href="${payUrl}">Нажмите здесь для оплаты</a>\n\n` +
-      `<i>После оплаты нажмите кнопку "Я оплатил", чтобы проверить статус.</i>`,
-      {
-        parse_mode: 'HTML',
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '💳 Оплатить', url: payUrl }],
-            [{ text: '✅ Я оплатил (Проверить)', callback_data: `check_payment:${transaction.paymentId}` }]
-          ],
-        },
-      },
-    );
-
-    // FIX 2: Non-blocking. Return immediately.
-    // The global callback handler in bot.update.ts will handle 'check_payment:' events.
-    return;
-
-  }
-  // Handle Stars/Crypto...
-}
-
-function extractPaymentUrl(formHtml: string): string {
-  // Improved Regex to handle single or double quotes and potential HTML entities
-  // Matches action="URL" or action='URL'
-  const match = formHtml.match(/action=["']([^"']+)["']/);
-  if (match && match[1]) {
-    // Decode HTML entities if present (basic ones)
-    let url = match[1].replace(/&amp;/g, '&');
-    return url;
-  }
-  return 'https://yoomoney.ru';
 }
