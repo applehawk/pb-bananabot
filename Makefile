@@ -536,3 +536,8 @@ gc-restore:
 	else \
 		./deploy/google.cloud/restore-db.sh $(FILE); \
 	fi
+
+# Diagnose remote database migrations vs local state
+gc-diagnose-migrations:
+	npx tsx bananabot-admin/scripts/diagnose-db-state.ts
+
