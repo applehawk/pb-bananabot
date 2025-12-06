@@ -198,13 +198,14 @@ export async function buyCreditsConversation(
 
   if (paymentSystem === PaymentSystemEnum.YOOMONEY) {
     const metadata = transaction.metadata as any;
-    const paymentForm = metadata?.form || '';
-    const payUrl = extractPaymentUrl(paymentForm);
+    // FIX: Use pre-generated URL from metadata, or fallback to extraction if missing (backward compatibility)
+    const payUrl = metadata.url || extractPaymentUrl(metadata?.form || '');
 
     await ctx.reply(
       `✅ <b>Платеж создан!</b>\n\n` +
       `💳 Сумма: ${transaction.amount} руб.\n` +
-      `🔗 <a href="${payUrl}">Нажмите здесь для оплаты</a>`,
+      `🔗 <a href="${payUrl}">Нажмите здесь для оплаты</a>\n\n` +
+      `<i>После оплаты нажмите кнопку "Я оплатил", чтобы проверить статус.</i>`,
       {
         parse_mode: 'HTML',
         reply_markup: {
@@ -216,41 +217,9 @@ export async function buyCreditsConversation(
       },
     );
 
-    // FIX 3: Loop for checking payment
-    let paymentVerified = false;
-
-    // Allow user to check 10 times or until verified
-    for (let i = 0; i < 10; i++) {
-      const confirmResponse = await conversation.waitFor('callback_query:data');
-
-      // If user does something else (like cancel), exit loop
-      if (confirmResponse.callbackQuery.data === 'cancel_purchase') {
-        await ctx.reply('Платеж отменен.');
-        return;
-      }
-
-      if (confirmResponse.callbackQuery.data.startsWith('check_payment:')) {
-
-        // Check status via external service
-        const isPaid = await conversation.external(async (ctx) => {
-          const paymentService = (ctx as any).paymentService;
-          return await paymentService.validatePayment(transaction.paymentId);
-        });
-
-        if (isPaid) {
-          await confirmResponse.answerCallbackQuery({ text: '✅ Оплата получена!' });
-          paymentVerified = true;
-          break; // Exit loop
-        } else {
-          await confirmResponse.answerCallbackQuery({ text: '⏳ Оплата еще не поступила. Попробуйте через минуту.' });
-          // Loop continues, waiting for next click
-        }
-      }
-    }
-
-    if (paymentVerified) {
-      await ctx.reply(`🎉 <b>Успешно!</b>\nКредиты зачислены.`, { parse_mode: 'HTML' });
-    }
+    // FIX 2: Non-blocking. Return immediately.
+    // The global callback handler in bot.update.ts will handle 'check_payment:' events.
+    return;
 
   }
   // Handle Stars/Crypto...

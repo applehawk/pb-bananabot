@@ -37,7 +37,7 @@ export class PaymentService {
     private readonly prisma: PrismaService,
     private readonly paymentStrategyFactory: PaymentStrategyFactory,
     private readonly yooMoney: YooMoneyClient,
-  ) {}
+  ) { }
 
   /**
    * Get all pending payments (transactions)
@@ -131,7 +131,8 @@ export class PaymentService {
         status: TransactionStatus.PENDING,
         isFinal: false,
         metadata: {
-          form: paymentData._payment.form, // Payment form HTML
+          form: paymentData._payment.form,
+          url: paymentData._payment.url, // Save direct URL
           packageName: creditPackage.name,
         },
         description: `Purchase ${creditPackage.name} (${creditPackage.credits} credits)`,

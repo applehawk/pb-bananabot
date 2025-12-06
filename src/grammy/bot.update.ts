@@ -342,7 +342,6 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
       const isConversationInternalData =
         callbackData.startsWith('select_package:') ||
         callbackData.startsWith('pay:') ||
-        callbackData.startsWith('check_payment:') ||
         callbackData === 'cancel_purchase' ||
         callbackData === 'back_to_packages' ||
         callbackData === 'generate_trigger' || // Handled by generate conversation
@@ -356,6 +355,31 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
         this.logger.log(`Callback is conversation-internal data, letting active conversation handle it`);
         // ВАЖНО: Передаем управление дальше, чтобы conversation.waitFor мог перехватить событие
         await next();
+        return;
+      }
+
+      // Handle payment check globally (non-blocking)
+      if (callbackData.startsWith('check_payment:')) {
+        const paymentId = callbackData.split(':')[1];
+        if (paymentId) {
+          try {
+            const isPaid = await ctx.paymentService.validatePayment(paymentId);
+            if (isPaid) {
+              await ctx.answerCallbackQuery({ text: '✅ Оплата получена! Кредиты начислены.' });
+              // Optional: Update the message to show success state
+              try {
+                await ctx.editMessageText(`✅ <b>Оплата прошла успешно!</b>\nКредиты зачислены на ваш баланс.`, { parse_mode: 'HTML' });
+              } catch (e) {
+                // Ignore if message can't be edited
+              }
+            } else {
+              await ctx.answerCallbackQuery({ text: '⏳ Оплата еще не поступила. Попробуйте через минуту.' });
+            }
+          } catch (error) {
+            this.logger.error(`Error checking payment ${paymentId}`, error);
+            await ctx.answerCallbackQuery({ text: '❌ Ошибка проверки платежа.' });
+          }
+        }
         return;
       }
 

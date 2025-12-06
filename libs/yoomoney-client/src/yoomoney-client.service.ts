@@ -51,7 +51,28 @@ export class YooMoneyClient {
       targets: comment,
     });
 
+
     return builder.buildHtml();
+  }
+
+  generatePaymentUrl(
+    amount: number,
+    paymentId: string,
+    comment: string,
+  ): string {
+    // Generate direct URL for QuickPay
+    // https://yoomoney.ru/quickpay/confirm.xml?receiver=...&quickpay-form=donate&targets=...&sum=...
+    const params = new URLSearchParams({
+      receiver: this.receiver,
+      'quickpay-form': 'donate',
+      targets: comment,
+      paymentType: 'AC', // Bank card
+      sum: amount.toString(),
+      label: paymentId,
+      successURL: this.successURL,
+    });
+
+    return `https://yoomoney.ru/quickpay/confirm.xml?${params.toString()}`;
   }
 
   async getOperationDetails(operationId: string): Promise<Operation> {

@@ -29,7 +29,6 @@ if [ "$SKIP_BACKUP" = false ]; then
 else
     echo -e "\n${YELLOW}Skipping database backup (--no-backup)${NC}"
 fi
-
 # Deploy admin first (applies migrations)
 echo -e "\n${GREEN}=== Deploying ADMIN (with migrations) ===${NC}"
 "$SCRIPT_DIR/deploy-admin.sh"
