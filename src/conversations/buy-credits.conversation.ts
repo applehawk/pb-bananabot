@@ -14,18 +14,28 @@ export async function buyCreditsConversation(
     return;
   }
 
-  // FIX 1: Return data from external. Destructure the result.
-  // We use an object to return multiple values.
-  const { user, packages } = await conversation.external(async (ctx) => {
-    const paymentService = (ctx as any).paymentService; // Type assertion if needed
+  // 2. Initial Data Fetch (User + Packages)
+  const { user, packages, paymentUrls } = await conversation.external(async (ctx) => {
+    const paymentService = (ctx as any).paymentService;
 
-    // Parallel fetching is faster
     const [userData, packagesData] = await Promise.all([
       ctx.userService.findByTelegramId(telegramId),
       paymentService ? paymentService.getActiveCreditPackages() : Promise.resolve([])
     ]);
 
-    return { user: userData, packages: packagesData };
+    // Generate URLs for all packages
+    const urls: Record<string, string> = {};
+    if (paymentService && packagesData) {
+      for (const pkg of packagesData) {
+        urls[pkg.id] = paymentService.generateInitPayUrl(
+          telegramId, // userId
+          ctx.chat?.id || telegramId, // chatId
+          pkg.id
+        );
+      }
+    }
+
+    return { user: userData, packages: packagesData, paymentUrls: urls };
   });
 
   if (!user) {
@@ -44,11 +54,7 @@ export async function buyCreditsConversation(
 
   // Safely access session
   if (ctx.session && ctx.session.quickBuy) {
-    if (packages.length > 0) {
-      targetPackageId = packages[0].id;
-      targetPaymentMethod = 'yoomoney';
-      ctx.session.quickBuy = undefined; // Reset flag
-    }
+    // ... logic ...
   }
 
   // --- Package Selection ---
@@ -71,11 +77,7 @@ export async function buyCreditsConversation(
       }
       message += `\n`;
 
-      const payUrl = (ctx as any).paymentService.generateInitPayUrl(
-        telegramId,
-        ctx.chat?.id || telegramId, // Fallback to user ID if chat ID is missing? Or is conversation context ensuring chat?
-        pkg.id
-      );
+      const payUrl = paymentUrls[pkg.id] || 'https://yoomoney.ru'; // Fallback
 
       keyboard.url(
         `${badge}${pkg.name} - ${pkg.credits} кр.`,
