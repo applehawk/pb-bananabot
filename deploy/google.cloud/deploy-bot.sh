@@ -43,6 +43,10 @@ else
     echo -e "${YELLOW}WARNING: No .env or .env.deploy file found!${NC}"
 fi
 
+# Upload docker-compose.yml
+echo -e "${GREEN}Uploading docker-compose.yml...${NC}"
+gcloud compute scp docker-compose.yml $INSTANCE_NAME:~/bananabot/docker-compose.yml --zone=$ZONE --quiet
+
 # Clean up local tarball
 rm bot-src.tar.gz
 

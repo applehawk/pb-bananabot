@@ -29,6 +29,8 @@ export async function settingsConversation(
         }
 
         let currentRatio = user.settings?.aspectRatio || '1:1';
+        let isHdQuality = user.settings?.hdQuality || false;
+        let selectedModelId = user.settings?.selectedModelId || 'gemini-2.5-flash-image';
 
         const buildSettingsUI = () => {
             const keyboard = new InlineKeyboard();
@@ -38,11 +40,24 @@ export async function settingsConversation(
             });
             if (ASPECT_RATIOS.length % 3 !== 0) keyboard.row();
 
+            // HD Quality Toggle
+            const hdText = isHdQuality ? '✅ 💎 HD (4K)' : '⬜️ 💎 HD (2K)';
+            keyboard.text(hdText, 'toggle_hd').row();
+
+            // Model Toggle
+            const isPro = selectedModelId === 'gemini-3-pro-image-preview';
+            const modelText = isPro ? '✅ 🤖 Модель: Продвинутая' : '⬜️ 🤖 Модель: Простая';
+            keyboard.text(modelText, 'toggle_model').row();
+
             keyboard.text('✅ Сохранить', 'save_settings').row();
             keyboard.text('🔙 Назад', 'close_settings');
 
+            const modelDesc = isPro
+                ? 'Продвинутая (Gemini 3.0 Pro) (~16 руб/шт)'
+                : 'Простая (Gemini 2.5 Flash) (~5 руб/шт)';
+
             return {
-                text: `⚙️ **Настройки**\n\n📐 **Соотношение сторон:** ${currentRatio}\n\nВыберите формат:`,
+                text: `⚙️ **Настройки**\n\n📐 **Соотношение сторон:** ${currentRatio}\n💎 **Качество:** ${isHdQuality ? '4K (HD)' : '2K (Standard)'}\n🤖 **Модель:** ${modelDesc}\n\nВыберите параметры:`,
                 keyboard
             };
         };
@@ -89,12 +104,55 @@ export async function settingsConversation(
                 continue;
             }
 
+            if (data === 'toggle_hd') {
+                isHdQuality = !isHdQuality;
+                await conversation.external(async (ext) => {
+                    try { await ext.api.answerCallbackQuery(callbackId); } catch (e) { console.error('[SETTINGS] Failed to answer callback:', e); }
+                    return null;
+                });
+
+                const ui = buildSettingsUI();
+                await conversation.external(async (ext) => {
+                    try {
+                        await ext.api.editMessageText(msgMeta.chatId, msgMeta.messageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'Markdown' });
+                    } catch (e) { console.error('[SETTINGS] Failed to edit message:', e); }
+                    return null;
+                });
+                continue;
+            }
+
+            if (data === 'toggle_model') {
+                selectedModelId = selectedModelId === 'gemini-2.5-flash-image'
+                    ? 'gemini-3-pro-image-preview'
+                    : 'gemini-2.5-flash-image';
+
+                await conversation.external(async (ext) => {
+                    try { await ext.api.answerCallbackQuery(callbackId); } catch (e) { console.error('[SETTINGS] Failed to answer callback:', e); }
+                    return null;
+                });
+
+                const ui = buildSettingsUI();
+                await conversation.external(async (ext) => {
+                    try {
+                        await ext.api.editMessageText(msgMeta.chatId, msgMeta.messageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'Markdown' });
+                    } catch (e) { console.error('[SETTINGS] Failed to edit message:', e); }
+                    return null;
+                });
+                continue;
+            }
+
             if (data === 'save_settings') {
                 await conversation.external(async (ext) => {
-                    await ext.userService.updateSettings(user!.id, { aspectRatio: currentRatio });
+                    await ext.userService.updateSettings(user!.id, {
+                        aspectRatio: currentRatio,
+                        hdQuality: isHdQuality,
+                        selectedModelId: selectedModelId
+                    });
                     try { await ext.api.answerCallbackQuery(callbackId, { text: '✅ Настройки сохранены!' }); } catch (e) { console.error('[SETTINGS] Failed to answer callback with text:', e); }
                     try { await ext.api.deleteMessage(msgMeta.chatId, msgMeta.messageId); } catch (e) { console.error('[SETTINGS] Failed to delete message:', e); }
-                    await ext.reply(`✅ Настройки сохранены!\n📐 Формат: **${currentRatio}**`, { parse_mode: 'Markdown' });
+
+                    const modelName = selectedModelId === 'gemini-3-pro-image-preview' ? 'Продвинутая' : 'Простая';
+                    await ext.reply(`✅ Настройки сохранены!\n📐 Формат: **${currentRatio}**\n💎 Качество: **${isHdQuality ? '4K' : '2K'}**\n🤖 Модель: **${modelName}**`, { parse_mode: 'Markdown' });
                     return null;
                 });
                 return;
