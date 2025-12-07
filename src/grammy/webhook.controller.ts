@@ -24,7 +24,7 @@ export class WebhookController {
   constructor(
     private readonly grammY: GrammYService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   /**
    * Webhook endpoint for Telegram updates
@@ -38,7 +38,7 @@ export class WebhookController {
     @Headers('x-telegram-bot-api-secret-token') secretToken?: string,
   ): Promise<{ ok: boolean }> {
     const expectedToken = this.configService.get<string>(
-      'TELEGRAM_SECRET_TOKEN',
+      'TELEGRAM_WEBHOOK_SECRET',
     );
 
     // Validate secret token if configured

@@ -21,6 +21,7 @@
     "start:prod": "node dist/src/main-grammy",
     "start:migrate:prod": "npm run prisma:migrate:deploy && npm run start:prod",
     "webhook:set": "ts-node scripts/set-webhook.ts",
+    "webhook:delete": "ts-node scripts/set-webhook.ts delete",
     "lint": "eslint . --ext .ts --fix",
     "test": "jest",
     "test:watch": "jest --watch",
