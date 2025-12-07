@@ -283,4 +283,23 @@ export class UserService {
     });
     return settings?.referralBonusAmount ?? 50;
   }
+
+  /**
+   * Save a chat message
+   */
+  async saveChatMessage(data: {
+    userId: string;
+    content: string;
+    mode: string;
+    isFromUser: boolean;
+  }): Promise<void> {
+    await this.prisma.chatMessage.create({
+      data: {
+        userId: data.userId,
+        content: data.content,
+        mode: data.mode,
+        isFromUser: data.isFromUser,
+      },
+    });
+  }
 }
