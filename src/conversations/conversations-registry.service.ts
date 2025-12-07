@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { GrammYService } from '../grammy/grammy.service';
 import { CommandEnum } from '../enum/command.enum';
+import { GrammYServiceExtension } from '../grammy/grammy-service-extension';
 import { generateConversation } from './generate.conversation';
 import { balanceConversation } from './balance.conversation';
 import { helpConversation } from './help.conversation';
@@ -19,7 +20,11 @@ import { settingsConversation } from './settings.conversation';
 export class ConversationsRegistryService implements OnModuleInit {
   private readonly logger = new Logger(ConversationsRegistryService.name);
 
-  constructor(private readonly grammyService: GrammYService) {
+  constructor(
+    private readonly grammyService: GrammYService,
+    // Inject extension to ensure conversations() middleware is installed BEFORE conversations are registered
+    private readonly grammyServiceExtension: GrammYServiceExtension,
+  ) {
     this.logger.log('ConversationsRegistryService constructor called');
   }
 
