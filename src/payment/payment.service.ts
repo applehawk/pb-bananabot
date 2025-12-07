@@ -265,6 +265,65 @@ export class PaymentService {
         this.logger.error(`Failed to send payment notification to ${transaction.userId}`, e);
       }
 
+      // === REFERRAL LOGIC: First Purchase Bonus ===
+      try {
+        // Check if user was referred by someone
+        const user = await this.userService.findById(transaction.userId);
+        if (user && user.referredBy) {
+          // Find the referral record
+          const referral = await this.prisma.referral.findFirst({
+            where: {
+              referredId: user.id,
+              // First purchase not yet recorded
+              firstPurchase: false,
+            },
+            include: { referrer: true },
+          });
+
+          if (referral) {
+            // Get system settings for bonus amount
+            const settings = await this.prisma.systemSettings.findUnique({
+              where: { key: 'singleton' },
+            });
+            const bonusAmount = settings?.referralFirstPurchaseBonus ?? 150;
+
+            // Update Referral Record
+            await this.prisma.referral.update({
+              where: { id: referral.id },
+              data: {
+                firstPurchase: true,
+                firstPurchaseBonus: bonusAmount,
+              },
+            });
+
+            // Credit Referrer
+            await this.creditsService.addCredits(
+              referral.referrerId,
+              bonusAmount,
+              TransactionType.REFERRAL,
+              PaymentMethod.FREE, // System bonus
+              {
+                description: `Bonus for first purchase of invited user ${user.username || user.firstName}`,
+                sourceUserId: user.id,
+              },
+            );
+
+            // Notify Referrer
+            if (referral.referrer.telegramId) {
+              await this.grammyService.bot.api.sendMessage(
+                Number(referral.referrer.telegramId),
+                `🎉 <b>Реферальный бонус!</b>\n\nВаш приглашенный друг совершил первую покупку.\nВам начислено <b>${bonusAmount}</b> рублей!`,
+                { parse_mode: 'HTML' }
+              );
+            }
+
+            this.logger.log(`Granted ${bonusAmount} first-purchase bonus to referrer ${referral.referrerId}`);
+          }
+        }
+      } catch (e) {
+        this.logger.error(`Failed to process referral first-purchase bonus for user ${transaction.userId}`, e);
+      }
+
       this.logger.log(`Payment ${paymentId} processing completed`);
     } else if (!isPaid && externalStatus !== transaction.status) {
       // Update status if changed but not paid

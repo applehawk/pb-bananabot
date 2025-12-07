@@ -70,11 +70,12 @@ export class UserService {
     // Create new user
     const referralCode = nanoid(8);
 
-    // Get free credits amount from system settings
+    // Get settings
     const systemSettings = await this.prisma.systemSettings.findUnique({
       where: { key: 'singleton' },
     });
     const freeCredits = systemSettings?.freeCreditsAmount ?? 3;
+    const referralBonus = systemSettings?.referralBonusAmount ?? 50;
 
     // Handle Referral Logic
     let referrerId: string | undefined;
@@ -88,8 +89,8 @@ export class UserService {
       if (referrer) {
         referrerId = referrer.id;
 
-        // Grant 50 credits to referrer
-        const bonusAmount = 50;
+        // Grant bonus credits to referrer
+        const bonusAmount = referralBonus;
         await this.prisma.user.update({
           where: { id: referrer.id },
           data: {
@@ -262,5 +263,15 @@ export class UserService {
       referrals: user.referralsGiven.length,
       referralsList: user.referralsGiven,
     };
+  }
+
+  /**
+   * Get referral bonus amount from system settings
+   */
+  async getReferralBonusAmount(): Promise<number> {
+    const settings = await this.prisma.systemSettings.findUnique({
+      where: { key: 'singleton' },
+    });
+    return settings?.referralBonusAmount ?? 50;
   }
 }

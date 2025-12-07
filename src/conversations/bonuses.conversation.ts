@@ -24,15 +24,24 @@ export async function bonusesConversation(
     // Using telegram ID as the ref code
     const refLink = `https://t.me/${botUsername}?start=ref_${telegramId}`;
 
-    // Fetch User Stats
-    // We strictly return raw numbers to avoid serialization issues with Prisma objects
-    const stats = await conversation.external(async (ctx) => {
+    // Fetch User Stats and Bonus Amount
+    // We strictly return raw primitives
+    const data = await conversation.external(async (ctx) => {
         const userService = (ctx as any).userService;
-        if (!userService) return { referralCount: 0, totalEarned: 0 };
+        const defaultBonus = 50;
+
+        if (!userService) return { referralCount: 0, totalEarned: 0, bonusAmount: defaultBonus };
+
+        let bonusAmount = defaultBonus;
+        try {
+            bonusAmount = await userService.getReferralBonusAmount();
+        } catch (e) {
+            console.error('Failed to fetch bonus amount', e);
+        }
 
         // We need the internal User ID (UUID) for getStatistics, not the Telegram ID
         const user = await userService.findByTelegramId(telegramId);
-        if (!user) return { referralCount: 0, totalEarned: 0 };
+        if (!user) return { referralCount: 0, totalEarned: 0, bonusAmount };
 
         const fullStats = await userService.getStatistics(user.id);
 
@@ -41,19 +50,19 @@ export async function bonusesConversation(
             ? fullStats.referralsList.reduce((sum: number, ref: any) => sum + (ref.bonusAmount || 0), 0)
             : 0;
 
-        return { referralCount, totalEarned };
+        return { referralCount, totalEarned, bonusAmount };
     });
 
     let message = `🎁 <b>Бонусы и Реферальная программа</b>\n\n`;
-    message += `Приглашайте друзей и получайте <b>50 рублей</b> за каждого приглашенного!\n`;
+    message += `Приглашайте друзей и получайте <b>${data.bonusAmount} рублей</b> за каждого приглашенного!\n`;
     message += `Ваша реферальная ссылка:\n`;
     message += `<code>${refLink}</code>\n\n`;
 
     message += `<b>📊 Ваша статистика:</b>\n`;
 
-    // stats is now guaranteed to constitute raw data `{ referralCount, totalEarned }`
-    message += `👥 Приглашено друзей: <b>${stats.referralCount}</b>\n`;
-    message += `💰 Заработано: <b>${stats.totalEarned.toFixed(0)} руб.</b>\n`;
+    // data is guaranteed to constitute raw primitives
+    message += `👥 Приглашено друзей: <b>${data.referralCount}</b>\n`;
+    message += `💰 Заработано: <b>${data.totalEarned.toFixed(0)} руб.</b>\n`;
 
     message += `\n(Список последних приглашений будет доступен позже)`;
 
