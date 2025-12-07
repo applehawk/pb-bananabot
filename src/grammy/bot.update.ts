@@ -330,7 +330,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     const user = await this.userService.findByTelegramId(ctx.from!.id);
     const credits = Math.round(user?.credits || 0);
 
-    const welcomeMessage = `🤖 *Добро пожаловать в @BananaArtBot!*
+    const welcomeMessage = `🤖 *Добро пожаловать в @BaniBaniBot!*
 
 *Что я умею:*
 🔹 _Текст_ → Уникальное изображение

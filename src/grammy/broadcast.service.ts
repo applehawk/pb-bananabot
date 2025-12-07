@@ -3,6 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../database/prisma.service';
 import { GrammYService } from './grammy.service';
 import { ConfigService } from '@nestjs/config';
+import { Api } from 'grammy';
 
 @Injectable()
 export class BroadcastService {
@@ -32,6 +33,13 @@ export class BroadcastService {
             if (!broadcast) return;
 
             this.logger.log(`Starting broadcast ${broadcast.id}: "${broadcast.message.substring(0, 20)}..."`);
+
+            // Check if custom bot token is used
+            let api = this.grammyService.bot.api;
+            if (broadcast.botToken) {
+                this.logger.log(`Using custom bot token for broadcast ${broadcast.id}`);
+                api = new Api(broadcast.botToken);
+            }
 
             // Determine filter
             const whereClause: any = {};
@@ -76,8 +84,8 @@ export class BroadcastService {
 
                 for (const user of users) {
                     try {
-                        // Note: grammyService.bot.api.sendMessage
-                        await this.grammyService.bot.api.sendMessage(
+                        // Note: Use the selected api instance
+                        await api.sendMessage(
                             user.telegramId.toString(),
                             messageContent,
                             { parse_mode: 'HTML' }
