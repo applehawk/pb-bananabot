@@ -25,6 +25,16 @@ export class PaymentScheduler {
 
                 for (const payment of pendingPayments) {
                     try {
+                        // Check if payment is older than 10 minutes
+                        const now = new Date().getTime();
+                        const createdAt = new Date(payment.createdAt).getTime();
+                        const diffMinutes = (now - createdAt) / 1000 / 60;
+
+                        if (diffMinutes > 15) {
+                            await this.paymentService.failPayment(payment.paymentId, 'Timeout > 10 min');
+                            continue;
+                        }
+
                         // validatePayment handles the check, crediting, and status update
                         await this.paymentService.validatePayment(payment.paymentId);
                     } catch (error) {

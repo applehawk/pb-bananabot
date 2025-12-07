@@ -227,9 +227,13 @@ export async function generateConversation(
 
                 if (data === 'buy_credits') {
                     await answerCallback(conversation, callbackId);
-                    ctx2.session.quickBuy = true;
+                    await conversation.external(async (ctx: any) => {
+                        ctx.session.quickBuy = true;
+                        // Use the external context to enter conversation, which is safer
+                        await ctx.conversation.enter('buy_credits');
+                    });
+
                     await deleteUiMessage(conversation, msgMeta);
-                    await ctx2.conversation.enter('buy_credits');
                     return;
                 }
             }
@@ -414,7 +418,7 @@ async function performGeneration(
     // 1. Отправляем сообщение о статусе
     const statusMsg = await conversation.external(async (ctx: any) => {
         const m = await ctx.reply(
-            `🎨 Генерирую...\n⏱ 5-10 секунд\n\n"${prompt.length > 100 ? prompt.slice(0, 100) + '...' : prompt}"`
+            `🎨 Генерирую...\n⏱ 5 - 10 секунд\n\n"${prompt.length > 100 ? prompt.slice(0, 100) + '...' : prompt}"`
         );
         return { chatId: m.chat.id, messageId: m.message_id };
     });

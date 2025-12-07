@@ -59,10 +59,10 @@ export class SubscriptionService {
                 return true;
             }
         } catch (error) {
-            this.logger.error(`Error checking subscription for ${telegramId}:`, error);
-            // In case of error (e.g. bot not admin in channel), maybe allow access or log?
-            // Safe default: deny if we can't verify, but log it.
-            // Or allow if it's a bot error? Let's deny to be safe and showing error might be better.
+            // Log as warning, not error, to reduce noise for configuration issues
+            this.logger.warn(`Subscription check failed for user ${telegramId} in channel ${systemSettings.telegramChannelId}: ${error.message}`);
+            // Return false (deny access) by default if check fails
+            return false;
         }
 
         return false;

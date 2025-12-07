@@ -167,6 +167,27 @@ export class PaymentService {
   }
 
   /**
+   * Validates and fails a payment if expired or manually cancelled
+   */
+  async failPayment(paymentId: string, reason: string): Promise<void> {
+    const transaction = await this.findPaymentByPaymentId(paymentId);
+    if (!transaction) return;
+
+    if (transaction.status === TransactionStatus.PENDING) {
+      this.logger.log(`Marking payment ${paymentId} as FAILED: ${reason}`);
+
+      await this.prisma.transaction.update({
+        where: { id: transaction.id },
+        data: {
+          status: TransactionStatus.FAILED,
+          isFinal: true,
+          description: `${transaction.description} [FAILED: ${reason}]`,
+        },
+      });
+    }
+  }
+
+  /**
    * Update payment status
    */
   async updatePaymentStatus(
@@ -230,12 +251,15 @@ export class PaymentService {
 
       // NOTIFY USER
       try {
-        await this.grammyService.bot.api.sendMessage(
-          Number(transaction.userId), // telegramId
-          `✅ <b>Оплата прошла успешно!</b>\n\nВам начислено <b>${transaction.creditsAdded}</b> рублей.` +
-          `\nТекущий баланс: ${(await this.userService.findByTelegramId(BigInt(transaction.userId)))?.credits.toFixed(1)} руб.`,
-          { parse_mode: 'HTML' }
-        );
+        const user = await this.userService.findById(transaction.userId);
+        if (user && user.telegramId) {
+          await this.grammyService.bot.api.sendMessage(
+            Number(user.telegramId),
+            `✅ <b>Оплата прошла успешно!</b>\n\nВам начислено <b>${transaction.creditsAdded}</b> рублей.` +
+            `\nТекущий баланс: ${user.credits.toFixed(1)} руб.`,
+            { parse_mode: 'HTML' }
+          );
+        }
       } catch (e) {
         this.logger.error(`Failed to send payment notification to ${transaction.userId}`, e);
       }
