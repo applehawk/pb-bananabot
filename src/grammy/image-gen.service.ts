@@ -37,8 +37,12 @@ export class ImageGenService implements OnModuleInit {
     // Users can send text/photos directly without needing a separate command
 
     // /balance command - delegates to conversation
-    bot.command('balance', async (ctx) => {
-      await ctx.conversation.enter(CommandEnum.BALANCE);
+    // bot.command('balance', async (ctx) => {
+    //   await ctx.conversation.enter(CommandEnum.BALANCE);
+    // });
+
+    bot.command('bonuses', async (ctx) => {
+      await ctx.conversation.enter(CommandEnum.BONUSES);
     });
 
     // /help command - delegates to conversation
@@ -47,8 +51,13 @@ export class ImageGenService implements OnModuleInit {
     });
 
     // /history command - delegates to conversation
-    bot.command('history', async (ctx) => {
-      await ctx.conversation.enter(CommandEnum.HISTORY);
+    // bot.command('history', async (ctx) => {
+    //   await ctx.conversation.enter(CommandEnum.HISTORY);
+    // });
+
+    // /history command - delegates to conversation
+    bot.command('bonuses', async (ctx) => {
+      await ctx.conversation.enter(CommandEnum.BONUSES);
     });
   }
 
@@ -62,15 +71,15 @@ export class ImageGenService implements OnModuleInit {
     // Users can now directly send text/photos for generation
 
     // Handler for "💰 Баланс" button
-    bot.hears(KeyboardCommands.BALANCE, async (ctx) => {
+    bot.hears(KeyboardCommands.BUY_CREDITS, async (ctx) => {
       this.logger.log('[KEYBOARD] Balance button pressed');
-      await ctx.conversation.enter(CommandEnum.BALANCE);
+      await ctx.conversation.enter(CommandEnum.BUY_CREDITS);
     });
 
     // Handler for "📜 История" button
-    bot.hears(KeyboardCommands.HISTORY, async (ctx) => {
+    bot.hears(KeyboardCommands.BONUSES, async (ctx) => {
       this.logger.log('[KEYBOARD] History button pressed');
-      await ctx.conversation.enter(CommandEnum.HISTORY);
+      await ctx.conversation.enter(CommandEnum.BONUSES);
     });
 
     // Handler for "❓ Помощь" button

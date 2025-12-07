@@ -20,8 +20,8 @@ export function getMainKeyboard() {
  * Keyboard button text mappings to commands
  */
 export const KeyboardCommands = {
-  BALANCE: '💳 Пополнить', // Was Balance
-  HISTORY: '🎁 Бонусы', // Was History
+  BUY_CREDITS: '💳 Пополнить', // Was Balance
+  BONUSES: '🎁 Бонусы', // Was History
   HELP: '❓ Помощь',
   SETTINGS: '⚙️ Настройки',
 } as const;
