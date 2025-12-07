@@ -22,11 +22,10 @@ tar --exclude='node_modules' \
     --exclude='logs' \
     --exclude='postgres_data' \
     --exclude='redis_data' \
-    --exclude='bananabot-admin' \
     --exclude='*.log' \
     --exclude='.turbo' \
     --exclude='.cache' \
-    -czf bot-src.tar.gz src/ libs/ prisma/ package*.json tsconfig*.json nest-cli.json .gitmodules Dockerfile
+    -czf bot-src.tar.gz src/ libs/ prisma/ package*.json tsconfig*.json nest-cli.json .gitmodules Dockerfile bananabot-admin/prisma
 
 # Upload files
 echo -e "${GREEN}Uploading source files to VM...${NC}"
