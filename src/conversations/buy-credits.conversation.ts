@@ -71,7 +71,7 @@ export async function buyCreditsConversation(
 
       message += `${badge}<b>${pkg.name}</b>\n`;
       message += ` 💰  Стоимость: <b>${pkg.priceYooMoney || pkg.price} руб.</b>\n`;
-      message += `  💎 Баланс пополнится на: <b>${pkg.credits} руб.</b> ${discount}`;
+      message += `  💎 Пополение на: <b>${pkg.credits} руб.</b> ${discount}`;
       if (pkg.description) {
         message += `  📝 <i>${pkg.description}</i>\n`;
       }

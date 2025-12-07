@@ -1,5 +1,6 @@
 import { Conversation } from '@grammyjs/conversations';
 import { MyContext } from '../grammy/grammy-context.interface';
+import { getMainKeyboard } from '../grammy/keyboards/main.keyboard';
 
 /**
  * HELP Conversation
@@ -43,7 +44,7 @@ export async function helpConversation(
         await ext.api.answerCallbackQuery(nextCtx.callbackQuery!.id);
         await ext.api.deleteMessage(chatId, messageId);
         await ext.reply('✅ Вы вышли из режима чата.', {
-          reply_markup: { remove_keyboard: true }
+          reply_markup: getMainKeyboard(),
         });
       });
       return;
@@ -54,7 +55,9 @@ export async function helpConversation(
       const text = nextCtx.message.text;
       if (text === '/cancel' || text === '/exit' || text === '/stop') {
         await conversation.external(async (ext) => {
-          await ext.reply('✅ Вы вышли из режима чата.');
+          await ext.reply('✅ Вы вышли из режима чата.', {
+            reply_markup: getMainKeyboard(),
+          });
         });
         return;
       }
@@ -67,18 +70,30 @@ export async function helpConversation(
 
       if (userId) {
         await conversation.external(async (ext) => {
-          // Save message to DB
-          const user = await ext.userService.findByTelegramId(userId);
-          if (user) {
-            await ext.userService.saveChatMessage({
-              userId: user.id,
-              content: text,
-              mode: 'help',
-              isFromUser: true
-            });
+          try {
+            // Save message to DB
+            const user = await ext.userService.findByTelegramId(userId);
+            if (user) {
+              await ext.userService.saveChatMessage({
+                userId: user.id,
+                content: text,
+                mode: 'help',
+                isFromUser: true
+              });
 
-            // Optional: React to message or small confirmation
-            // await ext.api.setMessageReaction(nextCtx.chat!.id, nextCtx.message!.message_id, [{ type: 'emoji', emoji: '👍' }]);
+              console.log(`[HelpChat] Saved message from ${userId}: ${text.substring(0, 50)}`);
+
+              // React to message confirmation
+              try {
+                await ext.api.setMessageReaction(nextCtx.chat!.id, nextCtx.message!.message_id, [{ type: 'emoji', emoji: '👍' }]);
+              } catch (e) {
+                console.error('[HelpChat] Failed to react to message:', e);
+              }
+            } else {
+              console.error(`[HelpChat] User not found for telegramId: ${userId}`);
+            }
+          } catch (error) {
+            console.error('[HelpChat] Error saving message:', error);
           }
         });
       }
