@@ -227,9 +227,9 @@ export async function generateConversation(
 
                 if (data === 'buy_credits') {
                     await answerCallback(conversation, callbackId);
-                    ctx.session.quickBuy = true;
+                    ctx2.session.quickBuy = true;
                     await deleteUiMessage(conversation, msgMeta);
-                    await ctx.conversation.enter('buy_credits');
+                    await ctx2.conversation.enter('buy_credits');
                     return;
                 }
             }
