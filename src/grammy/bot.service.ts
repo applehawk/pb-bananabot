@@ -41,7 +41,7 @@ export class BotService {
    * Upsert user from context
    */
   async upsertUser(ctx: MyContext, referralCode?: string): Promise<void> {
-    await this.userService.upsert({
+    const { user, referral } = await this.userService.upsert({
       telegramId: ctx.from?.id,
       username: ctx.from?.username,
       firstName: ctx.from?.first_name,
@@ -49,6 +49,23 @@ export class BotService {
       languageCode: ctx.from?.language_code || 'ru',
       referredBy: referralCode,
     });
+
+    // Notify referrer if applicable
+    if (referral) {
+      try {
+        await this.grammyService.bot.api.sendMessage(
+          Number(referral.referrerTelegramId),
+          `🎉 <b>По вашей ссылке зарегистрировался новый пользователь!</b>\n\n` +
+          `Вам начислено <b>${referral.bonusAmount}</b> рублей!`,
+          { parse_mode: 'HTML' }
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to send referral notification to ${referral.referrerTelegramId}:`,
+          error,
+        );
+      }
+    }
   }
 
   /**

@@ -48,13 +48,13 @@ export class UserService {
     lastName?: string;
     languageCode?: string;
     referredBy?: string;
-  }): Promise<User> {
+  }): Promise<{ user: User; referral?: { referrerTelegramId: bigint; bonusAmount: number } }> {
     const telegramId = BigInt(data.telegramId);
 
     const existingUser = await this.findByTelegramId(telegramId);
 
     if (existingUser) {
-      return this.prisma.user.update({
+      const user = await this.prisma.user.update({
         where: { telegramId },
         data: {
           username: data.username,
@@ -65,6 +65,7 @@ export class UserService {
         },
         include: { settings: true },
       });
+      return { user };
     }
 
     // Create new user
@@ -79,6 +80,7 @@ export class UserService {
 
     // Handle Referral Logic
     let referrerId: string | undefined;
+    let referralInfo: { referrerTelegramId: bigint; bonusAmount: number } | undefined;
 
     if (data.referredBy) {
       // Find referrer by their Telegram ID (which is passed as referredBy string)
@@ -110,6 +112,13 @@ export class UserService {
           },
         });
 
+        if (referrer.telegramId) {
+          referralInfo = {
+            referrerTelegramId: referrer.telegramId,
+            bonusAmount,
+          };
+        }
+
         this.logger.log(`Granted ${bonusAmount} referral credits to ${referrer.telegramId}`);
       }
     }
@@ -137,7 +146,7 @@ export class UserService {
           referralsReceived: {
             create: {
               referrerId: referrerId,
-              bonusAmount: 50,
+              bonusAmount: referralInfo?.bonusAmount ?? 50,
               bonusGranted: true,
             }
           }
@@ -149,7 +158,7 @@ export class UserService {
     this.logger.log(
       `New user created: ${user.telegramId}, referral: ${referralCode}`,
     );
-    return user;
+    return { user, referral: referralInfo };
   }
 
   /**
