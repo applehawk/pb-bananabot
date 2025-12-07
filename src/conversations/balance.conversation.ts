@@ -36,7 +36,7 @@ export async function balanceConversation(
   }
 
   let message = `💰 **Ваш баланс**\n\n`;
-  message += `💎 Кредиты: **${user.credits.toFixed(1)}**\n`;
+  message += `💎 Баланс: **${user.credits.toFixed(1)}**\n`;
   message += `🎨 Всего сгенерировано: ${user.totalGenerated}\n`;
   message += `📅 Участник с: ${user.createdAt.toLocaleDateString('ru-RU')}\n\n`;
 
@@ -46,16 +46,11 @@ export async function balanceConversation(
       const emoji = tx.creditsAdded > 0 ? '➕' : '➖';
       const type = getTransactionTypeName(tx.type);
       const credits = Math.abs(tx.creditsAdded).toFixed(1);
-      message += `${emoji} ${type}: ${credits} кредитов\n`;
+      message += `${emoji} ${type}: ${credits} руб.\n`;
     }
     message += `\n`;
   }
 
-  message += `💵 **Стоимость генерации:**\n`;
-  message += `• Text-to-Image: 1 кредит\n`;
-  message += `• Image-to-Image: 1.5 кредита\n`;
-  message += `• Multi-Image (2-4): 2 кредита\n`;
-  message += `• Multi-Image (5-16): 3 кредита\n`;
 
   await ctx.reply(message, {
     parse_mode: 'Markdown',

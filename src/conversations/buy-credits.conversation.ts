@@ -59,7 +59,7 @@ export async function buyCreditsConversation(
 
   // --- Package Selection ---
   if (!targetPackageId) {
-    let message = `💎 <b>Покупка кредитов</b>\n\n`;
+    let message = `💎 <b>Пополнение баланса</b>\n\n`;
     message += `Ваш текущий баланс: <b>${user.credits.toFixed(1)}</b> руб.\n\n`;
     message += `📦 <b>Доступные пакеты пополнения баланса:</b>\n\n`;
 
@@ -70,7 +70,8 @@ export async function buyCreditsConversation(
       const discount = pkg.discount > 0 ? ` (-${pkg.discount}%)` : '';
 
       message += `${badge}<b>${pkg.name}</b>\n`;
-      message += `  💎 ${pkg.priceYooMoney || pkg.price} руб.${discount}\n`;
+      message += ` 💰  Стоимость: <b>${pkg.priceYooMoney || pkg.price} руб.</b>\n`;
+      message += `  💎 Баланс пополнится на: <b>${pkg.credits} руб.</b> ${discount}`;
       if (pkg.description) {
         message += `  📝 <i>${pkg.description}</i>\n`;
       }
@@ -79,7 +80,7 @@ export async function buyCreditsConversation(
       const payUrl = paymentUrls[pkg.id];
 
       keyboard.url(
-        `${badge}${pkg.name} - ${pkg.credits} руб.`,
+        `${badge}${pkg.name} - ${pkg.priceYooMoney || pkg.price} руб.`,
         payUrl
       );
       keyboard.row();

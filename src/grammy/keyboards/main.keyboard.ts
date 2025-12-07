@@ -7,8 +7,8 @@ import { Keyboard } from 'grammy';
  */
 export function getMainKeyboard() {
   return new Keyboard()
-    .text('💰 Баланс')
-    .text('📜 История')
+    .text('💳 Пополнить')
+    .text('🎁 Бонусы')
     .row()
     .text('❓ Помощь')
     .text('⚙️ Настройки')
@@ -20,8 +20,8 @@ export function getMainKeyboard() {
  * Keyboard button text mappings to commands
  */
 export const KeyboardCommands = {
-  BALANCE: '💰 Баланс',
-  HISTORY: '📜 История',
+  BALANCE: '💳 Пополнить', // Was Balance
+  HISTORY: '🎁 Бонусы', // Was History
   HELP: '❓ Помощь',
   SETTINGS: '⚙️ Настройки',
 } as const;

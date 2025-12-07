@@ -40,13 +40,14 @@ export class BotService {
   /**
    * Upsert user from context
    */
-  async upsertUser(ctx: MyContext): Promise<void> {
+  async upsertUser(ctx: MyContext, referralCode?: string): Promise<void> {
     await this.userService.upsert({
       telegramId: ctx.from?.id,
       username: ctx.from?.username,
       firstName: ctx.from?.first_name,
       lastName: ctx.from?.last_name,
       languageCode: ctx.from?.language_code || 'ru',
+      referredBy: referralCode,
     });
   }
 

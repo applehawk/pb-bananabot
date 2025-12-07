@@ -66,7 +66,8 @@ function buildGenerateUI(
     imgCount: number,
     cost: number,
     canGenerate: boolean,
-    currentRatio: string
+    currentRatio: string,
+    userBalance: number = 0
 ) {
     const keyboard = new InlineKeyboard();
     let messageText = '';
@@ -100,8 +101,8 @@ function buildGenerateUI(
 
             messageText += `\n\nНажмите кнопку ниже, чтобы начать.`;
         } else {
-            keyboard.text('💳 Купить кредиты', 'buy_credits').row();
-            messageText += `\n\n⚠️ <b>Недостаточно кредитов!</b>\nДля генерации требуется ${cost} кредитов.`;
+            keyboard.text('💳 Пополнить баланс', 'buy_credits').row();
+            messageText += `\n\n⚠️ <b>Недостаточно средств!</b>\nДля генерации требуется ${cost.toFixed(2)} руб.\nВаш баланс: <b>${userBalance.toFixed(2)}</b> руб.`;
         }
     }
 
@@ -168,7 +169,7 @@ export async function generateConversation(
 
         // Подготовка UI
         const originalChatId = ctx.chat?.id ?? 0;
-        const initialUI = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio);
+        const initialUI = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio, user?.credits ?? 0);
 
         const msgMeta = await conversation.external(async (externalCtx) => {
             const m = await externalCtx.reply(initialUI.text, { reply_markup: initialUI.keyboard, parse_mode: 'HTML' });
@@ -197,7 +198,7 @@ export async function generateConversation(
                         await conversation.external(async (ext) => ext.userService.updateSettings(user!.id, { aspectRatio: currentRatio }));
                     }
                     await refreshData();
-                    const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio);
+                    const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio, user?.credits ?? 0);
                     if (msgMeta.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui, callbackId);
                     continue;
                 }
@@ -215,7 +216,7 @@ export async function generateConversation(
                     await refreshData();
                     if (!user || user.credits < cost) {
                         await answerCallback(conversation, callbackId, '❌ Недостаточно кредитов!', true);
-                        const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, false, currentRatio);
+                        const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, false, currentRatio, user?.credits ?? 0);
                         if (msgMeta.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui);
                         continue;
                     }
@@ -247,7 +248,7 @@ export async function generateConversation(
                 if (ctx2.message.caption) state.prompt = ctx2.message.caption.trim();
 
                 await refreshData();
-                const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio);
+                const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio, user?.credits ?? 0);
                 if (msgMeta.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui);
                 continue;
             }
@@ -266,7 +267,7 @@ export async function generateConversation(
                 await conversation.external(async (ext) => { try { await ext.api.deleteMessage(ctx2.chat.id, ctx2.message!.message_id); } catch { } });
 
                 await refreshData();
-                const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio);
+                const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio, user?.credits ?? 0);
                 if (msgMeta.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui);
                 continue;
             }
@@ -485,8 +486,8 @@ async function performGeneration(
         // 4. Формируем ответ
         const caption =
             `🎨 ${prompt}\n\n` +
-            `💎 Использовано: ${result.creditsUsed} кр.\n` +
-            `💰 Осталось: ${(user.credits - result.creditsUsed).toFixed(5)} кр.\n` +
+            `💎 Использовано: ${(result.creditsUsed).toFixed(2)} руб.\n` +
+            `💰 Осталось: ${(user.credits - result.creditsUsed).toFixed(2)} руб.\n` +
             `⏱ ${(result.processingTime / 1000).toFixed(1)}с`;
 
         const keyboard = {

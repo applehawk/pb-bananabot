@@ -8,6 +8,8 @@ import { helpConversation } from './help.conversation';
 import { historyConversation } from './history.conversation';
 import { buyCreditsConversation } from './buy-credits.conversation';
 import { settingsConversation } from './settings.conversation';
+import { bonusesConversation } from './bonuses.conversation';
+
 
 /**
  * Conversations Registry Service
@@ -44,13 +46,21 @@ export class ConversationsRegistryService implements OnModuleInit {
       CommandEnum.HISTORY,
       historyConversation,
     );
+
     this.grammyService.registerConversation(
       CommandEnum.BUY_CREDITS,
       buyCreditsConversation,
+      { parallel: true },
     );
+
     this.grammyService.registerConversation(
       CommandEnum.SETTINGS,
       settingsConversation,
+    );
+
+    this.grammyService.registerConversation(
+      CommandEnum.BONUSES,
+      bonusesConversation,
     );
 
     // Register GENERATE conversation (Last, so others are registered before it captures context)

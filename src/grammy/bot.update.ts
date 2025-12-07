@@ -317,7 +317,14 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     };
 
     // Upsert user
-    await this.botService.upsertUser(ctx);
+    let referralCode: string | undefined;
+    const matchText = typeof ctx.match === 'string' ? ctx.match : '';
+
+    if (matchText && matchText.startsWith('ref_')) {
+      referralCode = matchText.replace('ref_', '');
+    }
+
+    await this.botService.upsertUser(ctx, referralCode);
 
     // Send Welcome Message
     const user = await this.userService.findByTelegramId(ctx.from!.id);
@@ -388,7 +395,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
 
       await this.grammyService.bot.api.sendMessage(
         this.adminChatId,
-        `Пополнен баланс на ${changeInt} кредитов для @${username}`,
+        `Пополнен баланс на ${changeInt} рублей для @${username}`,
       );
     } catch (error) {
       await ctx.reply(`❌ Ошибка: ${error.message}`);
@@ -527,12 +534,13 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
       const messageText = ctx.message?.text;
 
       // Handle Main Keyboard Buttons
-      if (messageText === '💰 Баланс') {
-        await ctx.conversation.enter(CommandEnum.BALANCE);
+      // Handle Main Keyboard Buttons
+      if (messageText === '💳 Пополнить' || messageText === '💰 Баланс') {
+        await ctx.conversation.enter(CommandEnum.BUY_CREDITS);
         return;
       }
-      if (messageText === '📜 История') {
-        await ctx.conversation.enter(CommandEnum.HISTORY);
+      if (messageText === '🎁 Бонусы' || messageText === '📜 История') {
+        await ctx.conversation.enter(CommandEnum.BONUSES);
         return;
       }
       if (messageText === '❓ Помощь') {

@@ -161,9 +161,14 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
    * Called by scene/conversation services during initialization
    * IMPORTANT: Must be called BEFORE bot.start()
    */
-  public registerConversation(name: string, conversation: any): void {
+  public registerConversation(
+    name: string,
+    conversation: any,
+    options?: any, // ConversationConfig
+  ): void {
     this.logger.log(`Registering conversation: ${name}`);
-    const middleware = createConversation(conversation, name);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const middleware = createConversation(conversation, options ? { id: name, ...options } : name);
     this.logger.log(`Created middleware for conversation: ${name}`);
     this.bot.use(middleware);
     this.logger.log(`Registered conversation middleware: ${name}`);

@@ -76,6 +76,43 @@ export class UserService {
     });
     const freeCredits = systemSettings?.freeCreditsAmount ?? 3;
 
+    // Handle Referral Logic
+    let referrerId: string | undefined;
+
+    if (data.referredBy) {
+      // Find referrer by their Telegram ID (which is passed as referredBy string)
+      const referrer = await this.prisma.user.findUnique({
+        where: { telegramId: BigInt(data.referredBy) },
+      });
+
+      if (referrer) {
+        referrerId = referrer.id;
+
+        // Grant 50 credits to referrer
+        const bonusAmount = 50;
+        await this.prisma.user.update({
+          where: { id: referrer.id },
+          data: {
+            credits: { increment: bonusAmount },
+          },
+        });
+
+        // Create Transaction for Referrer
+        await this.prisma.transaction.create({
+          data: {
+            userId: referrer.id,
+            type: 'REFERRAL',
+            creditsAdded: bonusAmount,
+            description: `Referral bonus for user ${data.username || data.telegramId}`,
+            status: 'COMPLETED',
+            isFinal: true,
+          },
+        });
+
+        this.logger.log(`Granted ${bonusAmount} referral credits to ${referrer.telegramId}`);
+      }
+    }
+
     const user = await this.prisma.user.create({
       data: {
         telegramId,
@@ -94,6 +131,16 @@ export class UserService {
             language: data.languageCode || 'en',
           },
         },
+        // Create Referral record if referrer found
+        ...(referrerId ? {
+          referralsReceived: {
+            create: {
+              referrerId: referrerId,
+              bonusAmount: 50,
+              bonusGranted: true,
+            }
+          }
+        } : {})
       },
       include: { settings: true },
     });
