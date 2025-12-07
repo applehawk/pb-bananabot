@@ -229,6 +229,7 @@ export async function generateConversation(
                     await answerCallback(conversation, callbackId);
                     await conversation.external(async (ctx: any) => {
                         ctx.session.quickBuy = true;
+                        await ctx.conversation.exit('generate');
                         // Use the external context to enter conversation, which is safer
                         await ctx.conversation.enter('buy_credits');
                     });

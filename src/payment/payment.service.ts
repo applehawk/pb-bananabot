@@ -7,6 +7,7 @@ import {
   PaymentMethod,
 } from '@prisma/client';
 import { PaymentSystemEnum } from './enum/payment-system.enum';
+import { PaymentStatusEnum } from './enum/payment-status.enum';
 import { DateTime } from 'luxon';
 import { YooMoneyNotification } from '@app/yoomoney-client/types/notification.type';
 import { createHash } from 'crypto';
@@ -270,10 +271,21 @@ export class PaymentService {
       this.logger.debug(
         `Payment ${paymentId} status changed to ${externalStatus}`,
       );
+      let status: TransactionStatus;
+      if (externalStatus === PaymentStatusEnum.CANCELED) {
+        status = TransactionStatus.CANCELLED;
+      } else {
+        status = externalStatus as unknown as TransactionStatus;
+      }
+
+      const isFinalStatus =
+        status === TransactionStatus.FAILED ||
+        status === TransactionStatus.CANCELLED;
+
       await this.updatePaymentStatus(
         paymentId,
-        externalStatus as TransactionStatus,
-        false,
+        status,
+        isFinalStatus,
       );
     }
 

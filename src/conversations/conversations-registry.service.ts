@@ -34,12 +34,6 @@ export class ConversationsRegistryService implements OnModuleInit {
   async onModuleInit(): Promise<void> {
     this.logger.log('Registering conversations...');
 
-    // Register GENERATE conversation
-    this.grammyService.registerConversation(
-      CommandEnum.GENERATE,
-      generateConversation,
-    );
-
     // Register other conversations
     this.grammyService.registerConversation(
       CommandEnum.BALANCE,
@@ -57,6 +51,12 @@ export class ConversationsRegistryService implements OnModuleInit {
     this.grammyService.registerConversation(
       CommandEnum.SETTINGS,
       settingsConversation,
+    );
+
+    // Register GENERATE conversation (Last, so others are registered before it captures context)
+    this.grammyService.registerConversation(
+      CommandEnum.GENERATE,
+      generateConversation,
     );
 
     this.logger.log('All conversations registered successfully');
