@@ -392,8 +392,10 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
             }
         }
 
+        // Append text to existing prompt
         state.prompt = text;
-        try { await ctx.deleteMessage(); } catch { } // Delete user's text input to keep UI clean, update menu instead
+
+        // try { await ctx.deleteMessage(); } catch { } // Don't delete user's text input
         updated = true;
     }
 
