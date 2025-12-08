@@ -7,7 +7,7 @@ import { GenerationMode } from '../enum/generation-mode.enum';
 interface SafeUser {
     id: string;
     credits: number;
-    settings?: { aspectRatio?: string };
+    settings?: { aspectRatio?: string; model?: string; selectedModel?: { inputImagesLimit?: number } };
 }
 
 interface GenerationState {
@@ -85,6 +85,7 @@ function extractInitialState(ctx: MyContext): GenerationState {
 export async function enterGenerateFlow(ctx: MyContext) {
     console.log('[GENERATE] Flow started');
     const state = extractInitialState(ctx);
+    console.log('[GENERATE] Initial state extracted:', { mode: state.mode, hasPrompt: !!state.prompt, imgCount: state.inputImageFileIds.length, mediaGroupId: state.mediaGroupId });
 
     // Media Group & Latching Logic
     if (!state.isCommand) {
@@ -95,20 +96,26 @@ export async function enterGenerateFlow(ctx: MyContext) {
             existingStateId = Object.keys(ctx.session.generationStates).find(key =>
                 ctx.session.generationStates![key].mediaGroupId === state.mediaGroupId
             );
+            console.log('[GENERATE] Search by MediaGroup:', existingStateId);
         }
 
         // 2. Try Implicit Context (Latching to latest state in chat)
         // Only if we are sending images (Text latching is handled in processGenerateInput)
-        if (!existingStateId && state.inputImageFileIds.length > 0) {
+        // AND ONLY if this is NOT a new Media Group (Album). Albums should start fresh if not matched above.
+        if (!existingStateId && state.inputImageFileIds.length > 0 && !state.mediaGroupId) {
             const latest = findLatestState(ctx);
             if (latest) {
                 existingStateId = String(latest.uiMessageId);
+                console.log('[GENERATE] Found implicit latest state:', existingStateId);
                 // Optional: verify timestamp? For now assume valid if in session.
+            } else {
+                console.log('[GENERATE] No implicit latest state found');
             }
         }
 
         if (existingStateId && ctx.session.generationStates) {
             const existingState = ctx.session.generationStates[existingStateId];
+            console.log('[GENERATE] Merging into state:', existingStateId);
 
             // Append new photos if any
             let updated = false;
@@ -133,25 +140,69 @@ export async function enterGenerateFlow(ctx: MyContext) {
             }
 
             if (updated) {
+                console.log('[GENERATE] State updated, refreshing UI');
                 // Refresh UI of the existing generation menu
                 const user = await getUser(ctx);
                 const cost = await estimateCost(ctx, user?.id, existingState);
                 const canGen = (user?.credits ?? 0) >= cost;
                 const shouldAsk = (user?.settings as any)?.askAspectRatio === true || (user as any)?.totalGenerated === 0;
 
-                const ui = buildGenerateUI(existingState.mode, existingState.prompt, existingState.inputImageFileIds.length, cost, canGen, existingState.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk);
+                const modelName = (user?.settings as any)?.model || 'flux-pro';
+                const limit = user?.settings?.selectedModel?.inputImagesLimit || 5;
+                const ui = buildGenerateUI(existingState.mode, existingState.prompt, existingState.inputImageFileIds.length, cost, canGen, existingState.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk, modelName, limit);
 
                 if (existingState.uiMessageId && existingState.uiChatId) {
-                    try {
-                        await ctx.api.editMessageText(existingState.uiChatId, existingState.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
-                    } catch (e) { console.error('Failed to update media group UI', e); }
+                    const currentMsgId = ctx.message?.message_id || 0;
+                    const gap = currentMsgId - existingState.uiMessageId;
+
+                    // SMART RESEND: If gap > 2, Resend. Else Edit.
+                    if (gap > 2) {
+                        try {
+                            await ctx.api.deleteMessage(existingState.uiChatId, existingState.uiMessageId);
+                        } catch (e) {
+                            console.log('[GENERATE] Failed to delete old menu for resend', e);
+                        }
+
+                        const m = await ctx.reply(ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+
+                        // Update State ID and Keys
+                        const oldId = existingStateId!;
+                        const newId = String(m.message_id);
+
+                        existingState.uiMessageId = m.message_id;
+
+                        if (oldId !== newId && ctx.session.generationStates) {
+                            ctx.session.generationStates[newId] = existingState;
+                            delete ctx.session.generationStates[oldId];
+                        }
+                        console.log('[GENERATE] Resent menu due to gap:', gap);
+                        return;
+                    } else {
+                        // Edit in place
+                        try {
+                            await ctx.api.editMessageText(existingState.uiChatId, existingState.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+                            console.log('[GENERATE] UI updated successfully for:', existingStateId);
+                            return;
+                        } catch (e) {
+                            console.error('[GENERATE] Failed to update media group UI', e);
+                            // If update failed (e.g. message deleted), remove this invalid state and allow creation of new one
+                            if (existingStateId && ctx.session.generationStates?.[existingStateId]) {
+                                delete ctx.session.generationStates[existingStateId];
+                                console.log('[GENERATE] Deleted invalid state:', existingStateId);
+                            }
+                        }
+                    }
                 }
+            } else {
+                // Nothing updated? Maybe already match? 
+                console.log('[GENERATE] No updates to state, skipping');
+                return;
             }
-            return; // Stop processing, merged into existing
         }
     }
 
     // Initial Cost Estimation
+    console.log('[GENERATE] Proceeding to new flow creation');
     let cost = 0;
     const user = await getUser(ctx);
     if (user) {
@@ -167,6 +218,7 @@ export async function enterGenerateFlow(ctx: MyContext) {
     if (canSkip &&
         (state.mode === GenerationMode.TEXT_TO_IMAGE || state.inputImageFileIds.length > 0)) {
         if (user && user.credits >= cost) {
+            console.log('[GENERATE] Fast path taken');
             await performGeneration(ctx, user, state.prompt, state.mode, state.inputImageFileIds, currentRatio);
             return; // Done, no session needed
         }
@@ -180,10 +232,14 @@ export async function enterGenerateFlow(ctx: MyContext) {
     const isFirstTime = (user as any)?.totalGenerated === 0;
 
     const shouldAsk = isExplicitlyEnabled || isFirstTime;
-    const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGenerate, currentRatio, user?.credits ?? 0, shouldAsk);
+    const modelName = (user?.settings as any)?.model || 'flux-pro';
+    const limit = user?.settings?.selectedModel?.inputImagesLimit || 5;
+    const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGenerate, currentRatio, user?.credits ?? 0, shouldAsk, modelName, limit);
 
     // Send Main Keyboard first (as requested previously) - Actually assuming it's there or attached
+    console.log('[GENERATE] Sending new UI message');
     const m = await ctx.reply(ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+    console.log('[GENERATE] UI message sent:', m.message_id);
 
     // Save to Session (Multi-State)
     if (!ctx.session.generationStates) {
@@ -199,6 +255,7 @@ export async function enterGenerateFlow(ctx: MyContext) {
         uiChatId: ctx.chat?.id,
         mediaGroupId: state.mediaGroupId
     };
+    console.log('[GENERATE] New state saved:', m.message_id);
 }
 
 /**
@@ -348,11 +405,40 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
         const cost = await estimateCost(ctx, user?.id, state);
         const canGen = (user?.credits ?? 0) >= cost;
         const shouldAsk = (user?.settings as any)?.askAspectRatio === true || (user as any)?.totalGenerated === 0;
-        const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGen, state.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk);
+        const modelName = (user?.settings as any)?.model || 'flux-pro';
+        const limit = user?.settings?.selectedModel?.inputImagesLimit || 5;
+        const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGen, state.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk, modelName, limit);
         if (state.uiMessageId && state.uiChatId) {
-            try {
-                await ctx.api.editMessageText(state.uiChatId, state.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
-            } catch { }
+            let shouldResend = false;
+            // Only resend if this was a user reply (message exists) and gap is significant
+            if (ctx.message) {
+                const gap = ctx.message.message_id - state.uiMessageId;
+                if (gap > 2) shouldResend = true;
+            }
+
+            if (shouldResend) {
+                try {
+                    await ctx.api.deleteMessage(state.uiChatId, state.uiMessageId);
+                } catch { }
+
+                const m = await ctx.reply(ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+
+                // Update State Keys
+                // processGenerateInput uses reference `state`, but we need to update the Key in Session
+                const oldId = String(state.uiMessageId);
+                const newId = String(m.message_id);
+
+                state.uiMessageId = m.message_id;
+
+                if (oldId !== newId && ctx.session.generationStates) {
+                    ctx.session.generationStates[newId] = state;
+                    delete ctx.session.generationStates[oldId];
+                }
+            } else {
+                try {
+                    await ctx.api.editMessageText(state.uiChatId, state.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+                } catch { }
+            }
         }
     }
 
@@ -394,24 +480,39 @@ function buildGenerateUI(
     canGenerate: boolean,
     currentRatio: string,
     userBalance: number = 0,
-    showAspectRatioOptions: boolean = true
+    showAspectRatioOptions: boolean = true,
+    modelName: string = 'flux-pro',
+    limit: number = 5
 ) {
     const keyboard = new InlineKeyboard();
     let messageText = '';
 
+    const effectiveImgCount = Math.min(imgCount, limit);
+    const isLimitExceeded = imgCount > limit;
+
     if (mode === GenerationMode.TEXT_TO_IMAGE) {
         messageText = prompt
-            ? `ваш запрос: <b>${prompt}</b>`
+            ? `📝 Ваш запрос: <b>${prompt}</b>`
             : `✍️ Напиши описание для генерации картинки и отправь его!`;
     } else {
         messageText += imgCount > 0
-            ? `✅ Изображений загружено: ${imgCount}\n`
+            ? `✅ Изображений загружено: ${imgCount}${isLimitExceeded ? ` ⚠️ (Лимит: ${limit})` : ''}\n`
             : `📥 <b>Отправьте изображение или альбом</b> для обработки.\n`;
+
+        if (isLimitExceeded) {
+            messageText += `⚠️ <i>Внимание: Будут использованы первые ${limit} изображений.</i>\n`;
+        }
 
         messageText += prompt
             ? `📝 Ваш запрос: <b>${prompt}</b>\n`
             : `✍️ <b>Напиши описание</b> изменений или стиля.\n`;
     }
+
+    // Add Model, Ratio, Cost, Balance
+    messageText += `\n\n🤖 Модель: <b>${modelName}</b>`;
+    messageText += `\n📐 Соотношение: <b>${currentRatio}</b>`;
+    messageText += `\n💰 Стоимость: <b>${cost.toFixed(2)} ₽</b>`;
+    messageText += `\n💳 Баланс: <b>${userBalance.toFixed(2)} ₽</b>`;
 
     const readyToGenerate = mode === GenerationMode.TEXT_TO_IMAGE ? !!prompt : (imgCount > 0);
 
@@ -450,7 +551,18 @@ function findLatestState(ctx: MyContext) {
 
     // Sort by uiMessageId descending (newest first)
     inChat.sort((a, b) => (b.uiMessageId || 0) - (a.uiMessageId || 0));
-    return inChat[0];
+
+    const latest = inChat[0];
+
+    // Check if latest state is "fresh enough"
+    // If the gap between current message and menu is too large, assume context lost.
+    // ctx.message?.message_id might be undefined if not available, but usually is.
+    if (ctx.message?.message_id && latest.uiMessageId) {
+        const gap = ctx.message.message_id - latest.uiMessageId;
+        if (gap > 20) return undefined; // Too old, start new
+    }
+
+    return latest;
 }
 
 
@@ -542,7 +654,10 @@ async function performGeneration(
             const imageBuffers: Array<{ buffer: Buffer; mimeType: string; fileId?: string }> = [];
             const token = process.env.TELEGRAM_BOT_TOKEN;
 
-            for (const fileId of inputImageFileIds) {
+            const limit = user.settings?.selectedModel?.inputImagesLimit || 5;
+            const filesToProcess = inputImageFileIds.slice(0, limit);
+
+            for (const fileId of filesToProcess) {
                 if (!fileId) continue;
                 try {
                     const file = await ctx.api.getFile(fileId);

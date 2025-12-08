@@ -20,11 +20,56 @@ if [ ! -d "bananabot-admin" ]; then
     exit 1
 fi
 
-# Clean old admin source on server to prevent zombie files
-echo -e "${GREEN}Cleaning old admin source on VM...${NC}"
-gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --quiet --command="rm -rf ~/bananabot/bananabot-admin && mkdir -p ~/bananabot/bananabot-admin"
+# 1. Prepare configuration files upload
+FILES_TO_UPLOAD="docker-compose.yml"
+REMOTE_ENV_PATH="~/bananabot/.env"
 
-tar -cz \
+if [ -f .env.deploy ]; then
+    echo -e "${GREEN}Found .env.deploy, using as .env...${NC}"
+    FILES_TO_UPLOAD="$FILES_TO_UPLOAD .env.deploy"
+elif [ -f .env ]; then
+    echo -e "${GREEN}Found .env, using it...${NC}"
+    FILES_TO_UPLOAD="$FILES_TO_UPLOAD .env"
+else
+    echo -e "${YELLOW}WARNING: No .env or .env.deploy file found!${NC}"
+fi
+
+echo -e "${GREEN}Uploading configuration files ($FILES_TO_UPLOAD)...${NC}"
+gcloud compute scp $FILES_TO_UPLOAD $INSTANCE_NAME:~/ --zone=$ZONE --quiet
+
+# 2. Stream source and execute commands in a single SSH session
+echo -e "${GREEN}Streaming source and updating ADMIN on VM...${NC}"
+
+REMOTE_COMMAND="
+    set -e
+    mkdir -p ~/bananabot
+    cd ~/bananabot
+
+    # Handle configuration files
+    if [ -f ~/.env.deploy ]; then
+        mv ~/.env.deploy .env
+    elif [ -f ~/.env ]; then
+        mv ~/.env .env
+    fi
+    [ -f ~/docker-compose.yml ] && mv ~/docker-compose.yml .
+
+    # Clean old admin source to prevent zombie files and extract new one
+    echo 'Cleaning and extracting admin source...'
+    rm -rf bananabot-admin
+    tar -xz
+
+    echo 'Rebuilding ADMIN service...'
+    # Build and restart admin service with force-recreate to reload env vars
+    sudo docker compose up -d --build --force-recreate admin
+    
+    # Prune only dangling images
+    echo 'Cleaning up dangling images...'
+    sudo docker image prune -f || true
+
+    echo 'ADMIN deployment complete!'
+"
+
+tar -czf - \
     --exclude='node_modules' \
     --exclude='.next' \
     --exclude='.git' \
@@ -32,48 +77,5 @@ tar -cz \
     --exclude='.turbo' \
     --exclude='.cache' \
     --exclude='*.log' \
-    -C bananabot-admin . \
-| gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --quiet \
-    --command="tar -xz -C ~/bananabot/bananabot-admin"
-
-# Diagnose DB State
-# echo -e "\n${GREEN}=== Diagnosing Database State ===${NC}"
-# gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --command="cd ~/bananabot && docker compose run --rm --entrypoint '' admin npx tsx scripts/diagnose-db-state.ts"
-
-# Upload .env file
-if [ -f .env.deploy ]; then
-    echo -e "${GREEN}Found .env.deploy, uploading as .env...${NC}"
-    gcloud compute scp .env.deploy $INSTANCE_NAME:~/bananabot.env --zone=$ZONE --quiet
-elif [ -f .env ]; then
-    echo -e "${GREEN}Found .env, using it...${NC}"
-    gcloud compute scp .env $INSTANCE_NAME:~/bananabot.env --zone=$ZONE --quiet
-else
-    echo -e "${YELLOW}WARNING: No .env or .env.deploy file found!${NC}"
-fi
-
-# Upload docker-compose.yml
-echo -e "${GREEN}Uploading docker-compose.yml...${NC}"
-gcloud compute scp docker-compose.yml $INSTANCE_NAME:~/bananabot/docker-compose.yml --zone=$ZONE --quiet
-
-# Run update on VM
-echo -e "${GREEN}Updating ADMIN on VM...${NC}"
-gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="
-    cd ~/bananabot
-    
-    # Move .env if uploaded
-    if [ -f ~/bananabot.env ]; then
-        echo 'Updating .env file...'
-        mv ~/bananabot.env .env
-    fi
-    
-    echo 'Rebuilding ADMIN service...'
-    # Build and restart admin service with force-recreate to reload env vars
-    # Docker will use cache for unchanged layers
-    sudo docker compose up -d --build --force-recreate admin
-    
-    # Prune only dangling images (not all unused ones) to save space but keep cache
-    echo 'Cleaning up dangling images...'
-    sudo docker image prune -f || true
-
-    echo 'ADMIN deployment complete!'
-"
+    bananabot-admin \
+| gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --quiet --command="$REMOTE_COMMAND"

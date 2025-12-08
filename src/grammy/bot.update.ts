@@ -290,9 +290,9 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
       if (handled) return;
 
       if (active[CommandEnum.GENERATE]) {
-        // Legacy check (if any old conversations persist)
-        this.logger.log('Generate conversation active (legacy)');
-        return;
+        // Legacy check: if old conversation persists, force exit it so we can use the new flow
+        this.logger.log('Generate conversation active (legacy) - forcing exit');
+        await ctx.conversation.exit(CommandEnum.GENERATE);
       }
 
       // Start new flow with this photo

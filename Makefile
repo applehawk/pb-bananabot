@@ -378,6 +378,14 @@ vm-setup-sg:
 	@echo "Setting up Security Group..."
 	@./deploy/yandex.cloud/setup-sg.sh
 
+vm-login:
+	@echo "Logging into VM..."
+	@./deploy/google.cloud/login-vm.sh
+
+vm-logs-bot:
+	@echo "Streaming logs from Docker container..."
+	@./deploy/google.cloud/docker-compose-logs-bot.sh
+
 # ============================================================================
 # Database Commands
 # ============================================================================

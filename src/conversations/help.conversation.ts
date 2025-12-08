@@ -11,19 +11,28 @@ export async function helpConversation(
   conversation: Conversation<MyContext>,
   ctx: MyContext,
 ) {
-  const helpMessage =
+  const infoMessage =
     `🤖 *Что я умею:*\n` +
     `🔹 _Текст_ → Уникальное изображение\n` +
     `🔹 _Фото + Текст_ → Генерация с учетом референса\n` +
-    `🔹 _Несколько фото + Текст_ → Стиль и композиция из референсов\n\n` +
+    `🔹 _Несколько фото + Текст_ → Стиль и композиция из референсов`;
+
+  const supportMessage =
     `🤖 **Поддержка и Справка**\n\n` +
     `Вы перешли в режим чата с поддержкой.\n` +
     `Все ваши сообщения будут переданы администратору.\n` +
     `Мы ответим вам в ближайшее время (обычно в течение 24 часов).\n\n` +
-    `Для выхода из режима чата нажмите кнопку "❌ Выйти из чата".\n\n`;
+    `Для выхода из режима чата нажмите кнопку "❌ Выйти из чата".`;
 
   const { chatId, messageId } = await conversation.external(async (ext) => {
-    const m = await ext.reply(helpMessage, {
+    // 1. Info Message (Hides main keyboard)
+    await ext.reply(infoMessage, {
+      parse_mode: 'Markdown',
+      reply_markup: { remove_keyboard: true }
+    });
+
+    // 2. Support Message (With Exit Button)
+    const m = await ext.reply(supportMessage, {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [

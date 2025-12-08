@@ -15,7 +15,7 @@ export class UserService {
   async findByTelegramId(telegramId: bigint | number): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { telegramId: BigInt(telegramId) },
-      include: { settings: true },
+      include: { settings: { include: { selectedModel: true } } },
     });
   }
 
@@ -25,7 +25,7 @@ export class UserService {
   async findById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { id },
-      include: { settings: true },
+      include: { settings: { include: { selectedModel: true } } },
     });
   }
 
@@ -63,7 +63,7 @@ export class UserService {
           languageCode: data.languageCode,
           lastActiveAt: new Date(),
         },
-        include: { settings: true },
+        include: { settings: { include: { selectedModel: true } } },
       });
       return { user };
     }
@@ -152,7 +152,7 @@ export class UserService {
           }
         } : {})
       },
-      include: { settings: true },
+      include: { settings: { include: { selectedModel: true } } },
     });
 
     this.logger.log(
