@@ -13,7 +13,10 @@ import { UserService } from '../user/user.service';
 // import { TariffService } from '../tariff/tariff.service'; // Legacy VPN module
 import { PrismaService } from '../database/prisma.service';
 import { CommandEnum } from '../enum/command.enum';
+
 import { getMainKeyboard } from './keyboards/main.keyboard';
+import { enterGenerateFlow, processGenerateInput } from '../conversations/generate.conversation';
+import { enterSettingsFlow, processSettingsInput } from '../conversations/settings.conversation';
 
 import { GrammYServiceExtension } from './grammy-service-extension';
 
@@ -282,14 +285,22 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
       // Check if conversation is already active to prevent restarting it
       // This handles the case where multiple photos (album) are sent
       const active = await ctx.conversation.active();
+      // If we have a generation session, process it
+      const handled = await processGenerateInput(ctx);
+      if (handled) return;
+
       if (active[CommandEnum.GENERATE]) {
-        this.logger.log('Generate conversation already active, skipping enter() for additional photo');
+        // Legacy check (if any old conversations persist)
+        this.logger.log('Generate conversation active (legacy)');
         return;
       }
 
+      // Start new flow with this photo
+      await enterGenerateFlow(ctx);
+
       // The conversation will check ctx.message for the first photo
       // and then wait for subsequent photos if it's a media group
-      await ctx.conversation.enter(CommandEnum.GENERATE);
+      // Removed: await ctx.conversation.enter(CommandEnum.GENERATE);
     } catch (error) {
       this.logger.error('Error handling photo message:', error);
     }
@@ -471,10 +482,15 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
         callbackData.startsWith('pay:') ||
         // callbackData === 'cancel_purchase' || // Handled globally above
         callbackData === 'back_to_packages' ||
-        callbackData === 'generate_trigger' || // Handled by generate conversation
-        callbackData.startsWith('aspect_') || // Handled by generate/settings conversation
+        // callbackData === 'generate_trigger' || // Handled by processGenerateInput
+        callbackData.startsWith('aspect_') || // Handled by processGenerateInput
         callbackData === 'save_settings' || // Handled by settings conversation
         callbackData === 'close_settings'; // Handled by settings conversation
+
+      // 1. Try to handle via Stateless Generation Flow
+      if (await processGenerateInput(ctx)) {
+        return;
+      }
 
       // Handle payment check globally (non-blocking)
       if (callbackData.startsWith('check_payment:')) {
@@ -501,9 +517,15 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
         return;
       }
 
-      // Handle regeneration specially
+      // Handle Settings Input
+      if (await processSettingsInput(ctx)) {
+        return;
+      }
+
+      // Handle regeneration specially (now handled by processGenerateInput, but keeping as fallback)
       if (callbackData.startsWith('regenerate_')) {
-        await ctx.conversation.enter(CommandEnum.GENERATE);
+        await processGenerateInput(ctx);
+        // await ctx.conversation.enter(CommandEnum.GENERATE); // Legacy
         return;
       }
 
@@ -548,7 +570,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
         return;
       }
       if (messageText === '⚙️ Настройки') {
-        await ctx.conversation.enter(CommandEnum.SETTINGS);
+        await enterSettingsFlow(ctx);
         return;
       }
       if (messageText === '💎 Купить кредиты') {
@@ -569,8 +591,15 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
       }
 
       // If it's not a command and not a button, assume it's a prompt for generation
+
+      // 1. Try to process as input for existing flow
+      if (await processGenerateInput(ctx)) {
+        return;
+      }
+
+      // 2. Start new flow
       if (messageText && !messageText.startsWith('/')) {
-        await ctx.conversation.enter(CommandEnum.GENERATE);
+        await enterGenerateFlow(ctx);
       }
 
     } catch (error) {

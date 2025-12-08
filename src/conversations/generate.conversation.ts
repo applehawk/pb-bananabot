@@ -1,17 +1,8 @@
-import { Conversation } from '@grammyjs/conversations';
 import { InlineKeyboard, InputFile } from 'grammy';
 import { MyContext } from '../grammy/grammy-context.interface';
-import { KeyboardCommands } from '../grammy/keyboards/main.keyboard';
+import { KeyboardCommands, getMainKeyboard } from '../grammy/keyboards/main.keyboard';
 import axios from 'axios';
-
-type GenerationMode = 'text' | 'image';
-
-interface ConversationState {
-    prompt: string;
-    mode: GenerationMode;
-    inputImageFileIds: string[];
-    skipAspectRatioSelection: boolean;
-}
+import { GenerationMode } from '../enum/generation-mode.enum';
 
 interface SafeUser {
     id: string;
@@ -19,12 +10,19 @@ interface SafeUser {
     settings?: { aspectRatio?: string };
 }
 
+interface GenerationState {
+    prompt: string;
+    mode: GenerationMode;
+    inputImageFileIds: string[];
+    skipAspectRatioSelection: boolean;
+}
+
 /**
- * Вспомогательная функция: Извлекает начальное состояние из контекста запуска
+ * Вспомогательная функция: Извлекает начальное состояние из контекста
  */
-function extractInitialState(ctx: MyContext): ConversationState {
+function extractInitialState(ctx: MyContext): GenerationState {
     let prompt = '';
-    let mode: GenerationMode = 'text';
+    let mode: GenerationMode = GenerationMode.TEXT_TO_IMAGE;
     const inputImageFileIds: string[] = [];
     let skipAspectRatioSelection = false;
 
@@ -33,7 +31,7 @@ function extractInitialState(ctx: MyContext): ConversationState {
         const replyMsg = ctx.message.reply_to_message;
 
         if (replyMsg.photo?.length) {
-            mode = 'image';
+            mode = GenerationMode.IMAGE_TO_IMAGE;
             inputImageFileIds.push(replyMsg.photo[replyMsg.photo.length - 1].file_id);
         }
 
@@ -45,11 +43,12 @@ function extractInitialState(ctx: MyContext): ConversationState {
         const { text, caption, photo } = ctx.message;
 
         if (photo?.length) {
-            mode = 'image';
+            mode = GenerationMode.IMAGE_TO_IMAGE;
             inputImageFileIds.push(photo[photo.length - 1].file_id);
             if (caption) prompt = caption.trim();
         } else if (text) {
             const extracted = text.replace(/^\/generate\s*/, '').trim();
+            // Если текст не пустой и не равен команде - это промпт
             if (extracted && extracted !== '/generate') prompt = extracted;
         }
     }
@@ -58,8 +57,232 @@ function extractInitialState(ctx: MyContext): ConversationState {
 }
 
 /**
- * Вспомогательная функция: Строит UI (Текст + Клавиатура)
+ * Вход в режим генерации (Stateless Flow)
  */
+export async function enterGenerateFlow(ctx: MyContext) {
+    console.log('[GENERATE] Flow started');
+    const state = extractInitialState(ctx);
+
+    // Initial Cost Estimation
+    let cost = 0;
+    const user = await getUser(ctx);
+    if (user) {
+        cost = await estimateCost(ctx, user.id, state);
+    }
+
+    const currentRatio = user?.settings?.aspectRatio || '1:1';
+
+    // Check "Ask Aspect Ratio" setting
+    // Logic: 
+    // 1. If user explicitly enabled it (askAspectRatio === true) -> Ask
+    // 2. If it's the FIRST generation ever (totalGenerated === 0) -> Ask (to introduce the feature)
+    // 3. Otherwise -> Skip if prompt is ready
+
+    // settings.askAspectRatio default is now FALSE in schema.
+    const isExplicitlyEnabled = (user?.settings as any)?.askAspectRatio === true;
+    const isFirstTime = (user as any)?.totalGenerated === 0;
+
+    const shouldAsk = isExplicitlyEnabled || isFirstTime;
+
+    // Fast Path (Reply with everything ready AND we shouldn't ask)
+    const canSkip = !shouldAsk && !!state.prompt;
+
+    if (canSkip && state.skipAspectRatioSelection &&
+        (state.mode === GenerationMode.TEXT_TO_IMAGE || state.inputImageFileIds.length > 0)) {
+        if (user && user.credits >= cost) {
+            await performGeneration(ctx, user, state.prompt, state.mode, state.inputImageFileIds, currentRatio);
+            return; // Done, no session needed
+        }
+    }
+
+    // Cleanup previous UI if exists
+    if (ctx.session.generationState?.uiMessageId && ctx.session.generationState?.uiChatId) {
+        try { await ctx.api.deleteMessage(ctx.session.generationState.uiChatId, ctx.session.generationState.uiMessageId); } catch { }
+    }
+
+    // Save to Session
+    ctx.session.generationState = {
+        prompt: state.prompt,
+        mode: state.mode,
+        inputImageFileIds: state.inputImageFileIds,
+        aspectRatio: currentRatio,
+        uiMessageId: undefined, // will be set below
+        uiChatId: ctx.chat?.id
+    };
+
+    // Build UI
+    const canGenerate = (user?.credits ?? 0) >= cost;
+    const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGenerate, currentRatio, user?.credits ?? 0);
+
+    // Send Main Keyboard first (as requested previously)
+
+    const m = await ctx.reply(ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+
+    // Update session with message ID
+    if (ctx.session.generationState) {
+        ctx.session.generationState.uiMessageId = m.message_id;
+    }
+}
+
+/**
+ * Обработка ввода в режиме генерации
+ * Возвращает true, если сообщение обработано и не должно идти дальше
+ */
+export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
+
+    // 1. Handle Regeneration (Global trigger, essentially)
+    if (ctx.callbackQuery?.data?.startsWith('regenerate_')) {
+        const generationId = ctx.callbackQuery.data.split('_')[1];
+        await handleRegeneration(ctx, generationId);
+        await deleteUiMessage(ctx); // if any exists in session
+        return true;
+    }
+
+    // 2. Check Session State
+    const state = ctx.session.generationState;
+    if (!state) return false;
+
+    // Validate Chat ID (ensure we are in the same chat)
+    if (ctx.chat?.id !== state.uiChatId) return false;
+
+    // Validate Message ID for callbacks to prevent stale menu interactions (except regeneration which is global-ish, but handled above)
+    if (ctx.callbackQuery && ctx.callbackQuery.message && ctx.callbackQuery.message.message_id !== state.uiMessageId) {
+        // If it's a generation button but NOT the current UI, ignore or warn
+        // Regeneration is already handled.
+        // If it's aspect_, generate_trigger etc from OLD message:
+        const data = ctx.callbackQuery.data;
+        if (data && (data.startsWith('aspect_') || ['generate_trigger', 'buy_credits', 'cancel_generation'].includes(data))) {
+            await ctx.answerCallbackQuery({ text: '⚠️ Меню устарело.' });
+            try { await ctx.deleteMessage(); } catch { }
+            return true;
+        }
+        // If unrelated callback, let it pass (return false)
+        return false;
+    }
+
+    const user = await getUser(ctx);
+    let updated = false;
+
+    // 3. Handle Inputs
+    if (ctx.callbackQuery) {
+        const data = ctx.callbackQuery.data;
+        if (!data) return false;
+
+        // Recalculate cost first (needed for buy check)
+        const cost = await estimateCost(ctx, user?.id, state);
+
+        if (data.startsWith('aspect_')) {
+            state.aspectRatio = data.split('_')[1];
+            if (user) await ctx.userService.updateSettings(user.id, { aspectRatio: state.aspectRatio });
+            updated = true;
+        } else if (data === 'generate_trigger') {
+            if (!state.prompt) {
+                await ctx.answerCallbackQuery({ text: '❌ Введите описание!' });
+                return true;
+            }
+            if (!state.prompt || (state.mode === GenerationMode.IMAGE_TO_IMAGE && state.inputImageFileIds.length === 0)) {
+                await ctx.answerCallbackQuery({ text: '❌ Загрузите изображение!' });
+                return true;
+            }
+
+            if (!user || user.credits < cost) {
+                await ctx.answerCallbackQuery({ text: '❌ Недостаточно средств!', show_alert: true });
+                updated = true; // refresh UI
+            } else {
+                await ctx.answerCallbackQuery();
+                await deleteUiMessage(ctx);
+                ctx.session.generationState = undefined; // Clear state
+                await performGeneration(ctx, user, state.prompt, state.mode, state.inputImageFileIds, state.aspectRatio || '1:1');
+                return true;
+            }
+        } else if (data === 'buy_credits') {
+            await ctx.answerCallbackQuery();
+            await deleteUiMessage(ctx);
+            ctx.session.generationState = undefined;
+            await ctx.conversation.enter('buy_credits');
+            return true;
+        } else if (data === 'cancel_generation') {
+            await ctx.answerCallbackQuery();
+            await deleteUiMessage(ctx);
+            ctx.session.generationState = undefined;
+            await ctx.reply('🎨 Готов к новым шедеврам! ✨', { reply_markup: getMainKeyboard() });
+            return true;
+        } else {
+            // Not a generation button
+            return false;
+        }
+    } else if (ctx.message?.photo) {
+        // handle photo
+        const newId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+        if (!state.inputImageFileIds.includes(newId)) {
+            state.inputImageFileIds.push(newId);
+            state.mode = GenerationMode.IMAGE_TO_IMAGE;
+            if (ctx.message.caption) state.prompt = ctx.message.caption.trim();
+            updated = true;
+        }
+    } else if (ctx.message?.text) {
+        const text = ctx.message.text;
+        if (text.startsWith('/')) return false; // Let commands pass
+
+        // If "Main Keyboard" is clicked, exit generation mode
+        if (Object.values(KeyboardCommands).includes(text as any)) {
+            await deleteUiMessage(ctx);
+            ctx.session.generationState = undefined;
+            return false; // Let it propagate to main handler
+        }
+
+        state.prompt = text;
+        try { await ctx.deleteMessage(); } catch { }
+        updated = true;
+    }
+
+    if (updated) {
+        // Re-estimate cost
+        const cost = await estimateCost(ctx, user?.id, state);
+        const canGen = (user?.credits ?? 0) >= cost;
+        const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGen, state.aspectRatio || '1:1', user?.credits ?? 0);
+        if (state.uiMessageId && state.uiChatId) {
+            try {
+                await ctx.api.editMessageText(state.uiChatId, state.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+            } catch { }
+        }
+    }
+
+    return true; // We handled it
+}
+
+// --- Internal Helpers ---
+
+async function getUser(ctx: MyContext): Promise<SafeUser | null> {
+    const telegramId = ctx.from?.id;
+    if (!telegramId) return null;
+    const dbUser = await ctx.userService.findByTelegramId(telegramId);
+    if (!dbUser) return null;
+    const u = dbUser as any;
+    return {
+        id: u.id,
+        credits: u.credits,
+        settings: u.settings
+    };
+}
+
+async function estimateCost(ctx: MyContext, userId: string | undefined, state: any): Promise<number> {
+    if (!userId) return 0;
+    if (state.mode === GenerationMode.TEXT_TO_IMAGE) {
+        return await ctx.generationService.estimateCost(userId, { mode: 'text', numberOfImages: 1 });
+    } else {
+        const count = Math.max(1, state.inputImageFileIds.length);
+        return await ctx.generationService.estimateCost(userId, { mode: 'image', numberOfImages: count });
+    }
+}
+
+async function deleteUiMessage(ctx: MyContext) {
+    const st = ctx.session.generationState;
+    if (st?.uiMessageId && st?.uiChatId) {
+        try { await ctx.api.deleteMessage(st.uiChatId, st.uiMessageId); } catch { }
+    }
+}
+
 function buildGenerateUI(
     mode: GenerationMode,
     prompt: string,
@@ -72,7 +295,7 @@ function buildGenerateUI(
     const keyboard = new InlineKeyboard();
     let messageText = '';
 
-    if (mode === 'text') {
+    if (mode === GenerationMode.TEXT_TO_IMAGE) {
         messageText = prompt
             ? `ваш запрос: <b>${prompt}</b>`
             : `✍️ Напиши описание для генерации картинки и отправь его!`;
@@ -86,7 +309,7 @@ function buildGenerateUI(
             : `✍️ <b>Напиши описание</b> изменений или стиля.\n`;
     }
 
-    const readyToGenerate = mode === 'text' ? !!prompt : (!!prompt && imgCount > 0);
+    const readyToGenerate = mode === GenerationMode.TEXT_TO_IMAGE ? !!prompt : (!!prompt && imgCount > 0);
 
     if (readyToGenerate) {
         if (canGenerate) {
@@ -98,6 +321,7 @@ function buildGenerateUI(
             });
             if (ratios.length % 3 !== 0) keyboard.row();
             keyboard.text('🎨 Сгенерировать!', 'generate_trigger').row();
+            keyboard.text('❌ Отмена генерации', 'cancel_generation').row();
 
             messageText += `\n\nНажмите кнопку ниже, чтобы начать.`;
         } else {
@@ -109,381 +333,133 @@ function buildGenerateUI(
     return { text: messageText, keyboard };
 }
 
-export async function generateConversation(
-    conversation: Conversation<MyContext>,
-    ctx: MyContext,
-) {
+
+async function handleRegeneration(ctx: MyContext, generationId: string) {
+    const dbUser = await ctx.userService.findByTelegramId(ctx.from?.id);
+    if (!dbUser) return;
+
+    // Typecast to any to access properties if TS complains
+    const u = dbUser as any;
+
+    // Use try-catch for external service calls
+    let gen;
     try {
-        console.log('[GENERATE] Conversation started');
-
-        // Обработка быстрой регенерации
-        if (ctx.callbackQuery?.data?.startsWith('regenerate_')) {
-            const generationId = ctx.callbackQuery.data.split('_')[1];
-            await handleRegeneration(conversation, generationId);
-            return;
-        }
-
-        // Инициализация
-        const state = extractInitialState(ctx);
-        let user: SafeUser | null = null;
-        let cost = 0;
-
-        // Функция обновления данных пользователя и стоимости
-        const refreshData = async () => {
-            await conversation.external(async (exCtx) => {
-                const telegramId = exCtx.from?.id;
-                if (!telegramId) return;
-
-                const dbUser = await exCtx.userService.findByTelegramId(telegramId);
-                if (dbUser) {
-                    const u = dbUser as any;
-                    // Создаем POJO (Plain Old JavaScript Object) во избежание DataCloneError
-                    user = {
-                        id: u.id,
-                        credits: u.credits,
-                        settings: u.settings // Теперь безопасно
-                    };
-
-                    if (state.mode === 'text') {
-                        cost = await exCtx.generationService.estimateCost(u.id, { mode: 'text', numberOfImages: 1 });
-                    } else {
-                        const count = state.inputImageFileIds.length;
-                        cost = await exCtx.generationService.estimateCost(u.id, { mode: 'image', numberOfImages: count });
-                    }
-                }
-            });
-        };
-
-        await refreshData();
-        let currentRatio = user?.settings?.aspectRatio || '1:1';
-
-        // Быстрый старт (если это Reply со всеми данными)
-        if (state.skipAspectRatioSelection && state.prompt &&
-            (state.mode === 'text' || state.inputImageFileIds.length > 0)) {
-            await refreshData();
-            if (user && user.credits >= cost) {
-                await performGeneration(conversation, ctx.chat?.id ?? 0, user, state.prompt, state.mode, state.inputImageFileIds, currentRatio);
-                return;
-            }
-        }
-
-        // Подготовка UI
-        const originalChatId = ctx.chat?.id ?? 0;
-        const initialUI = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio, user?.credits ?? 0);
-
-        const msgMeta = await conversation.external(async (externalCtx) => {
-            const m = await externalCtx.reply(initialUI.text, { reply_markup: initialUI.keyboard, parse_mode: 'HTML' });
-            return { chatId: m.chat?.id ?? originalChatId, messageId: m.message_id };
-        });
-
-        // --- Интерактивный цикл ---
-        while (true) {
-            const ctx2 = await conversation.waitFor(['message:text', 'message:photo', 'callback_query:data']) as MyContext;
-
-            // Обработка Callback (кнопки)
-            if (ctx2.callbackQuery?.data) {
-                const data = ctx2.callbackQuery.data;
-                const callbackId = ctx2.callbackQuery.id;
-
-                if (data.startsWith('regenerate_')) {
-                    const generationId = data.split('_')[1];
-                    await handleRegeneration(conversation, generationId);
-                    await deleteUiMessage(conversation, msgMeta);
-                    return;
-                }
-
-                if (data.startsWith('aspect_')) {
-                    currentRatio = data.split('_')[1];
-                    if (user) {
-                        await conversation.external(async (ext) => ext.userService.updateSettings(user!.id, { aspectRatio: currentRatio }));
-                    }
-                    await refreshData();
-                    const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio, user?.credits ?? 0);
-                    if (msgMeta.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui, callbackId);
-                    continue;
-                }
-
-                if (data === 'generate_trigger') {
-                    if (!state.prompt) {
-                        await answerCallback(conversation, callbackId, '❌ Введите описание!');
-                        continue;
-                    }
-                    if (state.mode === 'image' && state.inputImageFileIds.length === 0) {
-                        await answerCallback(conversation, callbackId, '❌ Загрузите изображение!');
-                        continue;
-                    }
-
-                    await refreshData();
-                    if (!user || user.credits < cost) {
-                        await answerCallback(conversation, callbackId, '❌ Недостаточно кредитов!', true);
-                        const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, false, currentRatio, user?.credits ?? 0);
-                        if (msgMeta.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui);
-                        continue;
-                    }
-
-                    await answerCallback(conversation, callbackId);
-                    await deleteUiMessage(conversation, msgMeta);
-                    break; // ВЫХОД НА ГЕНЕРАЦИЮ
-                }
-
-                if (data === 'buy_credits') {
-                    await answerCallback(conversation, callbackId);
-                    await conversation.external(async (ctx: any) => {
-                        ctx.session.quickBuy = true;
-                        await ctx.conversation.exit('generate');
-                        // Use the external context to enter conversation, which is safer
-                        await ctx.conversation.enter('buy_credits');
-                    });
-
-                    await deleteUiMessage(conversation, msgMeta);
-                    return;
-                }
-            }
-
-            // Обработка Фото
-            if (ctx2.message?.photo?.length) {
-                state.mode = 'image';
-                const newFileId = ctx2.message.photo[ctx2.message.photo.length - 1].file_id;
-                if (!state.inputImageFileIds.includes(newFileId)) state.inputImageFileIds.push(newFileId);
-                if (ctx2.message.caption) state.prompt = ctx2.message.caption.trim();
-
-                await refreshData();
-                const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio, user?.credits ?? 0);
-                if (msgMeta.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui);
-                continue;
-            }
-
-            // Обработка Текста
-            if (ctx2.message?.text) {
-                const text = ctx2.message.text;
-
-                // Проверка на команды выхода
-                if (text === '/start' || text === '/reset' || Object.values(KeyboardCommands).includes(text as any)) {
-                    await deleteUiMessage(conversation, msgMeta);
-                    return;
-                }
-
-                state.prompt = text;
-                await conversation.external(async (ext) => { try { await ext.api.deleteMessage(ctx2.chat.id, ctx2.message!.message_id); } catch { } });
-
-                await refreshData();
-                const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, (user?.credits ?? 0) >= cost, currentRatio, user?.credits ?? 0);
-                if (msgMeta.messageId) await updateUI(conversation, msgMeta.chatId, msgMeta.messageId, ui);
-                continue;
-            }
-        }
-
-        // Запуск генерации
-        if (user) {
-            await performGeneration(conversation, ctx.chat?.id ?? 0, user, state.prompt, state.mode, state.inputImageFileIds, currentRatio);
-        }
-
-    } catch (error: any) {
-        await conversation.external(async (externalCtx) => {
-            console.error('[GENERATE] Conversation CRASHED:', error);
-            await externalCtx.reply('❌ Произошла ошибка. Попробуйте /start');
-        });
-    }
-}
-
-// --- Helpers ---
-
-async function deleteUiMessage(conversation: any, meta: { chatId: number, messageId?: number }) {
-    if (meta.messageId) {
-        await conversation.external(async (ctx: any) => {
-            try { await ctx.api.deleteMessage(meta.chatId, meta.messageId); } catch { }
-        });
-    }
-}
-
-async function updateUI(conversation: any, chatId: number, messageId: number, ui: any, callbackId?: string) {
-    await conversation.external(async (externalCtx: any) => {
-        if (callbackId) try { await externalCtx.api.answerCallbackQuery(callbackId); } catch { }
-        try {
-            await externalCtx.api.editMessageText(chatId, messageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
-        } catch { }
-    });
-}
-
-async function answerCallback(conversation: any, callbackId: string, text?: string, alert = false) {
-    await conversation.external(async (ctx: any) => {
-        try { await ctx.api.answerCallbackQuery(callbackId, { text, show_alert: alert }); } catch { }
-    });
-}
-
-/**
- * ИСПРАВЛЕННАЯ ФУНКЦИЯ REGENERATION
- * Выполняет все запросы к БД в одном внешнем блоке, чтобы избежать DataCloneError
- */
-/**
- * ИСПРАВЛЕННАЯ ФУНКЦИЯ REGENERATION
- * Использует строгую "плоскую" структуру возврата, чтобы избежать DataCloneError
- */
-async function handleRegeneration(conversation: any, generationId: string) {
-
-    // Получаем данные в "плоском" виде (только примитивы)
-    const flatData = await conversation.external(async (exCtx: any) => {
-        const dbUser = await exCtx.userService.findByTelegramId(exCtx.from?.id);
-        if (!dbUser) return null;
-
-        const gen = await exCtx.generationService.getById(generationId);
-        if (!gen) return null;
-
-        const u = dbUser as any;
-        const inputImageFileIds = Array.isArray(gen.inputImages)
-            ? gen.inputImages.map((i: any) => String(i.fileId)).filter(Boolean)
-            : [];
-
-        const mode = (gen.type === 'IMAGE_TO_IMAGE' || gen.type === 'MULTI_IMAGE') ? 'image' : 'text';
-        const imgCount = inputImageFileIds.length;
-
-        // Расчет стоимости
-        let cost = 0;
-        if (mode === 'text') {
-            cost = await exCtx.generationService.estimateCost(String(u.id), { mode: 'text', numberOfImages: 1 });
-        } else {
-            cost = await exCtx.generationService.estimateCost(String(u.id), { mode: 'image', numberOfImages: imgCount });
-        }
-
-        // ВОЗВРАЩАЕМ ТОЛЬКО ПРИМИТИВЫ. Никаких вложенных объектов DB.
-        return {
-            userId: String(u.id),
-            credits: Number(u.credits),
-            settingsAspectRatio: u.settings ? String(u.settings.aspectRatio) : undefined,
-            genPrompt: String(gen.prompt),
-            genAspectRatio: String(gen.aspectRatio),
-            genMode: String(mode),
-            genInputImageFileIds: inputImageFileIds,
-            cost: Number(cost),
-            chatId: Number(exCtx.chat?.id ?? 0)
-        };
-    });
-
-    if (!flatData) {
-        return conversation.external(async (c: any) => {
-            await c.reply('❌ Генерация не найдена или ошибка пользователя');
-            return null;
-        });
+        gen = await ctx.generationService.getById(generationId);
+    } catch {
+        await ctx.reply('❌ Генерация не найдена', { reply_markup: getMainKeyboard() });
+        return;
     }
 
-    // Восстанавливаем объекты локально
+    if (!gen) return;
+
+    const inputImageFileIds = Array.isArray(gen.inputImages)
+        ? gen.inputImages.map((i: any) => String(i.fileId)).filter(Boolean)
+        : [];
+
+    const mode = (gen.type === 'IMAGE_TO_IMAGE' || gen.type === 'MULTI_IMAGE') ? GenerationMode.IMAGE_TO_IMAGE : GenerationMode.TEXT_TO_IMAGE;
+    const imgCount = inputImageFileIds.length;
+
+    // Estimate cost
+    let cost = 0;
+    if (mode === GenerationMode.TEXT_TO_IMAGE) {
+        cost = await ctx.generationService.estimateCost(String(u.id), { mode: 'text', numberOfImages: 1 });
+    } else {
+        cost = await ctx.generationService.estimateCost(String(u.id), { mode: 'image', numberOfImages: imgCount });
+    }
+
     const user: SafeUser = {
-        id: flatData.userId,
-        credits: flatData.credits,
-        settings: flatData.settingsAspectRatio ? { aspectRatio: flatData.settingsAspectRatio } : undefined
+        id: u.id,
+        credits: u.credits,
+        settings: u.settings
     };
 
-    if (user.credits < flatData.cost) {
-        return conversation.external(async (c: any) => {
-            await c.reply('❌ Недостаточно кредитов');
-            return null;
-        });
+    if (user.credits < cost) {
+        await ctx.reply('❌ Недостаточно кредитов', { reply_markup: getMainKeyboard() });
+        return;
     }
 
-    await conversation.external(async (c: any) => {
-        await c.reply('🔄 Повторная генерация...');
-        return null;
-    });
-
-    await performGeneration(
-        conversation,
-        flatData.chatId,
-        user,
-        flatData.genPrompt,
-        flatData.genMode as GenerationMode,
-        flatData.genInputImageFileIds,
-        flatData.genAspectRatio
-    );
+    await ctx.reply('🔄 Повторная генерация...', { reply_markup: getMainKeyboard() });
+    await performGeneration(ctx, user, gen.prompt, mode, inputImageFileIds, gen.aspectRatio);
 }
 
-// ... импорты остаются прежними ...
-
-// Интерфейс для результата генерации (только примитивы!)
+// Interface for generation result
 interface GenerationResult {
     id: string;
     processingTime: number;
     imageUrl?: string | null;
     fileId?: string | null;
-    imageDataBase64?: string | null; // Передаем картинку как base64 строку, а не Buffer
+    imageDataBase64?: string | null;
     creditsUsed: number;
 }
 
 async function performGeneration(
-    conversation: any,
-    chatId: number,
+    ctx: MyContext,
     user: SafeUser,
     prompt: string,
     mode: GenerationMode,
     inputImageFileIds: string[],
     currentRatio: string
 ) {
-    // 1. Отправляем сообщение о статусе
-    const statusMsg = await conversation.external(async (ctx: any) => {
-        const m = await ctx.reply(
-            `🎨 Генерирую...\n⏱ 5 - 10 секунд\n\n"${prompt.length > 100 ? prompt.slice(0, 100) + '...' : prompt}"`
-        );
-        return { chatId: m.chat.id, messageId: m.message_id };
-    });
+    // 1. Send Status Message
+    const m = await ctx.reply(
+        `🎨 Генерирую...\n⏱ 5 - 10 секунд\n\n"${prompt.length > 100 ? prompt.slice(0, 100) + '...' : prompt}"`,
+        { reply_markup: getMainKeyboard() }
+    );
+    const statusMsgId = m.message_id;
 
     try {
-        // 2. Выполняем генерацию внутри ОДНОГО блока external
-        // Это предотвращает сохранение тяжелых буферов картинок в историю разговора
-        // и гарантирует возврат чистого объекта.
-        const result: GenerationResult = await conversation.external(async (ctx: any) => {
-            let gen: any;
+        // 2. Perform Generation
+        let gen: any;
+        let result: GenerationResult;
 
-            if (mode === 'text') {
-                gen = await ctx.generationService.generateTextToImage({
-                    userId: user.id,
-                    prompt,
-                    aspectRatio: currentRatio,
-                });
-            } else {
-                // Логика скачивания и подготовки картинок перенесена ВНУТРЬ external
-                const imageBuffers: Array<{ buffer: Buffer; mimeType: string; fileId?: string }> = [];
-                const token = process.env.TELEGRAM_BOT_TOKEN;
+        if (mode === GenerationMode.TEXT_TO_IMAGE) {
+            gen = await ctx.generationService.generateTextToImage({
+                userId: user.id,
+                prompt,
+                aspectRatio: currentRatio,
+            });
+        } else {
+            const imageBuffers: Array<{ buffer: Buffer; mimeType: string; fileId?: string }> = [];
+            const token = process.env.TELEGRAM_BOT_TOKEN;
 
-                for (const fileId of inputImageFileIds) {
-                    if (!fileId) continue;
-
-                    // Используем ctx.api прямо здесь, без вложенных external
+            for (const fileId of inputImageFileIds) {
+                if (!fileId) continue;
+                try {
                     const file = await ctx.api.getFile(fileId);
                     const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
-
-                    const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+                    const response = await axios.get(fileUrl, { responseType: 'arraybuffer' }); // Need axios import
                     const buffer = Buffer.from(response.data);
-
                     imageBuffers.push({
                         buffer,
                         mimeType: 'image/jpeg',
                         fileId
                     });
+                } catch (e) {
+                    console.error('Failed to download image', fileId, e);
                 }
-
-                gen = await ctx.generationService.generateImageToImage({
-                    userId: user.id,
-                    prompt,
-                    inputImages: imageBuffers,
-                    aspectRatio: currentRatio,
-                });
             }
 
-            // ВАЖНО: Возвращаем "чистый" объект (DTO), а не объект Prisma.
-            // Если imageData (Buffer) существует, конвертируем в base64 строку для безопасной передачи.
-            return {
-                id: String(gen.id),
-                processingTime: Number(gen.processingTime),
-                imageUrl: gen.imageUrl ? String(gen.imageUrl) : null,
-                fileId: gen.fileId ? String(gen.fileId) : null,
-                imageDataBase64: gen.imageData ? gen.imageData.toString('base64') : null,
-                creditsUsed: Number(gen.creditsUsed || 0)
-            };
-        });
+            gen = await ctx.generationService.generateImageToImage({
+                userId: user.id,
+                prompt,
+                inputImages: imageBuffers,
+                aspectRatio: currentRatio,
+            });
+        }
 
-        // 3. Удаляем сообщение о статусе
-        await deleteUiMessage(conversation, statusMsg);
+        result = {
+            id: String(gen.id),
+            processingTime: Number(gen.processingTime),
+            imageUrl: gen.imageUrl ? String(gen.imageUrl) : null,
+            fileId: gen.fileId ? String(gen.fileId) : null,
+            imageDataBase64: gen.imageData ? gen.imageData.toString('base64') : null,
+            creditsUsed: Number(gen.creditsUsed || 0)
+        };
 
-        // 4. Формируем ответ
+        // 3. Delete Status Message
+        try { await ctx.api.deleteMessage(ctx.chat!.id, statusMsgId); } catch { }
+
+        // 4. Send Result
         const caption =
             `🎨 ${prompt}\n\n` +
             `💎 Использовано: ${(result.creditsUsed).toFixed(2)} руб.\n` +
@@ -497,27 +473,19 @@ async function performGeneration(
             ]]
         };
 
-        // 5. Отправляем результат (imageSource может быть URL, File ID или Buffer)
-        await conversation.external(async (ctx: any) => {
-            const source = result.fileId || result.imageUrl;
+        const source = result.fileId || result.imageUrl;
 
-            if (source) {
-                await ctx.replyWithPhoto(source, { caption, reply_markup: keyboard });
-            } else if (result.imageDataBase64) {
-                // Конвертируем обратно из base64 в Buffer для отправки
-                const buffer = Buffer.from(result.imageDataBase64, 'base64');
-                await ctx.replyWithPhoto(new InputFile(buffer), { caption, reply_markup: keyboard });
-            } else {
-                await ctx.reply(`✅ Генерация ID: ${result.id} завершена, но нет изображения для отображения.`);
-            }
-            return null;
-        });
+        if (source) {
+            await ctx.replyWithPhoto(source, { caption, reply_markup: keyboard });
+        } else if (result.imageDataBase64) {
+            const buffer = Buffer.from(result.imageDataBase64, 'base64');
+            await ctx.replyWithPhoto(new InputFile(buffer), { caption, reply_markup: keyboard });
+        } else {
+            await ctx.reply(`✅ Генерация ID: ${result.id} завершена, но нет изображения для отображения.`, { reply_markup: getMainKeyboard() });
+        }
 
     } catch (error: any) {
-        await deleteUiMessage(conversation, statusMsg);
-        await conversation.external(async (ctx: any) => {
-            await ctx.reply(`❌ Ошибка генерации:\n${error.message || 'Неизвестная ошибка'}`);
-            return null;
-        });
+        try { await ctx.api.deleteMessage(ctx.chat!.id, statusMsgId); } catch { }
+        await ctx.reply(`❌ Ошибка генерации:\n${error.message || 'Неизвестная ошибка'}`, { reply_markup: getMainKeyboard() });
     }
 }

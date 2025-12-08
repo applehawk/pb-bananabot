@@ -2,12 +2,11 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { GrammYService } from '../grammy/grammy.service';
 import { CommandEnum } from '../enum/command.enum';
 import { GrammYServiceExtension } from '../grammy/grammy-service-extension';
-import { generateConversation } from './generate.conversation';
+// import { generateConversation } from './generate.conversation';
 import { balanceConversation } from './balance.conversation';
 import { helpConversation } from './help.conversation';
 import { historyConversation } from './history.conversation';
 import { buyCreditsConversation } from './buy-credits.conversation';
-import { settingsConversation } from './settings.conversation';
 import { bonusesConversation } from './bonuses.conversation';
 
 
@@ -54,20 +53,12 @@ export class ConversationsRegistryService implements OnModuleInit {
     );
 
     this.grammyService.registerConversation(
-      CommandEnum.SETTINGS,
-      settingsConversation,
-    );
-
-    this.grammyService.registerConversation(
       CommandEnum.BONUSES,
       bonusesConversation,
     );
 
     // Register GENERATE conversation (Last, so others are registered before it captures context)
-    this.grammyService.registerConversation(
-      CommandEnum.GENERATE,
-      generateConversation,
-    );
+    // GENERATE conversation removed (refactored to stateless flow)
 
     this.logger.log('All conversations registered successfully');
   }

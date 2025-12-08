@@ -29,6 +29,28 @@ export interface SessionData {
   // Media group pre-collection (before entering conversation)
   mediaGroupPhotos?: string[]; // file_ids collected from media group
   mediaGroupCaption?: string; // Caption from media group
+
+  // Stateless Generation Flow
+  generationState?: {
+    prompt: string;
+    mode: GenerationMode;
+    inputImageFileIds: string[];
+    uiMessageId?: number;
+    uiChatId?: number;
+    aspectRatio?: string;
+  };
+
+  // Stateless Settings Flow
+  settingsState?: {
+    uiMessageId?: number;
+    uiChatId?: number;
+    draft?: {
+      aspectRatio: string;
+      hdQuality: boolean;
+      askAspectRatio: boolean;
+      selectedModelId: string;
+    }
+  };
 }
 
 /**
