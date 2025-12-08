@@ -307,9 +307,20 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
         }
     } else if (ctx.message?.text) {
         // No explicit message ID (not a reply), but it is a text message.
+        const text = ctx.message.text;
+        if (text.startsWith('/')) return false;
+        if (Object.values(KeyboardCommands).includes(text as any)) return false;
+
         // Try to find the latest state to latch onto.
-        state = findLatestState(ctx);
-        if (!state) return false;
+        // Rule: Only latch to latest state if it has IMAGES but NO PROMPT.
+        const latest = findLatestState(ctx);
+
+        if (latest && latest.inputImageFileIds.length > 0 && !latest.prompt) {
+            state = latest;
+        } else {
+            // Otherwise, start fresh (return false -> entering enterGenerateFlow)
+            return false;
+        }
     } else {
         // Not a callback, not a reply, not a text message -> ignore
         return false;
@@ -365,7 +376,13 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
             await ctx.answerCallbackQuery();
             // Remove state for this message
             if (ctx.session.generationStates) {
-                delete ctx.session.generationStates[String(messageId)];
+                delete ctx.session.generationStates[String(messageId)]; // messageId might be undefined if text latch? No, state found.
+                // If state found via latch (no messageId variable), use state.uiMessageId
+                if (state.uiMessageId) {
+                    delete ctx.session.generationStates[String(state.uiMessageId)];
+                } else if (messageId) {
+                    delete ctx.session.generationStates[String(messageId)];
+                }
             }
 
             // "Cancel" implies "I don't want this". Usually we delete.
@@ -386,31 +403,14 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
         // Delete user's photo message to keep chat clean? Or keep it?
         // Let's keep it to be safe.
     } else if (ctx.message?.text) {
-        // Handle text reply to menu
+        // Handle text reply to menu (or latched text)
         const text = ctx.message.text;
-        if (text.startsWith('/')) return false;
 
-        if (Object.values(KeyboardCommands).includes(text as any)) {
-            // Main menu command -> Exit?
-            return false; // Propagate
-        }
-
-        // Implicit Context: if no explicit reply, check if we can latch onto the latest image state
-        if (!state) {
-            const latest = findLatestState(ctx);
-            // Only latch if latest state has images (User sent photos, then adds caption)
-            if (latest && latest.inputImageFileIds.length > 0) {
-                // Use this state
-                state = latest;
-            } else {
-                return false; // Not a reply, and no suitable recent state -> New Generation
-            }
-        }
-
-        // Append text to existing prompt
+        // Append text to existing prompt? Or set it?
+        // If we latched because "no prompt", then Set it. 
+        // If we latched (unlikely with new logic) to existing prompt, maybe append?
+        // New logic says: latch ONLY if !latest.prompt. So we set it.
         state.prompt = text;
-
-        // try { await ctx.deleteMessage(); } catch { } // Don't delete user's text input
         updated = true;
     }
 
@@ -429,6 +429,9 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
             let shouldResend = false;
             // Only resend if this was a user reply (message exists) and gap is significant
             if (ctx.message) {
+                // Always resend if user typed something to keep menu at bottom?
+                // Or just if gap? 
+                // Let's stick to gap check to avoid flickering if close.
                 const gap = ctx.message.message_id - state.uiMessageId;
                 if (gap > 2) shouldResend = true;
             }
@@ -507,7 +510,14 @@ function buildGenerateUI(
     const effectiveImgCount = Math.min(imgCount, limit);
     const isLimitExceeded = imgCount > limit;
 
-    if (mode === GenerationMode.TEXT_TO_IMAGE) {
+    // Logic: Text mode needs prompt. Image mode needs images AND prompt.
+    const isTextMode = mode === GenerationMode.TEXT_TO_IMAGE;
+    const hasPrompt = !!prompt;
+    const hasImages = imgCount > 0;
+
+    const readyToGenerate = isTextMode ? hasPrompt : (hasImages && hasPrompt);
+
+    if (isTextMode) {
         messageText = prompt
             ? `📝 Ваш запрос: <b>${prompt}</b>`
             : `✍️ Напиши описание для генерации картинки и отправь его!`;
@@ -520,18 +530,20 @@ function buildGenerateUI(
             messageText += `⚠️ <i>Внимание: Будут использованы первые ${limit} изображений.</i>\n`;
         }
 
-        messageText += prompt
-            ? `📝 Ваш запрос: <b>${prompt}</b>\n`
-            : `✍️ <b>Напиши описание</b> изменений или стиля.\n`;
+        if (hasPrompt) {
+            messageText += `📝 Ваш запрос: <b>${prompt}</b>\n`;
+        } else {
+            messageText += `📝 Ваш запрос: <b>${prompt || ''}</b>\n✍️ Напиши описание для генерации картинки и отправь его!\n`;
+        }
     }
 
     // Add Model, Ratio, Cost, Balance
-    messageText += `\n\n🤖 Модель: <b>${modelName}</b>`;
-    messageText += `\n📐 Соотношение: <b>${currentRatio}</b>`;
-    messageText += `\n💰 Стоимость: <b>${cost.toFixed(2)} ₽</b>`;
-    messageText += `\n💳 Баланс: <b>${userBalance.toFixed(2)} ₽</b>`;
-
-    const readyToGenerate = mode === GenerationMode.TEXT_TO_IMAGE ? !!prompt : (imgCount > 0);
+    if (readyToGenerate) {
+        messageText += `\n\n🤖 Модель: <b>${modelName}</b>`;
+        messageText += `\n📐 Соотношение: <b>${currentRatio}</b>`;
+        messageText += `\n💰 Стоимость: <b>${cost.toFixed(2)} ₽</b>`;
+        messageText += `\n💳 Баланс: <b>${userBalance.toFixed(2)} ₽</b>`;
+    }
 
     if (readyToGenerate) {
         if (canGenerate) {
@@ -552,6 +564,9 @@ function buildGenerateUI(
             keyboard.text('💳 Пополнить баланс', 'buy_credits').row();
             messageText += `\n\n⚠️ <b>Недостаточно средств!</b>\nДля генерации требуется ${cost.toFixed(2)} руб.\nВаш баланс: <b>${userBalance.toFixed(2)}</b> руб.`;
         }
+    } else {
+        // Not ready (Waiting for input)
+        keyboard.text('✨ Отмена', 'cancel_generation').row();
     }
 
     return { text: messageText, keyboard };
@@ -650,11 +665,25 @@ async function performGeneration(
     currentRatio: string
 ) {
     // 1. Send Status Message
-    const m = await ctx.reply(
-        `🎨 Генерирую...\n⏱ 5 - 10 секунд\n\n"${prompt.length > 100 ? prompt.slice(0, 100) + '...' : prompt}"`,
-        { reply_markup: getMainKeyboard() }
-    );
-    const statusMsgId = m.message_id;
+    // 1. Send Status Message
+    let statusMsgId: number;
+    let isEdited = false;
+    const waitingText = `🎨 Генерирую...\n⏱ 5 - 10 секунд\n\n"${prompt.length > 100 ? prompt.slice(0, 100) + '...' : prompt}"`;
+
+    if (ctx.callbackQuery?.message) {
+        try {
+            await ctx.editMessageText(waitingText, { parse_mode: 'HTML' });
+            statusMsgId = ctx.callbackQuery.message.message_id;
+            isEdited = true;
+        } catch (e) {
+            // fallback if edit fails
+        }
+    }
+
+    if (!isEdited) {
+        const m = await ctx.reply(waitingText, { reply_markup: getMainKeyboard() });
+        statusMsgId = m.message_id;
+    }
 
     try {
         // 2. Perform Generation
