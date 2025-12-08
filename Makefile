@@ -505,6 +505,10 @@ gc-deploy:
 gc-deploy-bot:
 	./deploy/google.cloud/deploy-bot.sh
 
+# View deployment logs on Google Cloud VM
+gc-deploy-logs:
+	./deploy/google.cloud/view-deploy-log.sh
+
 # Deploy only admin to Google Cloud VM
 gc-deploy-admin:
 	./deploy/google.cloud/deploy-admin.sh

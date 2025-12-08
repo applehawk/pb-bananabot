@@ -22,6 +22,9 @@ interface GenerationState {
     aspectRatio?: string;
 }
 
+// Map to store active debounce timers: ChatId -> Timeout
+const uiDebounceTimers = new Map<number, NodeJS.Timeout>();
+
 /**
  * Вспомогательная функция: Извлекает начальное состояние из контекста
  */
@@ -143,57 +146,37 @@ export async function enterGenerateFlow(ctx: MyContext) {
             }
 
             if (updated) {
-                console.log('[GENERATE] State updated, refreshing UI');
-                // Refresh UI of the existing generation menu
-                const user = await getUser(ctx);
-                const cost = await estimateCost(ctx, user?.id, existingState);
-                const canGen = (user?.credits ?? 0) >= cost;
-                const shouldAsk = (user?.settings as any)?.askAspectRatio === true || (user as any)?.totalGenerated === 0;
+                console.log('[GENERATE] State updated, scheduling UI refresh');
 
-                const modelName = (user?.settings as any)?.selectedModel?.displayName || (user?.settings as any)?.model || 'flux-pro';
-                const limit = user?.settings?.selectedModel?.inputImagesLimit || 5;
-                const ui = buildGenerateUI(existingState.mode, existingState.prompt, existingState.inputImageFileIds.length, cost, canGen, existingState.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk, modelName, limit);
+                // DEBOUNCE LOGIC
+                // If this is ONLY a text update (prompt refinement), we should update immediately
+                // to give instant feedback.
+                // If it involves images (batch upload), we debounce.
 
-                if (existingState.uiMessageId && existingState.uiChatId) {
-                    const currentMsgId = ctx.message?.message_id || 0;
-                    const gap = currentMsgId - existingState.uiMessageId;
+                const hasNewImages = state.inputImageFileIds.length > 0;
 
-                    // SMART RESEND: If gap > 2, Resend. Else Edit.
-                    if (gap > 2) {
-                        try {
-                            await ctx.api.deleteMessage(existingState.uiChatId, existingState.uiMessageId);
-                        } catch (e) {
-                            console.log('[GENERATE] Failed to delete old menu for resend', e);
+                if (existingState.uiChatId) {
+                    const chatId = existingState.uiChatId;
+
+                    if (!hasNewImages) {
+                        // Text only -> Immediate
+                        if (uiDebounceTimers.has(chatId)) {
+                            clearTimeout(uiDebounceTimers.get(chatId));
+                            uiDebounceTimers.delete(chatId);
                         }
-
-                        const m = await ctx.reply(ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
-
-                        // Update State ID and Keys
-                        const oldId = existingStateId!;
-                        const newId = String(m.message_id);
-
-                        existingState.uiMessageId = m.message_id;
-
-                        if (oldId !== newId && ctx.session.generationStates) {
-                            ctx.session.generationStates[newId] = existingState;
-                            delete ctx.session.generationStates[oldId];
-                        }
-                        console.log('[GENERATE] Resent menu due to gap:', gap);
-                        return;
+                        await updateGenerationUI(ctx, existingStateId!, existingState);
                     } else {
-                        // Edit in place
-                        try {
-                            await ctx.api.editMessageText(existingState.uiChatId, existingState.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
-                            console.log('[GENERATE] UI updated successfully for:', existingStateId);
-                            return;
-                        } catch (e) {
-                            console.error('[GENERATE] Failed to update media group UI', e);
-                            // If update failed (e.g. message deleted), remove this invalid state and allow creation of new one
-                            if (existingStateId && ctx.session.generationStates?.[existingStateId]) {
-                                delete ctx.session.generationStates[existingStateId];
-                                console.log('[GENERATE] Deleted invalid state:', existingStateId);
-                            }
+                        // Images -> Debounce
+                        if (uiDebounceTimers.has(chatId)) {
+                            clearTimeout(uiDebounceTimers.get(chatId));
                         }
+
+                        const timer = setTimeout(async () => {
+                            await updateGenerationUI(ctx, existingStateId!, existingState);
+                            uiDebounceTimers.delete(chatId);
+                        }, 800); // 800ms wait
+
+                        uiDebounceTimers.set(chatId, timer);
                     }
                 }
             } else {
@@ -418,46 +401,48 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
         // Save state back? It's a reference, but for Redis we might need to touch session?
         // Grammy session uses Proxy, so mutation is usually tracked.
 
-        // Re-estimate cost
-        const cost = await estimateCost(ctx, user?.id, state);
-        const canGen = (user?.credits ?? 0) >= cost;
-        const shouldAsk = (user?.settings as any)?.askAspectRatio === true || (user as any)?.totalGenerated === 0;
-        const modelName = (user?.settings as any)?.selectedModel?.displayName || (user?.settings as any)?.model || 'flux-pro';
-        const limit = user?.settings?.selectedModel?.inputImagesLimit || 5;
-        const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGen, state.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk, modelName, limit);
-        if (state.uiMessageId && state.uiChatId) {
-            let shouldResend = false;
-            // Only resend if this was a user reply (message exists) and gap is significant
-            if (ctx.message) {
-                // Always resend if user typed something to keep menu at bottom?
-                // Or just if gap? 
-                // Let's stick to gap check to avoid flickering if close.
-                const gap = ctx.message.message_id - state.uiMessageId;
-                if (gap > 2) shouldResend = true;
-            }
+        // Debounce logic for single message flow (latched state) too, 
+        // especially if multiple inputs come in rapid succession (e.g. forward 5 images)
+        if (state.uiChatId) {
+            const chatId = state.uiChatId;
+            const stateId = String(state.uiMessageId); // Current key? 
 
-            if (shouldResend) {
-                try {
-                    await ctx.api.deleteMessage(state.uiChatId, state.uiMessageId);
-                } catch { }
+            // Logic: Immediate update for TEXT (prompt), Debounce for PHOTOS
+            const isTextOnly = !!ctx.message?.text && !ctx.message?.photo;
 
-                const m = await ctx.reply(ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
-
-                // Update State Keys
-                // processGenerateInput uses reference `state`, but we need to update the Key in Session
-                const oldId = String(state.uiMessageId);
-                const newId = String(m.message_id);
-
-                state.uiMessageId = m.message_id;
-
-                if (oldId !== newId && ctx.session.generationStates) {
-                    ctx.session.generationStates[newId] = state;
-                    delete ctx.session.generationStates[oldId];
+            if (isTextOnly) {
+                // Cancel any pending debounce from previous images?
+                // Potentially yes, to force current state output.
+                if (uiDebounceTimers.has(chatId)) {
+                    clearTimeout(uiDebounceTimers.get(chatId));
+                    uiDebounceTimers.delete(chatId);
                 }
+
+                // Immediate Update
+                let key = String(state!.uiMessageId);
+                if (messageId) key = String(messageId);
+                await updateGenerationUI(ctx, key, state!);
+
             } else {
-                try {
-                    await ctx.api.editMessageText(state.uiChatId, state.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
-                } catch { }
+                // Image or validation update -> Debounce
+                if (uiDebounceTimers.has(chatId)) {
+                    clearTimeout(uiDebounceTimers.get(chatId));
+                }
+
+                const timer = setTimeout(async () => {
+                    // We need to re-find the key or pass the current one
+                    // But state.uiMessageId might have changed? No, inside timeout we use latest state obj.
+                    // We need to pass the *current state object*
+
+                    let key = String(state!.uiMessageId);
+                    // If the start of this function found state via `messageId` var, that's the key.
+                    if (messageId) key = String(messageId);
+
+                    await updateGenerationUI(ctx, key, state!);
+                    uiDebounceTimers.delete(chatId);
+                }, 800);
+
+                uiDebounceTimers.set(chatId, timer);
             }
         }
     }
@@ -491,6 +476,88 @@ async function estimateCost(ctx: MyContext, userId: string | undefined, state: a
 }
 
 // No deleteUiMessage function needed anymore
+
+async function updateGenerationUI(ctx: MyContext, existingStateId: string, existingState: GenerationState) {
+    if (!existingState.uiChatId || !existingState.uiMessageId) return;
+
+    const user = await getUser(ctx);
+    const cost = await estimateCost(ctx, user?.id, existingState);
+    const canGen = (user?.credits ?? 0) >= cost;
+    const shouldAsk = (user?.settings as any)?.askAspectRatio === true || (user as any)?.totalGenerated === 0;
+
+    const modelName = (user?.settings as any)?.selectedModel?.displayName || (user?.settings as any)?.model || 'flux-pro';
+    const limit = user?.settings?.selectedModel?.inputImagesLimit || 5;
+    const ui = buildGenerateUI(existingState.mode, existingState.prompt, existingState.inputImageFileIds.length, cost, canGen, existingState.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk, modelName, limit);
+
+    const currentMsgId = ctx.message?.message_id || 0;
+    const gap = currentMsgId - existingState.uiMessageId;
+
+    let shouldResend = false;
+    // Condition 1: Gap is too large (scrolled away)
+    if (gap > 2) shouldResend = true;
+
+    // Condition 2: Explicit user input?
+    // In `enterGenerateFlow`, we don't have new user input usually, just merging.
+    // In `processGenerateInput`, we definitely have user input.
+    // We can assume if we are running this update, it usually implies we want it visible.
+    // Let's stick to "Gap > 2 OR we are in processGenerateInput context (handled by caller passing context?)"
+
+    // Actually, `ctx.message` is the message that TRIGGERED this update.
+    // If it's a photo upload, it's new. So gap will be > 0.
+    // If we uploaded 5 photos, the first one triggered logic, but debounce delayed it.
+    // By the time it runs, 5 messages passed. Gap > 5. So it will Resend. That is CORRECT.
+    // We want to resend to be at the bottom.
+
+    // Special Checks for Deletion Logic (from ProcessInput)
+    // If we decide to resend, should we delete the old one?
+    let shouldDeleteOld = true;
+
+    // Logic from processGenerateInput:
+    // If text was added, do NOT delete old "waiting" bubble.
+    if (ctx.message?.text) {
+        shouldDeleteOld = false;
+    }
+
+    if (shouldResend) {
+        try {
+            if (shouldDeleteOld) {
+                await ctx.api.deleteMessage(existingState.uiChatId, existingState.uiMessageId);
+            } else {
+                // Remove buttons
+                await ctx.api.editMessageReplyMarkup(existingState.uiChatId, existingState.uiMessageId, { reply_markup: { inline_keyboard: [] } });
+            }
+        } catch (e) {
+            console.log('[GENERATE] Failed to delete/edit old menu', e);
+        }
+
+        const m = await ctx.reply(ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+
+        // Update State ID and Keys
+        const oldId = existingStateId!;
+        const newId = String(m.message_id);
+
+        existingState.uiMessageId = m.message_id;
+
+        if (oldId !== newId && ctx.session.generationStates) {
+            ctx.session.generationStates[newId] = existingState;
+            delete ctx.session.generationStates[oldId];
+        }
+        console.log('[GENERATE] Resent menu due to gap/input');
+    } else {
+        // Edit in place
+        try {
+            await ctx.api.editMessageText(existingState.uiChatId, existingState.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+            console.log('[GENERATE] UI updated successfully in place');
+        } catch (e) {
+            console.error('[GENERATE] Failed to update media group UI', e);
+            // If failed, maybe delete state?
+            if (existingStateId && ctx.session.generationStates?.[existingStateId]) {
+                delete ctx.session.generationStates[existingStateId];
+            }
+        }
+    }
+}
+
 
 function buildGenerateUI(
     mode: GenerationMode,

@@ -32,38 +32,10 @@ echo -e "${GREEN}Uploading configuration files ($FILES_TO_UPLOAD)...${NC}"
 # We upload to home dir first to avoid permission issues, then move
 gcloud compute scp $FILES_TO_UPLOAD $INSTANCE_NAME:~/ --zone=$ZONE --quiet
 
-# 2. Stream source code and execute commands in a single SSH session
-echo -e "${GREEN}Streaming source and updating BOT on VM...${NC}"
+# 2. Archive and uploading source code
+echo -e "${GREEN}Archiving source code...${NC}"
+TAR_FILE="deploy-bot-$(date +%s).tar.gz"
 
-# Construct the remote command
-REMOTE_COMMAND="
-    set -e
-    mkdir -p ~/bananabot
-    cd ~/bananabot
-
-    # Handle configuration files
-    if [ -f ~/.env.deploy ]; then
-        mv ~/.env.deploy .env
-    elif [ -f ~/.env ]; then
-        mv ~/.env .env
-    fi
-    [ -f ~/docker-compose.yml ] && mv ~/docker-compose.yml .
-
-    # Extract source stream
-    echo 'Extracting source files...'
-    tar -xz
-
-    # Rebuild and restart
-    echo 'Rebuilding BOT service (using cache)...'
-    sudo docker compose build bot
-    
-    echo 'Restarting BOT container...'
-    sudo docker compose up -d bot
-
-    echo 'BOT deployment complete!'
-"
-
-# Tar securely and pipe to SSH
 tar --exclude='node_modules' \
     --exclude='.git' \
     --exclude='dist' \
@@ -74,5 +46,49 @@ tar --exclude='node_modules' \
     --exclude='*.log' \
     --exclude='.turbo' \
     --exclude='.cache' \
-    -czf - src/ libs/ prisma/ package*.json tsconfig*.json nest-cli.json .gitmodules Dockerfile bananabot-admin/prisma \
-| gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --quiet --command="$REMOTE_COMMAND"
+    -czf "$TAR_FILE" - src/ libs/ prisma/ package*.json tsconfig*.json nest-cli.json .gitmodules Dockerfile bananabot-admin/prisma
+
+echo -e "${GREEN}Uploading source archive to $INSTANCE_NAME...${NC}"
+gcloud compute scp "$TAR_FILE" "$INSTANCE_NAME:~/bananabot/source.tar.gz" --zone="$ZONE" --quiet
+
+# Clean up local archive
+rm "$TAR_FILE"
+
+# 3. Trigger background deployment on VM
+echo -e "${GREEN}Triggering background deployment on VM...${NC}"
+
+REMOTE_COMMAND="
+    nohup bash -c '
+        set -e
+        mkdir -p ~/bananabot
+        cd ~/bananabot
+
+        echo \"[Start] Deployment started at \$(date)\" > deploy.log
+
+        # Handle configuration files (uploaded to ~/)
+        if [ -f ~/.env.deploy ]; then
+            mv ~/.env.deploy .env
+        elif [ -f ~/.env ]; then
+            mv ~/.env .env
+        fi
+        [ -f ~/docker-compose.yml ] && mv ~/docker-compose.yml .
+
+        # Extract source
+        echo \"Extracting source files...\" >> deploy.log
+        tar -xzf source.tar.gz >> deploy.log 2>&1
+        rm source.tar.gz
+
+        # Rebuild and restart
+        echo \"Rebuilding BOT service...\" >> deploy.log
+        sudo docker compose build bot >> deploy.log 2>&1
+        
+        echo \"Restarting BOT container...\" >> deploy.log
+        sudo docker compose up -d bot >> deploy.log 2>&1
+
+        echo \"[Done] Deployment complete at \$(date)\" >> deploy.log
+    ' > /dev/null 2>&1 &
+"
+
+gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --quiet --command="$REMOTE_COMMAND"
+
+echo -e "${GREEN}Deployment triggered in background! Logs available at ~/bananabot/deploy.log${NC}"
