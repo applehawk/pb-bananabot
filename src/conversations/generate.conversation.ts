@@ -293,13 +293,10 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
             return true;
         } else if (data === 'cancel_generation') {
             await ctx.answerCallbackQuery();
-            // Remove state for this message?
+            // Remove state for this message
             delete states[String(messageId)];
-            await ctx.deleteMessage(); // Delete the menu itself on cancel? Or just leave it?
+
             // "Cancel" implies "I don't want this". Usually we delete.
-            // But user said "user will delete if they want".
-            // Standard "Cancel" behaviour is usually delete/hide.
-            // Let's delete the message and state for Cancel.
             try { await ctx.deleteMessage(); } catch { }
             return true;
         } else {
@@ -416,7 +413,7 @@ function buildGenerateUI(
             : `✍️ <b>Напиши описание</b> изменений или стиля.\n`;
     }
 
-    const readyToGenerate = mode === GenerationMode.TEXT_TO_IMAGE ? !!prompt : (!!prompt && imgCount > 0);
+    const readyToGenerate = mode === GenerationMode.TEXT_TO_IMAGE ? !!prompt : (imgCount > 0);
 
     if (readyToGenerate) {
         if (canGenerate) {
