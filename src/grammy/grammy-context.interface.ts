@@ -31,14 +31,16 @@ export interface SessionData {
   mediaGroupCaption?: string; // Caption from media group
 
   // Stateless Generation Flow
-  generationState?: {
+  // Stateless Generation Flow
+  generationStates?: Record<string, { // Key is message_id
     prompt: string;
     mode: GenerationMode;
     inputImageFileIds: string[];
     uiMessageId?: number;
     uiChatId?: number;
     aspectRatio?: string;
-  };
+    mediaGroupId?: string;
+  }>;
 
   // Stateless Settings Flow
   settingsState?: {

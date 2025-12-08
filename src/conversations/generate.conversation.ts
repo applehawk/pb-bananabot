@@ -15,6 +15,7 @@ interface GenerationState {
     mode: GenerationMode;
     inputImageFileIds: string[];
     skipAspectRatioSelection: boolean;
+    mediaGroupId?: string;
 }
 
 /**
@@ -53,7 +54,13 @@ function extractInitialState(ctx: MyContext): GenerationState {
         }
     }
 
-    return { prompt, mode, inputImageFileIds, skipAspectRatioSelection };
+    return {
+        prompt,
+        mode,
+        inputImageFileIds,
+        skipAspectRatioSelection,
+        mediaGroupId: ctx.message?.media_group_id || ctx.message?.reply_to_message?.media_group_id
+    };
 }
 
 /**
@@ -62,6 +69,52 @@ function extractInitialState(ctx: MyContext): GenerationState {
 export async function enterGenerateFlow(ctx: MyContext) {
     console.log('[GENERATE] Flow started');
     const state = extractInitialState(ctx);
+
+    // Media Group Aggregation Logic
+    if (state.mediaGroupId && ctx.session.generationStates) {
+        // Find existing state with same Media Group ID
+        const existingStateId = Object.keys(ctx.session.generationStates).find(key =>
+            ctx.session.generationStates![key].mediaGroupId === state.mediaGroupId
+        );
+
+        if (existingStateId) {
+            const existingState = ctx.session.generationStates[existingStateId];
+
+            // Append new photos if any
+            let updated = false;
+            for (const fileId of state.inputImageFileIds) {
+                if (!existingState.inputImageFileIds.includes(fileId)) {
+                    existingState.inputImageFileIds.push(fileId);
+                    updated = true;
+                }
+            }
+
+            // Update prompts if this message has one and previous didn't? 
+            // Or concatenate? Usually last prompt wins or first wins.
+            // Let's assume user might send caption on 2nd photo. Use it if prompt is empty.
+            if (state.prompt && !existingState.prompt) {
+                existingState.prompt = state.prompt;
+                updated = true;
+            }
+
+            if (updated) {
+                // Refresh UI of the existing generation menu
+                const user = await getUser(ctx);
+                const cost = await estimateCost(ctx, user?.id, existingState);
+                const canGen = (user?.credits ?? 0) >= cost;
+                const shouldAsk = (user?.settings as any)?.askAspectRatio === true || (user as any)?.totalGenerated === 0;
+
+                const ui = buildGenerateUI(existingState.mode, existingState.prompt, existingState.inputImageFileIds.length, cost, canGen, existingState.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk);
+
+                if (existingState.uiMessageId && existingState.uiChatId) {
+                    try {
+                        await ctx.api.editMessageText(existingState.uiChatId, existingState.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+                    } catch (e) { console.error('Failed to update media group UI', e); }
+                }
+            }
+            return; // Stop processing, merged into existing
+        }
+    }
 
     // Initial Cost Estimation
     let cost = 0;
@@ -72,22 +125,11 @@ export async function enterGenerateFlow(ctx: MyContext) {
 
     const currentRatio = user?.settings?.aspectRatio || '1:1';
 
-    // Check "Ask Aspect Ratio" setting
-    // Logic: 
-    // 1. If user explicitly enabled it (askAspectRatio === true) -> Ask
-    // 2. If it's the FIRST generation ever (totalGenerated === 0) -> Ask (to introduce the feature)
-    // 3. Otherwise -> Skip if prompt is ready
 
-    // settings.askAspectRatio default is now FALSE in schema.
-    const isExplicitlyEnabled = (user?.settings as any)?.askAspectRatio === true;
-    const isFirstTime = (user as any)?.totalGenerated === 0;
+    // Fast Path (Skip menu ONLY if it is a Reply/Special flow)
+    const canSkip = state.skipAspectRatioSelection && !!state.prompt;
 
-    const shouldAsk = isExplicitlyEnabled || isFirstTime;
-
-    // Fast Path (Reply with everything ready AND we shouldn't ask)
-    const canSkip = !shouldAsk && !!state.prompt;
-
-    if (canSkip && state.skipAspectRatioSelection &&
+    if (canSkip &&
         (state.mode === GenerationMode.TEXT_TO_IMAGE || state.inputImageFileIds.length > 0)) {
         if (user && user.credits >= cost) {
             await performGeneration(ctx, user, state.prompt, state.mode, state.inputImageFileIds, currentRatio);
@@ -95,33 +137,33 @@ export async function enterGenerateFlow(ctx: MyContext) {
         }
     }
 
-    // Cleanup previous UI if exists
-    if (ctx.session.generationState?.uiMessageId && ctx.session.generationState?.uiChatId) {
-        try { await ctx.api.deleteMessage(ctx.session.generationState.uiChatId, ctx.session.generationState.uiMessageId); } catch { }
+    // Build UI
+    const canGenerate = (user?.credits ?? 0) >= cost;
+
+    // settings.askAspectRatio default is now FALSE in schema.
+    const isExplicitlyEnabled = (user?.settings as any)?.askAspectRatio === true;
+    const isFirstTime = (user as any)?.totalGenerated === 0;
+
+    const shouldAsk = isExplicitlyEnabled || isFirstTime;
+    const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGenerate, currentRatio, user?.credits ?? 0, shouldAsk);
+
+    // Send Main Keyboard first (as requested previously) - Actually assuming it's there or attached
+    const m = await ctx.reply(ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+
+    // Save to Session (Multi-State)
+    if (!ctx.session.generationStates) {
+        ctx.session.generationStates = {};
     }
 
-    // Save to Session
-    ctx.session.generationState = {
+    ctx.session.generationStates[String(m.message_id)] = {
         prompt: state.prompt,
         mode: state.mode,
         inputImageFileIds: state.inputImageFileIds,
         aspectRatio: currentRatio,
-        uiMessageId: undefined, // will be set below
-        uiChatId: ctx.chat?.id
+        uiMessageId: m.message_id,
+        uiChatId: ctx.chat?.id,
+        mediaGroupId: state.mediaGroupId
     };
-
-    // Build UI
-    const canGenerate = (user?.credits ?? 0) >= cost;
-    const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGenerate, currentRatio, user?.credits ?? 0);
-
-    // Send Main Keyboard first (as requested previously)
-
-    const m = await ctx.reply(ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
-
-    // Update session with message ID
-    if (ctx.session.generationState) {
-        ctx.session.generationState.uiMessageId = m.message_id;
-    }
 }
 
 /**
@@ -130,45 +172,56 @@ export async function enterGenerateFlow(ctx: MyContext) {
  */
 export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
 
-    // 1. Handle Regeneration (Global trigger, essentially)
+    // 1. Handle Regeneration (Global trigger)
     if (ctx.callbackQuery?.data?.startsWith('regenerate_')) {
         const generationId = ctx.callbackQuery.data.split('_')[1];
         await handleRegeneration(ctx, generationId);
-        await deleteUiMessage(ctx); // if any exists in session
+        // We don't delete UI message here as it might be from history
+        await ctx.answerCallbackQuery();
         return true;
     }
 
-    // 2. Check Session State
-    const state = ctx.session.generationState;
-    if (!state) return false;
+    // 2. Determine Message ID to find State
+    let messageId: number | undefined;
+
+    if (ctx.callbackQuery?.message) {
+        messageId = ctx.callbackQuery.message.message_id;
+    } else if (ctx.message?.reply_to_message) {
+        // If user replies to a menu message
+        messageId = ctx.message.reply_to_message.message_id;
+    }
+
+    if (!messageId) return false;
+
+    // 3. Find State
+    const states = ctx.session.generationStates || {};
+    const state = states[String(messageId)];
+
+    if (!state) {
+        // If we found a messageId (e.g. callback) but no state -> Expired or unknown
+        if (ctx.callbackQuery) {
+            const data = ctx.callbackQuery.data;
+            if (data && (data.startsWith('aspect_') || ['generate_trigger', 'buy_credits', 'cancel_generation'].includes(data))) {
+                await ctx.answerCallbackQuery({ text: '⚠️ Меню устарело.' });
+                // Optional: try to delete if really old? No, user said keep it.
+                return true;
+            }
+        }
+        return false;
+    }
 
     // Validate Chat ID (ensure we are in the same chat)
     if (ctx.chat?.id !== state.uiChatId) return false;
 
-    // Validate Message ID for callbacks to prevent stale menu interactions (except regeneration which is global-ish, but handled above)
-    if (ctx.callbackQuery && ctx.callbackQuery.message && ctx.callbackQuery.message.message_id !== state.uiMessageId) {
-        // If it's a generation button but NOT the current UI, ignore or warn
-        // Regeneration is already handled.
-        // If it's aspect_, generate_trigger etc from OLD message:
-        const data = ctx.callbackQuery.data;
-        if (data && (data.startsWith('aspect_') || ['generate_trigger', 'buy_credits', 'cancel_generation'].includes(data))) {
-            await ctx.answerCallbackQuery({ text: '⚠️ Меню устарело.' });
-            try { await ctx.deleteMessage(); } catch { }
-            return true;
-        }
-        // If unrelated callback, let it pass (return false)
-        return false;
-    }
-
     const user = await getUser(ctx);
     let updated = false;
 
-    // 3. Handle Inputs
+    // 4. Handle Inputs
     if (ctx.callbackQuery) {
         const data = ctx.callbackQuery.data;
         if (!data) return false;
 
-        // Recalculate cost first (needed for buy check)
+        // Recalculate cost
         const cost = await estimateCost(ctx, user?.id, state);
 
         if (data.startsWith('aspect_')) {
@@ -190,29 +243,36 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
                 updated = true; // refresh UI
             } else {
                 await ctx.answerCallbackQuery();
-                await deleteUiMessage(ctx);
-                ctx.session.generationState = undefined; // Clear state
+                // We do NOT delete UI message anymore
+                // Perform generation
                 await performGeneration(ctx, user, state.prompt, state.mode, state.inputImageFileIds, state.aspectRatio || '1:1');
+
+                // Optional: Cleanup state after successful generation to prevent double-click or reuse?
+                // User said "let them remove old messages if they want". 
+                // If we keep state, they can regenerate. That's fine.
                 return true;
             }
         } else if (data === 'buy_credits') {
             await ctx.answerCallbackQuery();
-            await deleteUiMessage(ctx);
-            ctx.session.generationState = undefined;
             await ctx.conversation.enter('buy_credits');
             return true;
         } else if (data === 'cancel_generation') {
             await ctx.answerCallbackQuery();
-            await deleteUiMessage(ctx);
-            ctx.session.generationState = undefined;
+            // Remove state for this message?
+            delete states[String(messageId)];
+            await ctx.deleteMessage(); // Delete the menu itself on cancel? Or just leave it?
+            // "Cancel" implies "I don't want this". Usually we delete.
+            // But user said "user will delete if they want". 
+            // Standard "Cancel" behaviour is usually delete/hide.
+            // Let's delete the message and state for Cancel.
+            try { await ctx.deleteMessage(); } catch { }
             await ctx.reply('🎨 Готов к новым шедеврам! ✨', { reply_markup: getMainKeyboard() });
             return true;
         } else {
-            // Not a generation button
             return false;
         }
     } else if (ctx.message?.photo) {
-        // handle photo
+        // handle photo reply
         const newId = ctx.message.photo[ctx.message.photo.length - 1].file_id;
         if (!state.inputImageFileIds.includes(newId)) {
             state.inputImageFileIds.push(newId);
@@ -220,27 +280,32 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
             if (ctx.message.caption) state.prompt = ctx.message.caption.trim();
             updated = true;
         }
+        // Delete user's photo message to keep chat clean? Or keep it?
+        // Let's keep it to be safe.
     } else if (ctx.message?.text) {
+        // Handle text reply to menu
         const text = ctx.message.text;
-        if (text.startsWith('/')) return false; // Let commands pass
+        if (text.startsWith('/')) return false;
 
-        // If "Main Keyboard" is clicked, exit generation mode
         if (Object.values(KeyboardCommands).includes(text as any)) {
-            await deleteUiMessage(ctx);
-            ctx.session.generationState = undefined;
-            return false; // Let it propagate to main handler
+            // Main menu command -> Exit?
+            return false; // Propagate
         }
 
         state.prompt = text;
-        try { await ctx.deleteMessage(); } catch { }
+        try { await ctx.deleteMessage(); } catch { } // Delete user's text input to keep UI clean, update menu instead
         updated = true;
     }
 
     if (updated) {
+        // Save state back? It's a reference, but for Redis we might need to touch session?
+        // Grammy session uses Proxy, so mutation is usually tracked.
+
         // Re-estimate cost
         const cost = await estimateCost(ctx, user?.id, state);
         const canGen = (user?.credits ?? 0) >= cost;
-        const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGen, state.aspectRatio || '1:1', user?.credits ?? 0);
+        const shouldAsk = (user?.settings as any)?.askAspectRatio === true || (user as any)?.totalGenerated === 0;
+        const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGen, state.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk);
         if (state.uiMessageId && state.uiChatId) {
             try {
                 await ctx.api.editMessageText(state.uiChatId, state.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
@@ -276,12 +341,7 @@ async function estimateCost(ctx: MyContext, userId: string | undefined, state: a
     }
 }
 
-async function deleteUiMessage(ctx: MyContext) {
-    const st = ctx.session.generationState;
-    if (st?.uiMessageId && st?.uiChatId) {
-        try { await ctx.api.deleteMessage(st.uiChatId, st.uiMessageId); } catch { }
-    }
-}
+// No deleteUiMessage function needed anymore
 
 function buildGenerateUI(
     mode: GenerationMode,
@@ -290,7 +350,8 @@ function buildGenerateUI(
     cost: number,
     canGenerate: boolean,
     currentRatio: string,
-    userBalance: number = 0
+    userBalance: number = 0,
+    showAspectRatioOptions: boolean = true
 ) {
     const keyboard = new InlineKeyboard();
     let messageText = '';
@@ -313,13 +374,15 @@ function buildGenerateUI(
 
     if (readyToGenerate) {
         if (canGenerate) {
-            const ratios = ['1:1', '16:9', '9:16', '3:4', '4:3'];
-            ratios.forEach((r, i) => {
-                const label = r === currentRatio ? `✅ ${r}` : r;
-                keyboard.text(label, `aspect_${r}`);
-                if ((i + 1) % 3 === 0) keyboard.row();
-            });
-            if (ratios.length % 3 !== 0) keyboard.row();
+            if (showAspectRatioOptions) {
+                const ratios = ['1:1', '16:9', '9:16', '3:4', '4:3'];
+                ratios.forEach((r, i) => {
+                    const label = r === currentRatio ? `✅ ${r}` : r;
+                    keyboard.text(label, `aspect_${r}`);
+                    if ((i + 1) % 3 === 0) keyboard.row();
+                });
+                if (ratios.length % 3 !== 0) keyboard.row();
+            }
             keyboard.text('🎨 Сгенерировать!', 'generate_trigger').row();
             keyboard.text('❌ Отмена генерации', 'cancel_generation').row();
 
@@ -483,6 +546,9 @@ async function performGeneration(
         } else {
             await ctx.reply(`✅ Генерация ID: ${result.id} завершена, но нет изображения для отображения.`, { reply_markup: getMainKeyboard() });
         }
+
+        // Restore Main Keyboard explicitly
+        await ctx.reply('Готово! ✨', { reply_markup: getMainKeyboard() });
 
     } catch (error: any) {
         try { await ctx.api.deleteMessage(ctx.chat!.id, statusMsgId); } catch { }
