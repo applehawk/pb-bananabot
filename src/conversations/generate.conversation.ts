@@ -23,7 +23,7 @@ interface GenerationState {
 }
 
 // Map to store active debounce timers: ChatId -> Timeout
-const uiDebounceTimers = new Map<number, NodeJS.Timeout>();
+
 
 /**
  * Вспомогательная функция: Извлекает начальное состояние из контекста
@@ -148,37 +148,12 @@ export async function enterGenerateFlow(ctx: MyContext) {
             if (updated) {
                 console.log('[GENERATE] State updated, scheduling UI refresh');
 
-                // DEBOUNCE LOGIC
-                // If this is ONLY a text update (prompt refinement), we should update immediately
-                // to give instant feedback.
-                // If it involves images (batch upload), we debounce.
-
                 const hasNewImages = state.inputImageFileIds.length > 0;
 
                 if (existingState.uiChatId) {
-                    const chatId = existingState.uiChatId;
-
-                    if (!hasNewImages) {
-                        // Text only -> Immediate
-                        if (uiDebounceTimers.has(chatId)) {
-                            clearTimeout(uiDebounceTimers.get(chatId));
-                            uiDebounceTimers.delete(chatId);
-                        }
-                        await updateGenerationUI(ctx, existingStateId!, existingState);
-                    } else {
-                        // Images -> Debounce
-                        if (uiDebounceTimers.has(chatId)) {
-                            clearTimeout(uiDebounceTimers.get(chatId));
-                        }
-
-                        const timer = setTimeout(async () => {
-                            await updateGenerationUI(ctx, existingStateId!, existingState);
-                            uiDebounceTimers.delete(chatId);
-                        }, 800); // 800ms wait
-
-                        uiDebounceTimers.set(chatId, timer);
-                    }
+                    await updateGenerationUI(ctx, existingStateId!, existingState);
                 }
+                return; // Stop here, do not create new UI
             } else {
                 // Nothing updated? Maybe already match? 
                 console.log('[GENERATE] No updates to state, skipping');
@@ -401,49 +376,10 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
         // Save state back? It's a reference, but for Redis we might need to touch session?
         // Grammy session uses Proxy, so mutation is usually tracked.
 
-        // Debounce logic for single message flow (latched state) too, 
-        // especially if multiple inputs come in rapid succession (e.g. forward 5 images)
         if (state.uiChatId) {
-            const chatId = state.uiChatId;
-            const stateId = String(state.uiMessageId); // Current key? 
-
-            // Logic: Immediate update for TEXT (prompt), Debounce for PHOTOS
-            const isTextOnly = !!ctx.message?.text && !ctx.message?.photo;
-
-            if (isTextOnly) {
-                // Cancel any pending debounce from previous images?
-                // Potentially yes, to force current state output.
-                if (uiDebounceTimers.has(chatId)) {
-                    clearTimeout(uiDebounceTimers.get(chatId));
-                    uiDebounceTimers.delete(chatId);
-                }
-
-                // Immediate Update
-                let key = String(state!.uiMessageId);
-                if (messageId) key = String(messageId);
-                await updateGenerationUI(ctx, key, state!);
-
-            } else {
-                // Image or validation update -> Debounce
-                if (uiDebounceTimers.has(chatId)) {
-                    clearTimeout(uiDebounceTimers.get(chatId));
-                }
-
-                const timer = setTimeout(async () => {
-                    // We need to re-find the key or pass the current one
-                    // But state.uiMessageId might have changed? No, inside timeout we use latest state obj.
-                    // We need to pass the *current state object*
-
-                    let key = String(state!.uiMessageId);
-                    // If the start of this function found state via `messageId` var, that's the key.
-                    if (messageId) key = String(messageId);
-
-                    await updateGenerationUI(ctx, key, state!);
-                    uiDebounceTimers.delete(chatId);
-                }, 800);
-
-                uiDebounceTimers.set(chatId, timer);
-            }
+            let key = String(state!.uiMessageId);
+            if (messageId) key = String(messageId);
+            await updateGenerationUI(ctx, key, state!);
         }
     }
 
@@ -494,7 +430,8 @@ async function updateGenerationUI(ctx: MyContext, existingStateId: string, exist
 
     let shouldResend = false;
     // Condition 1: Gap is too large (scrolled away)
-    if (gap > 2) shouldResend = true;
+    // User requested to keep message if close enough (e.g. within album size of 10)
+    if (gap > 20) shouldResend = true;
 
     // Condition 2: Explicit user input?
     // In `enterGenerateFlow`, we don't have new user input usually, just merging.
@@ -548,9 +485,15 @@ async function updateGenerationUI(ctx: MyContext, existingStateId: string, exist
         try {
             await ctx.api.editMessageText(existingState.uiChatId, existingState.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
             console.log('[GENERATE] UI updated successfully in place');
-        } catch (e) {
+        } catch (e: any) {
+            const err = e.description || e.message || '';
+            if (err.includes('message is not modified')) {
+                // This is normal/expected if updates happen too fast or no change.
+                console.log('[GENERATE] Message not modified, skipping.');
+                return;
+            }
             console.error('[GENERATE] Failed to update media group UI', e);
-            // If failed, maybe delete state?
+            // If failed (e.g. message deleted), maybe delete state?
             if (existingStateId && ctx.session.generationStates?.[existingStateId]) {
                 delete ctx.session.generationStates[existingStateId];
             }
