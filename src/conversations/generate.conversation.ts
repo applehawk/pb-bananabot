@@ -16,6 +16,7 @@ interface GenerationState {
     inputImageFileIds: string[];
     skipAspectRatioSelection: boolean;
     mediaGroupId?: string;
+    isCommand: boolean;
 }
 
 /**
@@ -26,6 +27,7 @@ function extractInitialState(ctx: MyContext): GenerationState {
     let mode: GenerationMode = GenerationMode.TEXT_TO_IMAGE;
     const inputImageFileIds: string[] = [];
     let skipAspectRatioSelection = false;
+    let isCommand = false;
 
     // 1. Проверка Reply (ответ на сообщение)
     if (ctx.message?.reply_to_message) {
@@ -52,6 +54,19 @@ function extractInitialState(ctx: MyContext): GenerationState {
             // Если текст не пустой и не равен команде - это промпт
             if (extracted && extracted !== '/generate') prompt = extracted;
         }
+
+        if (text) {
+            const trimmedText = text.trim();
+            if (trimmedText.startsWith('/')) {
+                isCommand = true;
+                // Special case for /generate command
+                if (trimmedText.startsWith('/generate')) {
+                    prompt = trimmedText.replace(/^\/generate\s*/, '').trim();
+                }
+            } else if (!photo?.length) { // If no photo, then text is the prompt
+                prompt = trimmedText;
+            }
+        }
     }
 
     return {
@@ -59,7 +74,8 @@ function extractInitialState(ctx: MyContext): GenerationState {
         mode,
         inputImageFileIds,
         skipAspectRatioSelection,
-        mediaGroupId: ctx.message?.media_group_id || ctx.message?.reply_to_message?.media_group_id
+        mediaGroupId: ctx.message?.media_group_id || ctx.message?.reply_to_message?.media_group_id,
+        isCommand
     };
 }
 
@@ -70,14 +86,28 @@ export async function enterGenerateFlow(ctx: MyContext) {
     console.log('[GENERATE] Flow started');
     const state = extractInitialState(ctx);
 
-    // Media Group Aggregation Logic
-    if (state.mediaGroupId && ctx.session.generationStates) {
-        // Find existing state with same Media Group ID
-        const existingStateId = Object.keys(ctx.session.generationStates).find(key =>
-            ctx.session.generationStates![key].mediaGroupId === state.mediaGroupId
-        );
+    // Media Group & Latching Logic
+    if (!state.isCommand) {
+        let existingStateId: string | undefined;
 
-        if (existingStateId) {
+        // 1. Try Media Group
+        if (state.mediaGroupId && ctx.session.generationStates) {
+            existingStateId = Object.keys(ctx.session.generationStates).find(key =>
+                ctx.session.generationStates![key].mediaGroupId === state.mediaGroupId
+            );
+        }
+
+        // 2. Try Implicit Context (Latching to latest state in chat)
+        // Only if we are sending images (Text latching is handled in processGenerateInput)
+        if (!existingStateId && state.inputImageFileIds.length > 0) {
+            const latest = findLatestState(ctx);
+            if (latest) {
+                existingStateId = String(latest.uiMessageId);
+                // Optional: verify timestamp? For now assume valid if in session.
+            }
+        }
+
+        if (existingStateId && ctx.session.generationStates) {
             const existingState = ctx.session.generationStates[existingStateId];
 
             // Append new photos if any
@@ -89,11 +119,16 @@ export async function enterGenerateFlow(ctx: MyContext) {
                 }
             }
 
-            // Update prompts if this message has one and previous didn't? 
-            // Or concatenate? Usually last prompt wins or first wins.
-            // Let's assume user might send caption on 2nd photo. Use it if prompt is empty.
-            if (state.prompt && !existingState.prompt) {
+            // Update prompts if this message has one
+            // If user uploads photo with caption, overwrite old text prompt? Yes, presumably refinement.
+            if (state.prompt) {
                 existingState.prompt = state.prompt;
+                updated = true;
+            }
+
+            // Upgrade Mode if needed
+            if (existingState.inputImageFileIds.length > 0 && existingState.mode === GenerationMode.TEXT_TO_IMAGE) {
+                existingState.mode = GenerationMode.IMAGE_TO_IMAGE;
                 updated = true;
             }
 
@@ -195,7 +230,7 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
 
     // 3. Find State
     const states = ctx.session.generationStates || {};
-    const state = states[String(messageId)];
+    let state = states[String(messageId)];
 
     if (!state) {
         // If we found a messageId (e.g. callback) but no state -> Expired or unknown
@@ -248,7 +283,7 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
                 await performGeneration(ctx, user, state.prompt, state.mode, state.inputImageFileIds, state.aspectRatio || '1:1');
 
                 // Optional: Cleanup state after successful generation to prevent double-click or reuse?
-                // User said "let them remove old messages if they want". 
+                // User said "let them remove old messages if they want".
                 // If we keep state, they can regenerate. That's fine.
                 return true;
             }
@@ -262,11 +297,10 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
             delete states[String(messageId)];
             await ctx.deleteMessage(); // Delete the menu itself on cancel? Or just leave it?
             // "Cancel" implies "I don't want this". Usually we delete.
-            // But user said "user will delete if they want". 
+            // But user said "user will delete if they want".
             // Standard "Cancel" behaviour is usually delete/hide.
             // Let's delete the message and state for Cancel.
             try { await ctx.deleteMessage(); } catch { }
-            await ctx.reply('🎨 Готов к новым шедеврам! ✨', { reply_markup: getMainKeyboard() });
             return true;
         } else {
             return false;
@@ -290,6 +324,18 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
         if (Object.values(KeyboardCommands).includes(text as any)) {
             // Main menu command -> Exit?
             return false; // Propagate
+        }
+
+        // Implicit Context: if no explicit reply, check if we can latch onto the latest image state
+        if (!state) {
+            const latest = findLatestState(ctx);
+            // Only latch if latest state has images (User sent photos, then adds caption)
+            if (latest && latest.inputImageFileIds.length > 0) {
+                // Use this state
+                state = latest;
+            } else {
+                return false; // Not a reply, and no suitable recent state -> New Generation
+            }
         }
 
         state.prompt = text;
@@ -384,7 +430,7 @@ function buildGenerateUI(
                 if (ratios.length % 3 !== 0) keyboard.row();
             }
             keyboard.text('🎨 Сгенерировать!', 'generate_trigger').row();
-            keyboard.text('❌ Отмена генерации', 'cancel_generation').row();
+            keyboard.text('✨ Отмена', 'cancel_generation').row();
 
             messageText += `\n\nНажмите кнопку ниже, чтобы начать.`;
         } else {
@@ -394,6 +440,20 @@ function buildGenerateUI(
     }
 
     return { text: messageText, keyboard };
+}
+
+function findLatestState(ctx: MyContext) {
+    if (!ctx.session.generationStates) return undefined;
+    const all = Object.values(ctx.session.generationStates);
+    if (all.length === 0) return undefined;
+
+    // Filter by current chat
+    const inChat = all.filter(s => s.uiChatId === ctx.chat?.id);
+    if (inChat.length === 0) return undefined;
+
+    // Sort by uiMessageId descending (newest first)
+    inChat.sort((a, b) => (b.uiMessageId || 0) - (a.uiMessageId || 0));
+    return inChat[0];
 }
 
 
