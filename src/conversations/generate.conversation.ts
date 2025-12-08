@@ -14,9 +14,12 @@ interface GenerationState {
     prompt: string;
     mode: GenerationMode;
     inputImageFileIds: string[];
-    skipAspectRatioSelection: boolean;
+    skipAspectRatioSelection?: boolean;
     mediaGroupId?: string;
-    isCommand: boolean;
+    isCommand?: boolean;
+    uiMessageId?: number;
+    uiChatId?: number;
+    aspectRatio?: string;
 }
 
 /**
@@ -147,7 +150,7 @@ export async function enterGenerateFlow(ctx: MyContext) {
                 const canGen = (user?.credits ?? 0) >= cost;
                 const shouldAsk = (user?.settings as any)?.askAspectRatio === true || (user as any)?.totalGenerated === 0;
 
-                const modelName = (user?.settings as any)?.model || 'flux-pro';
+                const modelName = (user?.settings as any)?.selectedModel?.displayName || (user?.settings as any)?.model || 'flux-pro';
                 const limit = user?.settings?.selectedModel?.inputImagesLimit || 5;
                 const ui = buildGenerateUI(existingState.mode, existingState.prompt, existingState.inputImageFileIds.length, cost, canGen, existingState.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk, modelName, limit);
 
@@ -232,7 +235,7 @@ export async function enterGenerateFlow(ctx: MyContext) {
     const isFirstTime = (user as any)?.totalGenerated === 0;
 
     const shouldAsk = isExplicitlyEnabled || isFirstTime;
-    const modelName = (user?.settings as any)?.model || 'flux-pro';
+    const modelName = (user?.settings as any)?.selectedModel?.displayName || (user?.settings as any)?.model || 'flux-pro';
     const limit = user?.settings?.selectedModel?.inputImagesLimit || 5;
     const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGenerate, currentRatio, user?.credits ?? 0, shouldAsk, modelName, limit);
 
@@ -283,22 +286,32 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
         messageId = ctx.message.reply_to_message.message_id;
     }
 
-    if (!messageId) return false;
-
     // 3. Find State
-    const states = ctx.session.generationStates || {};
-    let state = states[String(messageId)];
+    let state: GenerationState | undefined;
 
-    if (!state) {
-        // If we found a messageId (e.g. callback) but no state -> Expired or unknown
-        if (ctx.callbackQuery) {
-            const data = ctx.callbackQuery.data;
-            if (data && (data.startsWith('aspect_') || ['generate_trigger', 'buy_credits', 'cancel_generation'].includes(data))) {
-                await ctx.answerCallbackQuery({ text: '⚠️ Меню устарело.' });
-                // Optional: try to delete if really old? No, user said keep it.
-                return true;
+    if (messageId) {
+        // 3. Find State by ID
+        const states = ctx.session.generationStates || {};
+        state = states[String(messageId)];
+
+        if (!state) {
+            // If we found a messageId (e.g. callback) but no state -> Expired or unknown
+            if (ctx.callbackQuery) {
+                const data = ctx.callbackQuery.data;
+                if (data && (data.startsWith('aspect_') || ['generate_trigger', 'buy_credits', 'cancel_generation'].includes(data))) {
+                    await ctx.answerCallbackQuery({ text: '⚠️ Меню устарело.' });
+                    return true;
+                }
             }
+            return false;
         }
+    } else if (ctx.message?.text) {
+        // No explicit message ID (not a reply), but it is a text message.
+        // Try to find the latest state to latch onto.
+        state = findLatestState(ctx);
+        if (!state) return false;
+    } else {
+        // Not a callback, not a reply, not a text message -> ignore
         return false;
     }
 
@@ -351,7 +364,9 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
         } else if (data === 'cancel_generation') {
             await ctx.answerCallbackQuery();
             // Remove state for this message
-            delete states[String(messageId)];
+            if (ctx.session.generationStates) {
+                delete ctx.session.generationStates[String(messageId)];
+            }
 
             // "Cancel" implies "I don't want this". Usually we delete.
             try { await ctx.deleteMessage(); } catch { }
@@ -407,7 +422,7 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
         const cost = await estimateCost(ctx, user?.id, state);
         const canGen = (user?.credits ?? 0) >= cost;
         const shouldAsk = (user?.settings as any)?.askAspectRatio === true || (user as any)?.totalGenerated === 0;
-        const modelName = (user?.settings as any)?.model || 'flux-pro';
+        const modelName = (user?.settings as any)?.selectedModel?.displayName || (user?.settings as any)?.model || 'flux-pro';
         const limit = user?.settings?.selectedModel?.inputImagesLimit || 5;
         const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGen, state.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk, modelName, limit);
         if (state.uiMessageId && state.uiChatId) {
