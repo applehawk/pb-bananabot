@@ -108,6 +108,10 @@ else
 fi
 
 # 1. Prepare configuration files
+if [ ! -f "docker-compose.yml" ]; then
+    echo -e "${RED}ERROR: docker-compose.yml not found in current directory!${NC}"
+    exit 1
+fi
 FILES_TO_UPLOAD="docker-compose.yml"
 
 if [ -f .env.deploy ]; then
@@ -129,7 +133,11 @@ if [ "$DEPLOY_ADMIN" = true ]; then
         echo -e "${RED}ERROR: bananabot-admin submodule not found!${NC}"
         exit 1
     fi
-    echo -e "${GREEN}Archiving ADMIN source...${NC}"
+    if [ ! -f "bananabot-admin/Dockerfile" ]; then
+        echo -e "${RED}ERROR: bananabot-admin/Dockerfile not found!${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Archiving ADMIN source (including Dockerfile)...${NC}"
     ADMIN_TAR="deploy-admin-$(date +%s).tar.gz"
     tar -czf "$ADMIN_TAR" \
         --exclude='node_modules' \
@@ -145,7 +153,12 @@ if [ "$DEPLOY_ADMIN" = true ]; then
 fi
 
 if [ "$DEPLOY_BOT" = true ]; then
-    echo -e "${GREEN}Archiving BOT source...${NC}"
+    if [ ! -f "Dockerfile" ]; then
+        echo -e "${RED}ERROR: Dockerfile not found in current directory!${NC}"
+        echo -e "${YELLOW}Please run this script from the project root.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}Archiving BOT source (including Dockerfile)...${NC}"
     BOT_TAR="deploy-bot-$(date +%s).tar.gz"
     tar --exclude='node_modules' \
         --exclude='.git' \

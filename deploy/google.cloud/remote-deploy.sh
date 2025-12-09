@@ -66,7 +66,40 @@ elif [ -f ~/.env ]; then
     mv ~/.env .env
     echo "Updated .env" >> $LOG_FILE
 fi
-[ -f ~/docker-compose.yml ] && mv ~/docker-compose.yml .
+if [ -f ~/docker-compose.yml ]; then
+    mv -f ~/docker-compose.yml .
+    echo "Updated docker-compose.yml" >> $LOG_FILE
+else
+    echo "WARNING: ~/docker-compose.yml not found, using existing one if present" >> $LOG_FILE
+fi
+
+if [ "$DEPLOY_BOT" = true ]; then
+    echo "=== Deploying BOT ===" >> $LOG_FILE
+    
+    # Find and extract bot tar (newest first)
+    BOT_ARCHIVE=$(ls -t ~/deploy-bot-*.tar.gz 2>/dev/null | head -n 1)
+    if [ -n "$BOT_ARCHIVE" ] && [ -f "$BOT_ARCHIVE" ]; then
+        echo "Extracting $BOT_ARCHIVE..." >> $LOG_FILE
+        # Extract over existing files
+        tar -xzf "$BOT_ARCHIVE" >> $LOG_FILE 2>&1
+        
+        # Verify Dockerfile presence
+        if [ -f "Dockerfile" ]; then
+             echo "Verified Dockerfile: $(ls -l Dockerfile)" >> $LOG_FILE
+        else
+             echo "ERROR: Dockerfile missing after extraction!" >> $LOG_FILE
+        fi
+        
+        # Remove ALL bot archives to prevent accumulation
+        rm ~/deploy-bot-*.tar.gz >> $LOG_FILE 2>&1 || true
+        
+        echo "Rebuilding BOT service..." >> $LOG_FILE
+        sudo docker compose build bot >> $LOG_FILE 2>&1
+        sudo docker compose up -d bot >> $LOG_FILE 2>&1
+    else
+        echo "ERROR: Bot archive not found!" >> $LOG_FILE
+    fi
+fi
 
 if [ "$DEPLOY_ADMIN" = true ]; then
     echo "=== Deploying ADMIN ===" >> $LOG_FILE
@@ -80,6 +113,13 @@ if [ "$DEPLOY_ADMIN" = true ]; then
         echo "Extracting $ADMIN_ARCHIVE..." >> $LOG_FILE
         tar -xzf "$ADMIN_ARCHIVE" >> $LOG_FILE 2>&1
         
+        # Verify Dockerfile presence
+        if [ -f "bananabot-admin/Dockerfile" ]; then
+             echo "Verified bananabot-admin/Dockerfile: $(ls -l bananabot-admin/Dockerfile)" >> $LOG_FILE
+        else
+             echo "ERROR: bananabot-admin/Dockerfile missing after extraction!" >> $LOG_FILE
+        fi
+        
         # Remove ALL admin archives to prevent accumulation
         rm ~/deploy-admin-*.tar.gz >> $LOG_FILE 2>&1 || true
         
@@ -90,27 +130,6 @@ if [ "$DEPLOY_ADMIN" = true ]; then
         sudo docker image prune -f >> $LOG_FILE 2>&1 || true
     else
         echo "ERROR: Admin archive not found!" >> $LOG_FILE
-    fi
-fi
-
-if [ "$DEPLOY_BOT" = true ]; then
-    echo "=== Deploying BOT ===" >> $LOG_FILE
-    
-    # Find and extract bot tar (newest first)
-    BOT_ARCHIVE=$(ls -t ~/deploy-bot-*.tar.gz 2>/dev/null | head -n 1)
-    if [ -n "$BOT_ARCHIVE" ] && [ -f "$BOT_ARCHIVE" ]; then
-        echo "Extracting $BOT_ARCHIVE..." >> $LOG_FILE
-        # Extract over existing files
-        tar -xzf "$BOT_ARCHIVE" >> $LOG_FILE 2>&1
-        
-        # Remove ALL bot archives to prevent accumulation
-        rm ~/deploy-bot-*.tar.gz >> $LOG_FILE 2>&1 || true
-        
-        echo "Rebuilding BOT service..." >> $LOG_FILE
-        sudo docker compose build bot >> $LOG_FILE 2>&1
-        sudo docker compose up -d bot >> $LOG_FILE 2>&1
-    else
-        echo "ERROR: Bot archive not found!" >> $LOG_FILE
     fi
 fi
 
