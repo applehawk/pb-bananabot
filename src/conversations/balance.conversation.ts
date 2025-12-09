@@ -46,7 +46,7 @@ export async function balanceConversation(
       const emoji = tx.creditsAdded > 0 ? '➕' : '➖';
       const type = getTransactionTypeName(tx.type);
       const credits = Math.abs(tx.creditsAdded).toFixed(1);
-      message += `${emoji} ${type}: ${credits} руб.\n`;
+      message += `${emoji} ${type}: ${credits} монет\n`;
     }
     message += `\n`;
   }

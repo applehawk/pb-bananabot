@@ -299,6 +299,7 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
         const cost = await estimateCost(ctx, user?.id, state);
 
         if (data.startsWith('aspect_')) {
+            await ctx.answerCallbackQuery();
             state.aspectRatio = data.split('_')[1];
             if (user) await ctx.userService.updateSettings(user.id, { aspectRatio: state.aspectRatio });
             updated = true;
@@ -540,8 +541,8 @@ function buildGenerateUI(
     if (readyToGenerate) {
         messageText += `\n\n🤖 Модель: <b>${modelName}</b>`;
         messageText += `\n📐 Соотношение: <b>${currentRatio}</b>`;
-        messageText += `\n💰 Стоимость: <b>${cost.toFixed(2)} ₽</b>`;
-        messageText += `\n💳 Баланс: <b>${userBalance.toFixed(2)} ₽</b>`;
+        messageText += `\n💰 Стоимость: <b>${cost.toFixed(2)} монет</b>`;
+        messageText += `\n💳 Баланс: <b>${userBalance.toFixed(2)} монет</b>`;
     }
 
     if (readyToGenerate) {
@@ -561,7 +562,7 @@ function buildGenerateUI(
             messageText += `\n\nНажмите кнопку ниже, чтобы начать.`;
         } else {
             keyboard.text('💳 Пополнить баланс', 'buy_credits').row();
-            messageText += `\n\n⚠️ <b>Недостаточно средств!</b>\nДля генерации требуется ${cost.toFixed(2)} руб.\nВаш баланс: <b>${userBalance.toFixed(2)}</b> руб.`;
+            messageText += `\n\n⚠️ <b>Недостаточно средств!</b>\nДля генерации требуется ${cost.toFixed(2)} монет.\nВаш баланс: <b>${userBalance.toFixed(2)}</b> монет.`;
         }
     } else {
         // Not ready (Waiting for input)
@@ -742,8 +743,8 @@ async function performGeneration(
         // 4. Send Result
         const caption =
             `🎨 ${prompt}\n\n` +
-            `💎 Использовано: ${(result.creditsUsed).toFixed(2)} руб.\n` +
-            `💰 Осталось: ${(user.credits - result.creditsUsed).toFixed(2)} руб.\n` +
+            `💎 Использовано: ${(result.creditsUsed).toFixed(2)} монет\n` +
+            `💰 Осталось: ${(user.credits - result.creditsUsed).toFixed(2)} монет\n` +
             `⏱ ${(result.processingTime / 1000).toFixed(1)}с`;
 
         const keyboard = {

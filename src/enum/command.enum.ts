@@ -25,4 +25,5 @@ export enum CommandEnum {
   BUY_CREDITS = 'buy_credits',
   SETTINGS = 'settings',
   BONUSES = 'bonuses',
+  TRANSFER = 'transfer_balance',
 }

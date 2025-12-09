@@ -499,11 +499,11 @@ gc-provision:
 
 # Deploy code to Google Cloud VM (bot + admin)
 gc-deploy:
-	./deploy/google.cloud/deploy.sh
+	./deploy/google.cloud/deploy-all.sh all
 
 # Deploy only bot to Google Cloud VM
 gc-deploy-bot:
-	./deploy/google.cloud/deploy-bot.sh
+	./deploy/google.cloud/deploy-all.sh bot
 
 # View deployment logs on Google Cloud VM
 gc-deploy-logs:
@@ -511,7 +511,7 @@ gc-deploy-logs:
 
 # Deploy only admin to Google Cloud VM
 gc-deploy-admin:
-	./deploy/google.cloud/deploy-admin.sh
+	./deploy/google.cloud/deploy-all.sh admin
 
 # Deploy only nginx configuration to Google Cloud VM
 gc-deploy-nginx:

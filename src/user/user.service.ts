@@ -274,14 +274,23 @@ export class UserService {
     };
   }
 
+  async getSystemConfig() {
+    const settings = await this.prisma.systemSettings.findUnique({
+      where: { key: 'singleton' },
+    });
+    return {
+      freeCreditsAmount: settings?.freeCreditsAmount ?? 3,
+      referralBonusAmount: settings?.referralBonusAmount ?? 50,
+      referralFirstPurchaseBonus: settings?.referralFirstPurchaseBonus ?? 150,
+    };
+  }
+
   /**
    * Get referral bonus amount from system settings
    */
   async getReferralBonusAmount(): Promise<number> {
-    const settings = await this.prisma.systemSettings.findUnique({
-      where: { key: 'singleton' },
-    });
-    return settings?.referralBonusAmount ?? 50;
+    const config = await this.getSystemConfig();
+    return config.referralBonusAmount;
   }
 
   /**
@@ -300,6 +309,74 @@ export class UserService {
         mode: data.mode,
         isFromUser: data.isFromUser,
       },
+    });
+  }
+
+  /**
+   * Find user by Username (case-insensitive if possible, else exact)
+   */
+  async findByUsername(username: string): Promise<User | null> {
+    const clean = username.replace('@', '').trim();
+    // Use findFirst since username might not be unique in schema or handled as unique index
+    return this.prisma.user.findFirst({
+      where: {
+        username: {
+          equals: clean,
+          mode: 'insensitive', // Postgres specific, falls back if not supported but safe to try
+        },
+      },
+    });
+  }
+
+  /**
+   * Transfer credits between users atomically
+   */
+  async transferCredits(fromUserId: string, toUserId: string, amount: number): Promise<{ fromUser: User, toUser: User }> {
+    return this.prisma.$transaction(async (tx) => {
+      const sender = await tx.user.findUnique({ where: { id: fromUserId } });
+      if (!sender || sender.credits < amount) {
+        throw new Error('insufficient_funds');
+      }
+
+      // Decrement Sender
+      const updatedSender = await tx.user.update({
+        where: { id: fromUserId },
+        data: { credits: { decrement: amount } },
+      });
+
+      // Increment Receiver
+      const updatedReceiver = await tx.user.update({
+        where: { id: toUserId },
+        data: { credits: { increment: amount } },
+      });
+
+      // Create Transaction for Sender (Debit)
+      await tx.transaction.create({
+        data: {
+          userId: fromUserId,
+          type: 'TRANSFER',
+          amount: -amount,
+          creditsAdded: -amount, // Negative for deduction
+          description: `Transfer to user ${updatedReceiver.username || updatedReceiver.telegramId}`,
+          status: 'COMPLETED',
+          isFinal: true,
+        }
+      });
+
+      // Create Transaction for Receiver (Credit)
+      await tx.transaction.create({
+        data: {
+          userId: toUserId,
+          type: 'TRANSFER',
+          amount: amount,
+          creditsAdded: amount,
+          description: `Transfer from user ${updatedSender.username || updatedSender.telegramId}`,
+          status: 'COMPLETED',
+          isFinal: true,
+        }
+      });
+
+      return { fromUser: updatedSender, toUser: updatedReceiver };
     });
   }
 }

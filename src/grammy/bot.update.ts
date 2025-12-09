@@ -358,7 +358,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
 • «Примерь эти очки на мне, реализм»
 • «Флакон духов на фоне ночного города»
 
-💎 Ваш баланс: *${credits} рублей*
+💎 Ваш баланс: *${credits} монет*
 
 🎯 *Фишка:* Бот умеет сохранять черты лица людей с ваших фото!
 
@@ -406,7 +406,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
 
       await this.grammyService.bot.api.sendMessage(
         this.adminChatId,
-        `Пополнен баланс на ${changeInt} рублей для @${username}`,
+        `Пополнен баланс на ${changeInt} монет бани для @${username}`,
       );
     } catch (error) {
       await ctx.reply(`❌ Ошибка: ${error.message}`);

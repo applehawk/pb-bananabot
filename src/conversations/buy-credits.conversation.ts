@@ -60,7 +60,7 @@ export async function buyCreditsConversation(
   // --- Package Selection ---
   if (!targetPackageId) {
     let message = `💎 <b>Пополнение баланса</b>\n\n`;
-    message += `Ваш текущий баланс: <b>${user.credits.toFixed(1)}</b> руб.\n\n`;
+    message += `Ваш текущий баланс: <b>${user.credits.toFixed(1)}</b> монет\n\n`;
     message += `📦 <b>Доступные пакеты пополнения баланса:</b>\n\n`;
 
     const keyboard = new InlineKeyboard();
@@ -71,7 +71,7 @@ export async function buyCreditsConversation(
 
       message += `${badge}<b>${pkg.name}</b>\n`;
       message += ` 💰  Стоимость: <b>${pkg.priceYooMoney || pkg.price} руб.</b>\n`;
-      message += `  💎 Пополение на: <b>${pkg.credits} руб.</b> ${discount}`;
+      message += `  💎 Пополение на: <b>${pkg.credits} монет</b> ${discount}`;
       if (pkg.description) {
         message += `  \n📝 <i>${pkg.description}</i>\n`;
       }

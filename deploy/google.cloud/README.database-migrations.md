@@ -84,7 +84,7 @@ ls -la bananabot-admin/prisma/migrations/
 Admin-панель должна деплоиться первой, так как она содержит свежие миграции:
 
 ```bash
-./deploy/google.cloud/deploy-admin.sh
+./deploy/google.cloud/deploy-all.sh admin
 ```
 
 > [!IMPORTANT]
@@ -93,7 +93,7 @@ Admin-панель должна деплоиться первой, так как
 ### 3. Деплой Bot
 
 ```bash
-./deploy/google.cloud/deploy-bot.sh
+./deploy/google.cloud/deploy-all.sh bot
 ```
 
 Bot также выполнит `prisma migrate deploy`, но если Admin уже применил миграции, эта операция будет no-op.
@@ -258,7 +258,7 @@ gcloud compute ssh bananabot-vm --zone=europe-north1-c --command="
 
 ```bash
 # Полный деплой с миграциями
-./deploy/google.cloud/deploy-admin.sh && ./deploy/google.cloud/deploy-bot.sh
+./deploy/google.cloud/deploy-all.sh
 
 # Проверка статуса
 ./deploy/google.cloud/check_status.sh

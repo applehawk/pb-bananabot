@@ -227,8 +227,8 @@ function buildSettingsUI(draft: SettingsDraft, prices: { pro: number, simple: nu
     keyboard.text('🔙 Назад', 'close_settings');
 
     const modelDesc = isPro
-        ? `Продвинутая (Gemini 3.0 Pro) (~${prices.pro} руб/шт)`
-        : `Простая (Gemini 2.5 Flash) (~${prices.simple} руб/шт)`;
+        ? `Продвинутая (Gemini 3.0 Pro) (~${prices.pro} монет/шт)`
+        : `Простая (Gemini 2.5 Flash) (~${prices.simple} монет/шт)`;
 
     return {
         text: `⚙️ **Настройки**\n\n📐 **Соотношение сторон:** ${aspectRatio}\n💎 **Качество:** ${hdQuality ? '4K (HD)' : '2K (Standard)'}\n❓ **Спрашивать формат:** ${askAspectRatio ? 'Да' : 'Нет'}\n🤖 **Модель:** ${modelDesc}\n\nВыберите параметры:`,

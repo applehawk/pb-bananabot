@@ -56,7 +56,7 @@ export class BotService {
         await this.grammyService.bot.api.sendMessage(
           Number(referral.referrerTelegramId),
           `🎉 <b>По вашей ссылке зарегистрировался новый пользователь!</b>\n\n` +
-          `Вам начислено <b>${referral.bonusAmount}</b> рублей!`,
+          `Вам начислено <b>${referral.bonusAmount}</b> монет бани!`,
           { parse_mode: 'HTML' }
         );
       } catch (error) {
@@ -83,14 +83,8 @@ export class BotService {
     balance: number,
     change: number,
   ): Promise<void> {
-    const balanceCurrency = balance.toLocaleString('ru-RU', {
-      style: 'currency',
-      currency: 'RUB',
-    });
-    const changeCurrency = change.toLocaleString('ru-RU', {
-      style: 'currency',
-      currency: 'RUB',
-    });
+    const balanceCurrency = `${balance.toFixed(2)} монет бани`;
+    const changeCurrency = `${change.toFixed(2)} монет бани`;
     await this.sendMessage(
       chatId,
       `Требуется пополнить баланс для списания ${changeCurrency}\n\nТекущий баланс: ${balanceCurrency}\n\n`,

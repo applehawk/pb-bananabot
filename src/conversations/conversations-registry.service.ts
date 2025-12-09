@@ -7,7 +7,7 @@ import { balanceConversation } from './balance.conversation';
 import { helpConversation } from './help.conversation';
 import { historyConversation } from './history.conversation';
 import { buyCreditsConversation } from './buy-credits.conversation';
-import { bonusesConversation } from './bonuses.conversation';
+import { bonusesConversation, transferConversation } from './bonuses.conversation';
 
 
 /**
@@ -55,6 +55,11 @@ export class ConversationsRegistryService implements OnModuleInit {
     this.grammyService.registerConversation(
       CommandEnum.BONUSES,
       bonusesConversation,
+    );
+
+    this.grammyService.registerConversation(
+      CommandEnum.TRANSFER,
+      transferConversation,
     );
 
     // Register GENERATE conversation (Last, so others are registered before it captures context)

@@ -256,8 +256,8 @@ export class PaymentService {
         if (user && user.telegramId) {
           await this.grammyService.bot.api.sendMessage(
             Number(user.telegramId),
-            `✅ <b>Оплата прошла успешно!</b>\n\nВам начислено <b>${transaction.creditsAdded}</b> рублей.` +
-            `\nТекущий баланс: ${user.credits.toFixed(1)} руб.`,
+            `✅ <b>Оплата прошла успешно!</b>\n\nВам начислено <b>${transaction.creditsAdded}</b> монет бани.` +
+            `\nТекущий баланс: ${user.credits.toFixed(1)} монет`,
             { parse_mode: 'HTML' }
           );
         }
@@ -312,7 +312,7 @@ export class PaymentService {
             if (referral.referrer.telegramId) {
               await this.grammyService.bot.api.sendMessage(
                 Number(referral.referrer.telegramId),
-                `🎉 <b>Реферальный бонус!</b>\n\nВаш приглашенный друг совершил первую покупку.\nВам начислено <b>${bonusAmount}</b> рублей!`,
+                `🎉 <b>Реферальный бонус!</b>\n\nВаш приглашенный друг совершил первую покупку.\nВам начислено <b>${bonusAmount}</b> монет бани!`,
                 { parse_mode: 'HTML' }
               );
             }

@@ -16,10 +16,10 @@
 ### Шаг 2: Деплой обновленного кода
 ```bash
 # Деплой бота
-./deploy/google.cloud/deploy-bot.sh
+./deploy/google.cloud/deploy-all.sh bot
 
 # Деплой админ-панели
-./deploy/google.cloud/deploy-admin.sh
+./deploy/google.cloud/deploy-all.sh admin
 ```
 
 ### Шаг 3: Проверка

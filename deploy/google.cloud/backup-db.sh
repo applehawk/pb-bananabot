@@ -51,9 +51,11 @@ echo -e "${GREEN}✓ Backup completed successfully!${NC}"
 echo -e "  Location: ${YELLOW}$LOCAL_BACKUP_DIR/$BACKUP_NAME${NC}"
 echo -e "  Size: ${YELLOW}$BACKUP_SIZE${NC}"
 
-# Keep only last 5 backups
+# Keep only last N backups (default 5)
+KEEP_COUNT=${1:-5}
+
 echo ""
-echo -e "${GREEN}Cleaning old backups (keeping last 5)...${NC}"
-ls -t "$LOCAL_BACKUP_DIR"/backup_*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -f
+echo -e "${GREEN}Cleaning old backups (keeping last $KEEP_COUNT)...${NC}"
+ls -t "$LOCAL_BACKUP_DIR"/backup_*.sql.gz 2>/dev/null | tail -n +$((KEEP_COUNT + 1)) | xargs -r rm -f
 echo -e "Current backups:"
 ls -lh "$LOCAL_BACKUP_DIR"/backup_*.sql.gz 2>/dev/null || echo "  (none)"
