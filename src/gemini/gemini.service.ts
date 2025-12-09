@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { HttpService } from '@nestjs/axios';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { lastValueFrom } from 'rxjs';
 
 export interface GenerateImageParams {
   prompt: string;
@@ -9,6 +11,22 @@ export interface GenerateImageParams {
   numberOfImages?: number;
   inputImages?: Array<{ data: Buffer; mimeType: string }>;
   modelName?: string;
+}
+
+export interface GenerateVideoParams {
+  prompt: string;
+  negativePrompt?: string;
+  inputImage?: { data: Buffer; mimeType: string };
+  aspectRatio?: '16:9' | '9:16';
+  durationSeconds?: '4' | '8';
+  modelName?: string;
+}
+
+export interface VideoGenerationResult {
+  videoData: Buffer;
+  mimeType: string;
+  prompt: string;
+  modelName: string;
 }
 
 export interface GenerationResult {
@@ -20,12 +38,23 @@ export interface GenerationResult {
   enhancedPrompt?: string;
 }
 
+export enum VeoModels {
+  VEO_3_1 = 'veo-3.1-generate-preview',
+  VEO_3_1_FAST = 'veo-3.1-fast-generate-preview', // Assumed, verified via best effort pattern
+  VEO_3 = 'veo-3-generate-preview', // Assumed
+  VEO_3_FAST = 'veo-3-fast-generate-preview', // Assumed
+  VEO_2 = 'veo-2-generate-preview', // Assumed, mostly for legacy support if needed
+}
+
 @Injectable()
 export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
   private genAI: GoogleGenerativeAI;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly httpService: HttpService,
+  ) {
     const apiKey = this.config.get<string>('gemini.apiKey');
 
     if (!apiKey) {
@@ -290,6 +319,168 @@ export class GeminiService {
     } catch (error) {
       this.logger.error('Gemini health check failed: ' + error.message);
       return false;
+    }
+  }
+
+  // ===========================================================================
+  // Video Generation (Veo)
+  // ===========================================================================
+
+  /**
+   * Generate video using Veo models via REST API
+   */
+  async generateVideo(
+    params: GenerateVideoParams,
+  ): Promise<VideoGenerationResult> {
+    const {
+      prompt,
+      negativePrompt,
+      inputImage,
+      aspectRatio = '16:9',
+      modelName = VeoModels.VEO_3_1,
+      durationSeconds = '8',
+    } = params;
+
+    this.logger.log(
+      `Starting video generation with model ${modelName}. Prompt: ${prompt.slice(0, 50)}...`,
+    );
+
+    const apiKey = this.config.get<string>('gemini.apiKey');
+    const baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+
+    // 1. Prepare request body
+    const requestBody: any = {
+      instances: [
+        {
+          prompt: prompt,
+        },
+      ],
+      parameters: {
+        aspectRatio: aspectRatio,
+        durationSeconds: durationSeconds,
+      },
+    };
+
+    if (negativePrompt) {
+      requestBody.parameters.negativePrompt = negativePrompt;
+    }
+
+    if (inputImage) {
+      requestBody.instances[0].image = {
+        imageBytes: inputImage.data.toString('base64'), // Ensure base64
+        mimeType: inputImage.mimeType,
+      };
+    }
+
+    try {
+      // 2. Start Long Running Operation
+      const url = `${baseUrl}/models/${modelName}:predictLongRunning?key=${apiKey}`;
+      const startResponse = await lastValueFrom(
+        this.httpService.post(url, requestBody, {
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+      const operationName = startResponse.data.name; // e.g. "projects/.../operations/..."
+      this.logger.log(`Video generation started. Operation: ${operationName}`);
+
+      // 3. Poll for completion
+      const videoUri = await this.pollVideoOperation(
+        operationName,
+        apiKey,
+        baseUrl,
+      );
+
+      // 4. Download video
+      this.logger.log(`Downloading video from: ${videoUri}`);
+      const videoBuffer = await this.downloadVideo(videoUri, apiKey);
+
+      return {
+        videoData: videoBuffer,
+        mimeType: 'video/mp4',
+        modelName,
+        prompt,
+      };
+    } catch (error) {
+      this.logger.error(
+        'Video generation failed: ' + (error.response?.data?.error?.message || error.message),
+        error.stack,
+      );
+      throw new Error(
+        'Failed to generate video: ' + (error.response?.data?.error?.message || error.message),
+      );
+    }
+  }
+
+  private async pollVideoOperation(
+    operationName: string,
+    apiKey: string,
+    baseUrl: string,
+  ): Promise<string> {
+    const pollUrl = `${baseUrl}/${operationName}?key=${apiKey}`;
+    const maxRetries = 60; // 10 minutes (60 * 10s)
+    let attempts = 0;
+
+    while (attempts < maxRetries) {
+      await new Promise((resolve) => setTimeout(resolve, 10000)); // Wait 10s
+      attempts++;
+
+      try {
+        const response = await lastValueFrom(this.httpService.get(pollUrl));
+        const data = response.data;
+
+        if (data.done) {
+          if (data.error) {
+            throw new Error(data.error.message || 'Operation failed with error');
+          }
+
+          // Extract video URI
+          // Structure: response.generateVideoResponse.generatedSamples[0].video.uri
+          const uri =
+            data.response?.generateVideoResponse?.generatedSamples?.[0]?.video
+              ?.uri;
+
+          if (!uri) {
+            throw new Error('Video URI not found in completed response');
+          }
+
+          return uri;
+        }
+
+        this.logger.log(`Polling video... Attempt ${attempts}/${maxRetries}`);
+      } catch (error) {
+        // If it's a transient error, maybe continue? For now, throw.
+        // But if headers/auth are wrong, it will fail repeatedly.
+        if (error.response?.status === 404) {
+          // Operation might need a moment to propagate? unlikely for polling URL returned by API.
+          throw error;
+        }
+        // If error is just "not ready" logic check above covers it (done=false)
+        // If network error, maybe log and continue?
+        this.logger.warn(`Polling error: ${error.message}`);
+        if (attempts > 5 && error.response?.status >= 400) throw error; // Fail fast on consistent errors
+      }
+    }
+
+    throw new Error('Video generation timed out');
+  }
+
+  private async downloadVideo(uri: string, apiKey: string): Promise<Buffer> {
+    // Download requires API key header usually, or just authenticated access.
+    // The docs say: curl -H "x-goog-api-key: $GEMINI_API_KEY" "${video_uri}"
+    try {
+      const response = await lastValueFrom(
+        this.httpService.get(uri, {
+          headers: {
+            'x-goog-api-key': apiKey,
+          },
+          responseType: 'arraybuffer',
+        }),
+      );
+      return Buffer.from(response.data);
+    } catch (error) {
+      this.logger.error(`Failed to download video: ${error.message}`);
+      throw error;
     }
   }
 }

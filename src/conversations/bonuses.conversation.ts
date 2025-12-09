@@ -139,18 +139,19 @@ export async function transferConversation(
         }
 
         if (input.callbackQuery?.data) {
-            await input.answerCallbackQuery().catch(() => { });
             const data = input.callbackQuery.data;
             if (data.startsWith('amount:')) {
                 const val = data.split(':')[1];
                 if (val === 'all') {
                     if (balance <= 0) {
-                        await input.answerCallbackQuery({ text: '❌ На балансе нет средств.', show_alert: true });
+                        await input.answerCallbackQuery({ text: '❌ На балансе нет средств.', show_alert: true }).catch(() => { });
                         continue;
                     }
+                    await input.answerCallbackQuery().catch(() => { });
                     selectedAmount = balance;
                     break;
                 } else if (val === 'custom') {
+                    await input.answerCallbackQuery().catch(() => { });
                     // Ask for custom amount
                     await input.editMessageText('✍️ <b>Введите сумму перевода</b> (целое число или дробное, например 49.5):', { parse_mode: 'HTML', reply_markup: new InlineKeyboard().text('🔙 Назад', 'back_amount').text('❌ Отменить', 'cancel') });
 
@@ -158,6 +159,10 @@ export async function transferConversation(
                     let waitingCustom = true;
                     while (waitingCustom) {
                         const customInput = await conversation.waitFor(['message:text', 'callback_query:data']);
+                        if (customInput.message) {
+                            await customInput.deleteMessage().catch(() => { });
+                        }
+
                         if (customInput.callbackQuery?.data === 'cancel') {
                             await customInput.deleteMessage().catch(() => { });
                             return;
@@ -176,7 +181,6 @@ export async function transferConversation(
                         if (customInput.message?.text) {
                             let text = customInput.message.text.trim().replace(',', '.');
                             // Delete user input to keep chat clean
-                            await customInput.deleteMessage().catch(() => { });
 
                             // Validate format: numbers only
                             if (!/^\d+(\.\d+)?$/.test(text)) {
@@ -189,7 +193,7 @@ export async function transferConversation(
                                 continue;
                             }
                             if (val > balance) {
-                                await customInput.reply(`❌ Недостаточно средств. Ваш баланс: ${balance.toFixed(2)} монет`);
+                                await ctx.api.sendMessage(ctx.chat!.id, `❌ Недостаточно средств. Ваш баланс: ${balance.toFixed(2)} монет`);
                                 continue;
                             }
 
@@ -203,9 +207,10 @@ export async function transferConversation(
                 } else {
                     selectedAmount = parseFloat(val);
                     if (selectedAmount > balance) {
-                        await input.answerCallbackQuery({ text: '❌ Недостаточно средств!', show_alert: true });
+                        await input.answerCallbackQuery({ text: '❌ Недостаточно средств!', show_alert: true }).catch(() => { });
                         continue;
                     }
+                    await input.answerCallbackQuery().catch(() => { });
                     break; // Amount selected
                 }
             } else if (data === 'back_amount') {
