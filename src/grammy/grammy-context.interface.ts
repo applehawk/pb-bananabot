@@ -39,6 +39,7 @@ export interface SessionData {
     uiMessageId?: number;
     uiChatId?: number;
     aspectRatio?: string;
+    createdAt?: number;
     mediaGroupId?: string;
   }>;
 

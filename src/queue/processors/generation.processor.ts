@@ -75,7 +75,10 @@ export class GenerationProcessor extends WorkerHost {
             if (result.imageUrl) {
                 await this.botService.sendPhoto(chatId, result.imageUrl, caption);
             } else if (result.imageData || result.imageDataBase64) {
-                const buffer = result.imageData || Buffer.from(result.imageDataBase64, 'base64');
+                const imageContent = result.imageData || result.imageDataBase64;
+                const buffer = Buffer.isBuffer(imageContent)
+                    ? imageContent
+                    : Buffer.from(imageContent, 'base64');
                 await this.botService.sendPhoto(chatId, new InputFile(buffer), caption);
             } else {
                 await this.botService.sendMessage(chatId, '✅ Генерация завершена, но результат не получен.');

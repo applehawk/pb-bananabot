@@ -20,7 +20,10 @@ interface GenerationState {
     uiMessageId?: number;
     uiChatId?: number;
     aspectRatio?: string;
+    createdAt?: number;
 }
+
+// ... (existing code)
 
 // Map to store active debounce timers: ChatId -> Timeout
 
@@ -214,7 +217,8 @@ export async function enterGenerateFlow(ctx: MyContext) {
         aspectRatio: currentRatio,
         uiMessageId: m.message_id,
         uiChatId: ctx.chat?.id,
-        mediaGroupId: state.mediaGroupId
+        mediaGroupId: state.mediaGroupId,
+        createdAt: Date.now()
     };
     console.log('[GENERATE] New state saved:', m.message_id);
 }
@@ -322,9 +326,12 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
                 // Perform generation
                 await performGeneration(ctx, user, state.prompt, state.mode, state.inputImageFileIds, state.aspectRatio || '1:1');
 
-                // Optional: Cleanup state after successful generation to prevent double-click or reuse?
-                // User said "let them remove old messages if they want".
-                // If we keep state, they can regenerate. That's fine.
+                // Cleanup state to prevent latching of new messages to this finished flow
+                if (ctx.session.generationStates) {
+                    if (state.uiMessageId) delete ctx.session.generationStates[String(state.uiMessageId)];
+                    if (messageId) delete ctx.session.generationStates[String(messageId)];
+                }
+
                 return true;
             }
         } else if (data === 'buy_credits') {
@@ -587,11 +594,23 @@ function findLatestState(ctx: MyContext) {
     const latest = inChat[0];
 
     // Check if latest state is "fresh enough"
+    // 1. Time Check (5 minutes expiration)
+    const now = Date.now();
+    const created = latest.createdAt || 0; // fallback for existing sessions
+    if (now - created > 5 * 60 * 1000) {
+        console.log('[GENERATE] Latest state expired (time), ignoring.');
+        return undefined;
+    }
+
+    // 2. Message Gap Check
     // If the gap between current message and menu is too large, assume context lost.
     // ctx.message?.message_id might be undefined if not available, but usually is.
     if (ctx.message?.message_id && latest.uiMessageId) {
         const gap = ctx.message.message_id - latest.uiMessageId;
-        if (gap > 20) return undefined; // Too old, start new
+        if (gap > 20) {
+            console.log('[GENERATE] Latest state expired (gap), ignoring.');
+            return undefined; // Too old, start new
+        }
     }
 
     return latest;
@@ -725,7 +744,7 @@ async function performGeneration(
         });
 
         // 3. Update Status Message
-        const startingText = `⏳ <b>Задача в очереди!</b>\n\nЯ уведомлю вас, когда генерация завершится. Можете продолжать общение или создать новую задачу.`;
+        const startingText = `🚀 <b>Генерация запущена!</b> Вы молодец! 🥯✨\n\nКак только ваше творчество испечётся, я сразу пришлю его вам! (Обычно 5-10 секунд)`;
 
         // Try to edit the "Generating..." message
         try {

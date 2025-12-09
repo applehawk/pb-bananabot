@@ -93,6 +93,15 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 1
 fi
 
+# Pre-checks
+echo -e "\n${GREEN}Running local DI validation details...${NC}"
+if npm run validate-di; then
+    echo -e "${GREEN}DI Check Passed.${NC}"
+else
+    echo -e "${RED}DI Check Failed! Deployment aborted.${NC}"
+    exit 1
+fi
+
 
 
 # 0. Database Backup
