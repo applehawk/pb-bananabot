@@ -15,75 +15,60 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-LOCAL_BACKUP_DIR="./backups"
-
-# Check for backup file argument or list available
+# Check argument
 if [ -z "$1" ]; then
-    echo -e "${YELLOW}Available backups:${NC}"
-    ls -lht "$LOCAL_BACKUP_DIR"/backup_*.sql.gz 2>/dev/null || echo "  No backups found in $LOCAL_BACKUP_DIR"
-    echo ""
-    echo "Usage: $0 <backup_file.sql.gz>"
-    echo "Example: $0 backups/backup_bananabot_20251205_221500.sql.gz"
+    echo "Usage: $0 <path_to_backup_file.sql.gz>"
+    echo "Example: $0 ./backups/backup_bananabot_20251209_141423.sql.gz"
     exit 1
 fi
 
-BACKUP_FILE="$1"
+LOCAL_BACKUP_PATH="$1"
+FILENAME=$(basename "$LOCAL_BACKUP_PATH")
 
-if [ ! -f "$BACKUP_FILE" ]; then
-    echo -e "${RED}Error: Backup file not found: $BACKUP_FILE${NC}"
+if [ ! -f "$LOCAL_BACKUP_PATH" ]; then
+    echo -e "${RED}Error: File '$LOCAL_BACKUP_PATH' not found!${NC}"
     exit 1
 fi
 
-BACKUP_NAME=$(basename "$BACKUP_FILE")
-
-echo -e "${RED}=== DATABASE RESTORE ===${NC}"
-echo -e "${RED}WARNING: This will REPLACE ALL DATA in database '$DB_NAME'!${NC}"
-echo ""
+echo -e "${GREEN}=== Database Restore ===${NC}"
 echo "Instance: $INSTANCE_NAME"
 echo "Database: $DB_NAME"
-echo "Backup: $BACKUP_FILE"
+echo "Backup File: $LOCAL_BACKUP_PATH"
 echo ""
-read -p "Are you ABSOLUTELY sure? Type 'yes' to confirm: " CONFIRM
-
-if [ "$CONFIRM" != "yes" ]; then
-    echo "Aborted."
+echo -e "${RED}⚠️  WARNING: This will OVERWRITE the existing database '$DB_NAME' on the VM!${NC}"
+echo -e "${YELLOW}Are you sure you want to proceed? [y/N]${NC}"
+read -r -p "" response
+if [[ ! "$response" =~ ^[yY]$ ]]; then
+    echo "Restore cancelled."
     exit 1
 fi
 
-echo ""
-echo -e "${GREEN}Stopping services...${NC}"
-gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="
-    cd ~/bananabot && \
-    sudo docker compose stop bot admin
+# 1. Upload backup to VM
+echo -e "\n${GREEN}Uploading backup to VM...${NC}"
+gcloud compute scp "$LOCAL_BACKUP_PATH" $INSTANCE_NAME:/tmp/$FILENAME --zone=$ZONE --quiet
+
+# 2. Restore Database
+echo -e "${GREEN}Restoring database (this may take a while)...${NC}"
+
+# Remote script to drop and restore
+# - We terminate connections to the DB first
+# - We drop and recreate the DB to ensure a clean slate
+# - We gunzip and pipe the SQL into psql
+RESTORE_SCRIPT="
+    echo 'Terminating existing connections...'
+    PGPASSWORD='$DB_PASS' sudo docker compose exec -T postgres psql -U $DB_USER -d postgres -c \"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$DB_NAME' AND pid <> pg_backend_pid();\" >/dev/null 2>&1 || true
+
+    echo 'Recreating database $DB_NAME...'
+    PGPASSWORD='$DB_PASS' sudo docker compose exec -T postgres psql -U $DB_USER -d postgres -c \"DROP DATABASE IF EXISTS $DB_NAME;\"
+    PGPASSWORD='$DB_PASS' sudo docker compose exec -T postgres psql -U $DB_USER -d postgres -c \"CREATE DATABASE $DB_NAME;\"
+
+    echo 'Importing data...'
+    zcat /tmp/$FILENAME | PGPASSWORD='$DB_PASS' sudo docker compose exec -T postgres psql -U $DB_USER -d $DB_NAME 
+    
+    echo 'Cleaning up...'
+    rm /tmp/$FILENAME
 "
 
-echo -e "${GREEN}Uploading backup...${NC}"
-gcloud compute scp "$BACKUP_FILE" $INSTANCE_NAME:/tmp/$BACKUP_NAME --zone=$ZONE --quiet
+gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="$RESTORE_SCRIPT"
 
-echo -e "${GREEN}Restoring database...${NC}"
-gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="
-    cd ~/bananabot && \
-    
-    # Drop and recreate database
-    PGPASSWORD='$DB_PASS' sudo docker compose exec -T postgres \
-        psql -U $DB_USER -d postgres -c 'DROP DATABASE IF EXISTS $DB_NAME;' && \
-    PGPASSWORD='$DB_PASS' sudo docker compose exec -T postgres \
-        psql -U $DB_USER -d postgres -c 'CREATE DATABASE $DB_NAME;' && \
-    
-    # Restore from backup
-    gunzip -c /tmp/$BACKUP_NAME | PGPASSWORD='$DB_PASS' sudo docker compose exec -T postgres \
-        psql -U $DB_USER -d $DB_NAME && \
-    
-    rm -f /tmp/$BACKUP_NAME && \
-    echo 'Database restored successfully!'
-"
-
-echo -e "${GREEN}Starting services...${NC}"
-gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="
-    cd ~/bananabot && \
-    sudo docker compose up -d bot admin
-"
-
-echo ""
-echo -e "${GREEN}✓ Restore completed!${NC}"
-echo -e "${YELLOW}Run ./deploy/google.cloud/check_status.sh to verify services${NC}"
+echo -e "\n${GREEN}✓ Database restore completed successfully!${NC}"
