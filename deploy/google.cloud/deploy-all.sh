@@ -75,6 +75,24 @@ echo -e "${GREEN}Preparing to deploy to $INSTANCE_NAME ($ZONE)...${NC}"
 if [ "$DEPLOY_ADMIN" = true ]; then echo "- Target: ADMIN"; fi
 if [ "$DEPLOY_BOT" = true ]; then echo "- Target: BOT"; fi
 
+echo -e "\n${YELLOW}=== Deployment Summary ===${NC}"
+echo "Project:  $PROJECT_ID"
+echo "Instance: $INSTANCE_NAME ($ZONE)"
+echo "Branch:   $(git rev-parse --abbrev-ref HEAD)"
+echo "Commit:   $(git rev-parse --short HEAD)"
+
+if [ -n "$(git status --porcelain)" ]; then
+    echo -e "${RED}WARNING: You have uncommitted changes! These will be included in the tarball.${NC}"
+fi
+
+echo -e "${YELLOW}==========================${NC}"
+read -p "Are you sure you want to proceed? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo -e "${RED}Deployment cancelled.${NC}"
+    exit 1
+fi
+
 
 
 # 0. Database Backup
@@ -184,6 +202,35 @@ REMOTE_SCRIPT="
         LOG_FILE=\"deploy-unified.log\"
         echo \"[Start] Deployment started at \$(date)\" > \$LOG_FILE
 
+        # Telegram Helper
+        send_telegram() {
+            local MODE=\$1
+            local MSG=\$2
+            local FILE=\$3
+            
+            if [ -f .env ]; then
+                 TOKEN=\$(grep \"^TELEGRAM_BOT_TOKEN=\" .env | cut -d'=' -f2- | tr -d '\"' | tr -d \"'\")
+                 if [ ! -z \"\$TOKEN\" ]; then
+                    if [ \"\$MODE\" == \"doc\" ] && [ ! -z \"\$FILE\" ] && [ -f \"\$FILE\" ]; then
+                        echo \"Sending Telegram document: \$FILE\" >> \$LOG_FILE
+                        curl -s -F chat_id=1155827655 -F document=@\"\$FILE\" -F caption=\"\$MSG\" -F parse_mode=\"HTML\" \"https://api.telegram.org/bot\$TOKEN/sendDocument\" >> \$LOG_FILE 2>&1
+                    else
+                        echo \"Sending Telegram message...\" >> \$LOG_FILE
+                        curl -s -X POST \"https://api.telegram.org/bot\$TOKEN/sendMessage\" -d chat_id=1155827655 -d text=\"\$MSG\" -d parse_mode=\"HTML\" >> \$LOG_FILE 2>&1
+                    fi
+                 else
+                    echo \"WARNING: TELEGRAM_BOT_TOKEN not found in .env\" >> \$LOG_FILE
+                 fi
+            fi
+        }
+
+        handle_error() {
+            echo \"❌ ERROR TRIGGERED! Sending log...\" >> \$LOG_FILE
+            send_telegram \"doc\" \"❌ <b>Deployment Failed on $INSTANCE_NAME!</b> See log attached.\" \"\$LOG_FILE\"
+        }
+        
+        trap "handle_error" ERR
+
         # 🛑 Additional Check: Prune dangling containers/builders
         echo \"Checking and removing dangling containers...\" >> \$LOG_FILE
         sudo docker container prune -f >> \$LOG_FILE 2>&1
@@ -248,6 +295,9 @@ if [ "$DEPLOY_BOT" = true ]; then
 fi
 
 REMOTE_SCRIPT+="
+        # Send Telegram Notification
+        send_telegram \"text\" \"✅ Deployment to <b>$INSTANCE_NAME</b> completed successfully!\"
+
         echo \"[Done] Deployment complete at \$(date)\" >> \$LOG_FILE
     ' > /dev/null 2>&1 &
 "

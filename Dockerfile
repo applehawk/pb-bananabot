@@ -55,7 +55,8 @@ COPY --from=builder /app/prisma ./prisma
 # Создаем пользователя 'nestjs' с UID 1001 для безопасности
 RUN groupadd -g 1001 nodejs && \
     useradd -u 1001 -g nodejs -m -s /bin/bash nestjs && \
-    chown -R nestjs:nodejs /app
+    mkdir -p /data && \
+    chown -R nestjs:nodejs /app /data
 
 USER nestjs
 
