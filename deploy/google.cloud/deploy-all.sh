@@ -157,13 +157,16 @@ if [ "$DEPLOY_BOT" = true ]; then
         --exclude='*.log' \
         --exclude='.turbo' \
         --exclude='.cache' \
-        -czf "$BOT_TAR" - src/ libs/ prisma/ package*.json tsconfig*.json nest-cli.json .gitmodules Dockerfile bananabot-admin/prisma
+        -czf "$BOT_TAR" src/ libs/ prisma/ package*.json tsconfig*.json nest-cli.json .gitmodules Dockerfile bananabot-admin/prisma
     FILES_TO_UPLOAD="$FILES_TO_UPLOAD $BOT_TAR"
     TEMP_FILES="$TEMP_FILES $BOT_TAR"
 fi
 
 # 3. Upload Files
 echo -e "${GREEN}Uploading files to $INSTANCE_NAME...${NC}"
+# Add remote script to upload list
+FILES_TO_UPLOAD="$FILES_TO_UPLOAD $SCRIPT_DIR/remote-deploy.sh"
+
 # We upload to home dir first
 gcloud compute scp $FILES_TO_UPLOAD $INSTANCE_NAME:~/ --zone=$ZONE --quiet
 
@@ -175,9 +178,12 @@ fi
 # 4. Trigger Remote Deployment
 echo -e "${GREEN}Triggering background deployment on VM...${NC}"
 
-# Construct the remote script
-REMOTE_SCRIPT="
-    # Kill previous deployment if exists
+REMOTE_ARGS=""
+if [ "$DEPLOY_ADMIN" = true ]; then REMOTE_ARGS="$REMOTE_ARGS admin"; fi
+if [ "$DEPLOY_BOT" = true ]; then REMOTE_ARGS="$REMOTE_ARGS bot"; fi
+
+# Kill previous deployment if exists
+KILL_CMD="
     PID_FILE=~/bananabot/deploy.pid
     if [ -f \"\$PID_FILE\" ]; then
         OLD_PID=\$(cat \"\$PID_FILE\")
@@ -187,122 +193,14 @@ REMOTE_SCRIPT="
         fi
         rm -f \"\$PID_FILE\"
     fi
-
-
-
-    nohup bash -c '
-        # Save PID for next run
-        echo \$\$ > ~/bananabot/deploy.pid
-        trap \"rm -f ~/bananabot/deploy.pid\" EXIT
-
-        set -e
-        mkdir -p ~/bananabot
-        cd ~/bananabot
-        
-        LOG_FILE=\"deploy-unified.log\"
-        echo \"[Start] Deployment started at \$(date)\" > \$LOG_FILE
-
-        # Telegram Helper
-        send_telegram() {
-            local MODE=\$1
-            local MSG=\$2
-            local FILE=\$3
-            
-            if [ -f .env ]; then
-                 TOKEN=\$(grep \"^TELEGRAM_BOT_TOKEN=\" .env | cut -d'=' -f2- | tr -d '\"' | tr -d \"'\")
-                 if [ ! -z \"\$TOKEN\" ]; then
-                    if [ \"\$MODE\" == \"doc\" ] && [ ! -z \"\$FILE\" ] && [ -f \"\$FILE\" ]; then
-                        echo \"Sending Telegram document: \$FILE\" >> \$LOG_FILE
-                        curl -s -F chat_id=1155827655 -F document=@\"\$FILE\" -F caption=\"\$MSG\" -F parse_mode=\"HTML\" \"https://api.telegram.org/bot\$TOKEN/sendDocument\" >> \$LOG_FILE 2>&1
-                    else
-                        echo \"Sending Telegram message...\" >> \$LOG_FILE
-                        curl -s -X POST \"https://api.telegram.org/bot\$TOKEN/sendMessage\" -d chat_id=1155827655 -d text=\"\$MSG\" -d parse_mode=\"HTML\" >> \$LOG_FILE 2>&1
-                    fi
-                 else
-                    echo \"WARNING: TELEGRAM_BOT_TOKEN not found in .env\" >> \$LOG_FILE
-                 fi
-            fi
-        }
-
-        handle_error() {
-            echo \"❌ ERROR TRIGGERED! Sending log...\" >> \$LOG_FILE
-            send_telegram \"doc\" \"❌ <b>Deployment Failed on $INSTANCE_NAME!</b> See log attached.\" \"\$LOG_FILE\"
-        }
-        
-        trap "handle_error" ERR
-
-        # 🛑 Additional Check: Prune dangling containers/builders
-        echo \"Checking and removing dangling containers...\" >> \$LOG_FILE
-        sudo docker container prune -f >> \$LOG_FILE 2>&1
-        sudo docker builder prune -f >> \$LOG_FILE 2>&1
-        echo \"Cleanup complete.\" >> \$LOG_FILE
-
-        # Handle configuration files
-        if [ -f ~/.env.deploy ]; then
-            mv ~/.env.deploy .env
-            echo \"Updated .env\" >> \$LOG_FILE
-        elif [ -f ~/.env ]; then
-            mv ~/.env .env
-            echo \"Updated .env\" >> \$LOG_FILE
-        fi
-        [ -f ~/docker-compose.yml ] && mv ~/docker-compose.yml .
 "
+gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --quiet --command="$KILL_CMD"
 
-if [ "$DEPLOY_ADMIN" = true ]; then
-    REMOTE_SCRIPT+="
-        echo \"=== Deploying ADMIN ===\" >> \$LOG_FILE
-        
-        # Clean old admin source
-        rm -rf bananabot-admin
-        
-        # Find and extract admin tar
-        ADMIN_ARCHIVE=\$(find ~/ -name \"deploy-admin-*.tar.gz\" | head -n 1)
-        if [ -f \"\$ADMIN_ARCHIVE\" ]; then
-            echo \"Extracting \$ADMIN_ARCHIVE...\" >> \$LOG_FILE
-            tar -xzf \"\$ADMIN_ARCHIVE\" >> \$LOG_FILE 2>&1
-            rm \"\$ADMIN_ARCHIVE\"
-            
-            echo \"Rebuilding ADMIN service...\" >> \$LOG_FILE
-            sudo docker compose up -d --build --force-recreate admin >> \$LOG_FILE 2>&1
-            
-            # Prune dangling images
-            sudo docker image prune -f >> \$LOG_FILE 2>&1 || true
-        else
-            echo \"ERROR: Admin archive not found!\" >> \$LOG_FILE
-        fi
-    "
-fi
+# Execute remote script in background
+# We redirect output to a temp file initially to avoid immediate hangup issues, 
+# but the script itself handles logging to deploy-unified.log
+EXEC_CMD="nohup bash ~/remote-deploy.sh $REMOTE_ARGS > ~/bananabot/startup.log 2>&1 &"
 
-if [ "$DEPLOY_BOT" = true ]; then
-    REMOTE_SCRIPT+="
-        echo \"=== Deploying BOT ===\" >> \$LOG_FILE
-        
-        # Find and extract bot tar
-        BOT_ARCHIVE=\$(find ~/ -name \"deploy-bot-*.tar.gz\" | head -n 1)
-        if [ -f \"\$BOT_ARCHIVE\" ]; then
-            echo \"Extracting \$BOT_ARCHIVE...\" >> \$LOG_FILE
-            # Extract over existing files
-            tar -xzf \"\$BOT_ARCHIVE\" >> \$LOG_FILE 2>&1
-            rm \"\$BOT_ARCHIVE\"
-            
-            echo \"Rebuilding BOT service...\" >> \$LOG_FILE
-            sudo docker compose build bot >> \$LOG_FILE 2>&1
-            sudo docker compose up -d bot >> \$LOG_FILE 2>&1
-        else
-            echo \"ERROR: Bot archive not found!\" >> \$LOG_FILE
-        fi
-    "
-fi
-
-REMOTE_SCRIPT+="
-        # Send Telegram Notification
-        send_telegram \"text\" \"✅ Deployment to <b>$INSTANCE_NAME</b> completed successfully!\"
-
-        echo \"[Done] Deployment complete at \$(date)\" >> \$LOG_FILE
-    ' > /dev/null 2>&1 &
-"
-
-# Execute remote command
-gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --quiet --command="$REMOTE_SCRIPT"
+gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --quiet --command="$EXEC_CMD"
 
 echo -e "${GREEN}Deployment triggered in background! Logs available at ~/bananabot/deploy-unified.log${NC}"
