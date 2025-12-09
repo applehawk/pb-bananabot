@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GenerationProcessor } from './processors/generation.processor';
 import { GenerationModule } from '../generation/generation.module';
 import { GrammYModule } from '../grammy/grammy.module';
+import { UserModule } from '../user/user.module';
 
 @Global()
 @Module({
@@ -11,6 +12,7 @@ import { GrammYModule } from '../grammy/grammy.module';
         ConfigModule,
         forwardRef(() => GrammYModule),
         forwardRef(() => GenerationModule),
+        UserModule,
         BullModule.forRootAsync({
             imports: [ConfigModule],
             useFactory: async (configService: ConfigService) => ({

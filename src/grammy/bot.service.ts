@@ -71,9 +71,10 @@ export class BotService {
   /**
    * Send a message to a specific chat
    */
-  async sendMessage(chatId: number, message: string): Promise<void> {
+  async sendMessage(chatId: number, message: string, options?: { reply_markup?: any }): Promise<void> {
     await this.grammyService.bot.api.sendMessage(chatId, message, {
       parse_mode: 'HTML',
+      ...options,
     });
   }
 

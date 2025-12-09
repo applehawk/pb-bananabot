@@ -321,7 +321,10 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
                 updated = true; // refresh UI
             } else {
                 await ctx.answerCallbackQuery();
-                // We do NOT delete UI message anymore
+
+                // User requested deletion here for consistency with 'cancel'
+                try { await ctx.deleteMessage(); } catch { }
+
                 // Perform generation
                 await performGeneration(ctx, user, state.prompt, state.mode, state.inputImageFileIds, state.aspectRatio || '1:1');
 
@@ -682,26 +685,11 @@ async function performGeneration(
     inputImageFileIds: string[],
     currentRatio: string
 ) {
-    // 1. Send Status Message
-    // 1. Send Status Message
-    let statusMsgId: number;
-    let isEdited = false;
-    const waitingText = `🎨 Генерирую...\n⏱ 5 - 10 секунд\n\n"${prompt.length > 100 ? prompt.slice(0, 100) + '...' : prompt}"`;
+    // 1. Prepare Status Message
+    // Текст об успешном запуске (показываем сразу, чтобы не было лишних состояний)
+    const startingText = `🚀 <b>Генерация запущена!</b> Вы молодец! 🥯✨\n\nКак только ваше творчество испечётся, я сразу пришлю его вам! (Обычно 5-10 секунд)`;
 
-    if (ctx.callbackQuery?.message) {
-        try {
-            await ctx.editMessageText(waitingText, { parse_mode: 'HTML' });
-            statusMsgId = ctx.callbackQuery.message.message_id;
-            isEdited = true;
-        } catch (e) {
-            // fallback if edit fails
-        }
-    }
-
-    if (!isEdited) {
-        const m = await ctx.reply(waitingText, { reply_markup: getMainKeyboard() });
-        statusMsgId = m.message_id;
-    }
+    // We wait to send this until AFTER queueing is successful
 
     try {
         // 2. Perform Generation (Queueing)
@@ -759,19 +747,12 @@ async function performGeneration(
             modelName: (user.settings as any)?.selectedModelId || user.settings?.model
         });
 
-        // 3. Update Status Message
-        const startingText = `🚀 <b>Генерация запущена!</b> Вы молодец! 🥯✨\n\nКак только ваше творчество испечётся, я сразу пришлю его вам! (Обычно 5-10 секунд)`;
-
-        // Try to edit the "Generating..." message
-        try {
-            await ctx.api.editMessageText(ctx.chat!.id, statusMsgId, startingText, { parse_mode: 'HTML' });
-        } catch (e) {
-            // If failed to edit (e.g. user deleted), try sending new
-            await ctx.reply(startingText, { parse_mode: 'HTML', reply_markup: getMainKeyboard() });
-        }
+        // 3. Status SENT HERE (After queueing)
+        await ctx.reply(startingText, { reply_markup: getMainKeyboard(), parse_mode: 'HTML' });
 
     } catch (error: any) {
-        try { await ctx.api.deleteMessage(ctx.chat!.id, statusMsgId); } catch { }
+        // If error happened before queueing, we simply report it.
+        // No outdated message to delete because we didn't send success message yet.
         await ctx.reply(`❌ Ошибка постановки в очередь:\n${error.message || 'Неизвестная ошибка'}`, { reply_markup: getMainKeyboard() });
     }
 }

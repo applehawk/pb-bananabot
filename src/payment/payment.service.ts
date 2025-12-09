@@ -234,14 +234,9 @@ export class PaymentService {
       const packageName =
         (transaction.metadata as any)?.packageName || 'Credit Package';
 
-      // Credit user via CreditsService
-      await this.creditsService.addCredits(
-        transaction.userId,
-        transaction.creditsAdded,
-        TransactionType.PURCHASE,
-        transaction.paymentMethod,
-        { packageName, paymentId },
-      );
+      // Credit user directly (updating balance) without creating a duplicate transaction record
+      // The existing "PENDING" transaction will be updated to "COMPLETED" and serve as the record.
+      await this.userService.updateCredits(transaction.userId, transaction.creditsAdded);
 
       // Update transaction status
       await this.updatePaymentStatus(
