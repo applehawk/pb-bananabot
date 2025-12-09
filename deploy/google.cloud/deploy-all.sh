@@ -102,6 +102,17 @@ else
     exit 1
 fi
 
+if [ "$DEPLOY_ADMIN" = true ]; then
+    echo -e "\n${GREEN}Running local Admin build check...${NC}"
+    if cd bananabot-admin && npm run build; then
+        echo -e "${GREEN}Admin Build Check Passed.${NC}"
+        cd ..
+    else
+        echo -e "${RED}Admin Build Failed! Please fix errors before deploying.${NC}"
+        exit 1
+    fi
+fi
+
 
 
 # 0. Database Backup
