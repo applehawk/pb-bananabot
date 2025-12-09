@@ -14,6 +14,7 @@ COPY nest-cli.json ./
 # Remove package-lock.json to avoid frozen lockfile errors during migration (since we don't have bun.lockb)
 RUN rm -f package-lock.json
 RUN bun install
+RUN bun install -D tsc-alias
 
 # 3. Copy source code, libs, and pre-copied Prisma schema
 COPY src ./src
@@ -28,6 +29,7 @@ RUN bunx prisma generate --schema=./prisma/schema.prisma
 
 # 5. Build application (NestJS/TypeScript)
 RUN bun run build
+RUN bunx tsc-alias -p tsconfig.json --outDir ./dist
 
 # ---
 # Stage 2: Production
@@ -42,6 +44,7 @@ ENV NODE_ENV=production
 
 # 1. Install only production dependencies
 COPY package*.json ./
+COPY tsconfig.json ./
 RUN rm -f package-lock.json
 RUN bun install --production
 # Удаляем невалидный symlink после production install
@@ -51,6 +54,8 @@ RUN rm -rf node_modules/.prisma
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/libs ./libs
+COPY --from=builder /app/src ./src
 
 # Создаем пользователя 'nestjs' с UID 1001 для безопасности
 RUN groupadd -g 1001 nodejs && \

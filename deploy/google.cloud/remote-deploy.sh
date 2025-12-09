@@ -79,6 +79,9 @@ if [ "$DEPLOY_BOT" = true ]; then
     # Find and extract bot tar (newest first)
     BOT_ARCHIVE=$(ls -t ~/deploy-bot-*.tar.gz 2>/dev/null | head -n 1)
     if [ -n "$BOT_ARCHIVE" ] && [ -f "$BOT_ARCHIVE" ]; then
+        echo "Clean old source files..." >> $LOG_FILE
+        rm -rf src libs prisma >> $LOG_FILE 2>&1
+        
         echo "Extracting $BOT_ARCHIVE..." >> $LOG_FILE
         # Extract over existing files
         tar -xzf "$BOT_ARCHIVE" >> $LOG_FILE 2>&1
