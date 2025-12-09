@@ -111,16 +111,15 @@ export async function enterGenerateFlow(ctx: MyContext) {
         // 2. Try Implicit Context (Latching to latest state in chat)
         // Only if we are sending images (Text latching is handled in processGenerateInput)
         // AND ONLY if this is NOT a new Media Group (Album). Albums should start fresh if not matched above.
+
+        // DISABLED: User requested new images (separate messages) to always start NEW state, not latch.
+        // Previously we checked findLatestState() here. Now we skip it to force new UI.
+        /* 
         if (!existingStateId && state.inputImageFileIds.length > 0 && !state.mediaGroupId) {
-            const latest = findLatestState(ctx);
-            if (latest) {
-                existingStateId = String(latest.uiMessageId);
-                console.log('[GENERATE] Found implicit latest state:', existingStateId);
-                // Optional: verify timestamp? For now assume valid if in session.
-            } else {
-                console.log('[GENERATE] No implicit latest state found');
-            }
-        }
+             const latest = findLatestState(ctx);
+             // ...
+        } 
+        */
 
         if (existingStateId && ctx.session.generationStates) {
             const existingState = ctx.session.generationStates[existingStateId];
@@ -715,22 +714,39 @@ async function performGeneration(
             const limit = user.settings?.selectedModel?.inputImagesLimit || 5;
             const filesToProcess = inputImageFileIds.slice(0, limit);
 
-            for (const fileId of filesToProcess) {
-                if (!fileId) continue;
-                try {
-                    const file = await ctx.api.getFile(fileId);
-                    const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
-                    const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
-                    const buffer = Buffer.from(response.data);
-                    inputImagesPayload.push({
-                        buffer,
-                        mimeType: 'image/jpeg',
-                        fileId
-                    });
-                } catch (e) {
-                    console.error('Failed to download image', fileId, e);
+            // 1. Создание массива Промисов для всех операций I/O
+            const downloadPromises = filesToProcess
+                .filter(fileId => !!fileId) // Убеждаемся, что fileId существует
+                .map(fileId => (async () => {
+                    try {
+                        // Получение пути к файлу
+                        const file = await ctx.api.getFile(fileId);
+                        const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+
+                        // Скачивание файла
+                        const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
+                        const buffer = Buffer.from(response.data);
+
+                        return {
+                            buffer,
+                            mimeType: 'image/jpeg',
+                            fileId
+                        };
+                    } catch (e) {
+                        console.error('Failed to download image', fileId, e);
+                        return null; // Возвращаем null при ошибке, чтобы Promise.all не упал
+                    }
+                })());
+
+            // 2. Асинхронное выполнение всех Промисов параллельно
+            const results = await Promise.all(downloadPromises); // <-- 🚀 ПАРАЛЛЕЛЬНОЕ выполнение
+
+            // 3. Фильтрация успешных результатов
+            results.forEach(res => {
+                if (res) {
+                    inputImagesPayload.push(res);
                 }
-            }
+            });
         }
 
         await ctx.generationService.queueGeneration({
