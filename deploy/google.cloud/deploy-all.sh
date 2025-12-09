@@ -75,6 +75,8 @@ echo -e "${GREEN}Preparing to deploy to $INSTANCE_NAME ($ZONE)...${NC}"
 if [ "$DEPLOY_ADMIN" = true ]; then echo "- Target: ADMIN"; fi
 if [ "$DEPLOY_BOT" = true ]; then echo "- Target: BOT"; fi
 
+
+
 # 0. Database Backup
 if [ "$SKIP_BACKUP" = false ]; then
     if [ -f "$SCRIPT_DIR/backup-db.sh" ]; then
@@ -168,6 +170,8 @@ REMOTE_SCRIPT="
         rm -f \"\$PID_FILE\"
     fi
 
+
+
     nohup bash -c '
         # Save PID for next run
         echo \$\$ > ~/bananabot/deploy.pid
@@ -179,6 +183,12 @@ REMOTE_SCRIPT="
         
         LOG_FILE=\"deploy-unified.log\"
         echo \"[Start] Deployment started at \$(date)\" > \$LOG_FILE
+
+        # 🛑 Additional Check: Prune dangling containers/builders
+        echo \"Checking and removing dangling containers...\" >> \$LOG_FILE
+        sudo docker container prune -f >> \$LOG_FILE 2>&1
+        sudo docker builder prune -f >> \$LOG_FILE 2>&1
+        echo \"Cleanup complete.\" >> \$LOG_FILE
 
         # Handle configuration files
         if [ -f ~/.env.deploy ]; then
