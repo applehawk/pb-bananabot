@@ -18,7 +18,7 @@
     "start": "nest start --entryFile main-grammy",
     "start:dev": "nest start --watch --entryFile main-grammy",
     "start:debug": "nest start --debug --watch --entryFile main-grammy",
-    "start:prod": "node dist/src/main-grammy",
+    "start:prod": "bun dist/src/main-grammy.js",
     "start:migrate:prod": "npm run prisma:migrate:deploy && npm run start:prod",
     "webhook:set": "ts-node scripts/set-webhook.ts",
     "webhook:delete": "ts-node scripts/set-webhook.ts delete",

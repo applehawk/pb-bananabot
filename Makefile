@@ -218,18 +218,18 @@ submodules-status:
 # Install admin panel dependencies
 admin-install:
 	@echo "Installing admin panel dependencies..."
-	cd bananabot-admin && pnpm install
+	cd bananabot-admin && bun install
 	@echo "✓ Admin panel dependencies installed"
 
 # Run admin panel in development mode
 admin-dev:
 	@echo "Starting admin panel in development mode (port 3001)..."
-	cd bananabot-admin && pnpm run dev
+	cd bananabot-admin && bun run dev
 
 # Build admin panel for production
 admin-build:
 	@echo "Building admin panel for production..."
-	cd bananabot-admin && pnpm run build
+	cd bananabot-admin && bun run build
 	@echo "✓ Admin panel built"
 
 # ============================================================================
