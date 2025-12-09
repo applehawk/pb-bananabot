@@ -433,29 +433,36 @@ async function updateGenerationUI(ctx: MyContext, existingStateId: string, exist
     // User requested to keep message if close enough (e.g. within album size of 10)
     if (gap > 20) shouldResend = true;
 
-    // Condition 2: Explicit user input?
-    // In `enterGenerateFlow`, we don't have new user input usually, just merging.
-    // In `processGenerateInput`, we definitely have user input.
-    // We can assume if we are running this update, it usually implies we want it visible.
-    // Let's stick to "Gap > 2 OR we are in processGenerateInput context (handled by caller passing context?)"
-
-    // Actually, `ctx.message` is the message that TRIGGERED this update.
-    // If it's a photo upload, it's new. So gap will be > 0.
-    // If we uploaded 5 photos, the first one triggered logic, but debounce delayed it.
-    // By the time it runs, 5 messages passed. Gap > 5. So it will Resend. That is CORRECT.
-    // We want to resend to be at the bottom.
-
-    // Special Checks for Deletion Logic (from ProcessInput)
-    // If we decide to resend, should we delete the old one?
-    let shouldDeleteOld = true;
-
-    // Logic from processGenerateInput:
-    // If text was added, do NOT delete old "waiting" bubble.
-    if (ctx.message?.text) {
-        shouldDeleteOld = false;
+    // Try to edit first if we don't need to resend
+    if (!shouldResend) {
+        try {
+            await ctx.api.editMessageText(existingState.uiChatId, existingState.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
+            console.log('[GENERATE] UI updated successfully in place');
+            return; // We are done
+        } catch (e: any) {
+            const err = e.description || e.message || '';
+            if (err.includes('message is not modified')) {
+                console.log('[GENERATE] Message not modified, skipping.');
+                return;
+            }
+            if (err.includes('message to edit not found') || err.includes('message can\'t be edited')) {
+                console.log('[GENERATE] Message missing or uneditable, forcing resend.');
+                shouldResend = true;
+            } else {
+                console.error('[GENERATE] Failed to update media group UI', e);
+                // Other errors (e.g. blocked user?) - maybe cleanup?
+                // Let's keep state for now unless it's critical, but typically we just fail here.
+                return;
+            }
+        }
     }
 
     if (shouldResend) {
+        // Special Checks for Deletion Logic
+        let shouldDeleteOld = true;
+        if (ctx.message?.text) {
+            shouldDeleteOld = false;
+        }
         try {
             if (shouldDeleteOld) {
                 await ctx.api.deleteMessage(existingState.uiChatId, existingState.uiMessageId);
@@ -479,25 +486,7 @@ async function updateGenerationUI(ctx: MyContext, existingStateId: string, exist
             ctx.session.generationStates[newId] = existingState;
             delete ctx.session.generationStates[oldId];
         }
-        console.log('[GENERATE] Resent menu due to gap/input');
-    } else {
-        // Edit in place
-        try {
-            await ctx.api.editMessageText(existingState.uiChatId, existingState.uiMessageId, ui.text, { reply_markup: ui.keyboard, parse_mode: 'HTML' });
-            console.log('[GENERATE] UI updated successfully in place');
-        } catch (e: any) {
-            const err = e.description || e.message || '';
-            if (err.includes('message is not modified')) {
-                // This is normal/expected if updates happen too fast or no change.
-                console.log('[GENERATE] Message not modified, skipping.');
-                return;
-            }
-            console.error('[GENERATE] Failed to update media group UI', e);
-            // If failed (e.g. message deleted), maybe delete state?
-            if (existingStateId && ctx.session.generationStates?.[existingStateId]) {
-                delete ctx.session.generationStates[existingStateId];
-            }
-        }
+        console.log('[GENERATE] Resent menu due to gap/input/error');
     }
 }
 
@@ -529,7 +518,7 @@ function buildGenerateUI(
 
     if (isTextMode) {
         messageText = prompt
-            ? `📝 Ваш запрос: <b>${prompt}</b>`
+            ? `📝 Ваш запрос: <b>${prompt ? prompt : '\'Необходим текст описания генерации!\''}</b>`
             : `✍️ Напиши описание для генерации картинки и отправь его!`;
     } else {
         messageText += imgCount > 0
