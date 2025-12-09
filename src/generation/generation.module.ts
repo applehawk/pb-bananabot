@@ -5,10 +5,11 @@ import { DatabaseModule } from '../database/database.module';
 import { UserModule } from '../user/user.module';
 import { CreditsModule } from '../credits/credits.module';
 import { GeminiModule } from '../gemini/gemini.module';
+import { QueueModule } from '../queue/queue.module';
 
 @Module({
-  imports: [DatabaseModule, UserModule, CreditsModule, GeminiModule],
+  imports: [DatabaseModule, UserModule, CreditsModule, GeminiModule, QueueModule],
   providers: [GenerationService, ImageStorageService],
   exports: [GenerationService, ImageStorageService],
 })
-export class GenerationModule {}
+export class GenerationModule { }

@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { PrismaService } from '../database/prisma.service';
 import { UserService } from '../user/user.service';
 import { CreditsService } from '../credits/credits.service';
@@ -8,6 +10,7 @@ import { GenerationType, GenerationStatus, ModelTariff } from '@prisma/client';
 
 export interface GenerateTextToImageParams {
   userId: string;
+  generationId: string; // Added
   prompt: string;
   negativePrompt?: string;
   aspectRatio?: string;
@@ -16,6 +19,7 @@ export interface GenerateTextToImageParams {
 
 export interface GenerateImageToImageParams {
   userId: string;
+  generationId: string; // Added
   prompt: string;
   inputImages: Array<{ buffer: Buffer; mimeType: string; fileId?: string }>;
   negativePrompt?: string;
@@ -32,7 +36,57 @@ export class GenerationService {
     private readonly creditsService: CreditsService,
     private readonly geminiService: GeminiService,
     private readonly imageStorage: ImageStorageService,
+    @InjectQueue('generation') private readonly generationQueue: Queue,
   ) { }
+
+  async queueGeneration(data: {
+    userId: string;
+    chatId: number;
+    prompt: string;
+    mode: 'TEXT_TO_IMAGE' | 'IMAGE_TO_IMAGE';
+    inputImages?: Array<{ buffer: Buffer; mimeType: string; fileId?: string }>;
+    aspectRatio?: string;
+    modelName?: string;
+  }) {
+    const { userId, prompt, mode, aspectRatio, inputImages, modelName } = data;
+
+    // 1. Get settings to ensure we have correct model/params
+    const settings = await this.userService.getSettings(userId);
+    const finalModelId = modelName || settings.selectedModelId;
+    const finalAspectRatio = aspectRatio || settings.aspectRatio;
+
+    // 2. Create Generation Record (PENDING)
+    const generationType = mode === 'TEXT_TO_IMAGE'
+      ? 'TEXT_TO_IMAGE'
+      : (inputImages && inputImages.length > 1 ? 'MULTI_IMAGE' : 'IMAGE_TO_IMAGE');
+
+    const generation = await this.prisma.generation.create({
+      data: {
+        userId,
+        type: generationType,
+        prompt,
+        negativePrompt: settings.useNegativePrompt ? 'blurry, low quality, distorted' : null,
+        aspectRatio: finalAspectRatio,
+        numberOfImages: 1, // Default, will be updated if batch works differently later
+        safetyLevel: settings.safetyLevel,
+        status: 'PENDING', // Initial status
+        creditsUsed: 0,
+        modelId: finalModelId,
+      },
+    });
+
+    // 3. Add job to queue with generationId
+    const job = await this.generationQueue.add('generate-image', {
+      ...data,
+      generationId: generation.id
+    }, {
+      removeOnComplete: true,
+      removeOnFail: 100,
+    });
+
+    this.logger.log(`Queued generation job ${job.id} (GenID: ${generation.id}) for user ${userId}`);
+    return { job, generationId: generation.id };
+  }
 
   /**
    * Estimate cost for generation
@@ -51,9 +105,7 @@ export class GenerationService {
     const modelId = settings?.selectedModelId || 'gemini-2.5-flash-image'; // Fallback default
 
     // 2. Get Model Tariff
-    const modelTariff = await this.prisma.modelTariff.findUnique({
-      where: { modelId },
-    });
+    const modelTariff = await this.creditsService.getCachedModelTariff(modelId);
 
     if (!modelTariff) {
       // Return a safe default or 0 if pricing is broken, to avoid blocking UI
@@ -102,9 +154,7 @@ export class GenerationService {
 
     // 2. Get Model Tariff
     const modelId = settings.selectedModelId;
-    const modelTariff = await this.prisma.modelTariff.findUnique({
-      where: { modelId },
-    });
+    const modelTariff = await this.creditsService.getCachedModelTariff(modelId);
 
     if (!modelTariff) {
       throw new Error(`Model tariff not found: ${modelId}`);
@@ -129,22 +179,17 @@ export class GenerationService {
     const reservedAmount = estimatedCost.creditsToDeduct;
     await this.creditsService.reserveCredits(userId, reservedAmount);
 
-    // 5. Create generation record
-    const generation = await this.prisma.generation.create({
+    // 5. Update generation record to PROCESSING
+    // We reuse the existing generation ID created in queue
+    const generation = await this.prisma.generation.update({
+      where: { id: params.generationId },
       data: {
-        userId,
-        type: isBatch ? 'BATCH' : 'TEXT_TO_IMAGE',
-        prompt,
-        negativePrompt:
-          negativePrompt || settings.useNegativePrompt
-            ? 'blurry, low quality, distorted'
-            : null,
-        aspectRatio: aspectRatio || settings.aspectRatio,
-        numberOfImages,
-        safetyLevel: settings.safetyLevel,
         status: 'PROCESSING',
-        creditsUsed: 0, // Will be updated after generation
-        modelId: modelId,
+        // Update these just in case they changed or were not fully set
+        type: isBatch ? 'BATCH' : 'TEXT_TO_IMAGE',
+        negativePrompt: negativePrompt || settings.useNegativePrompt ? 'blurry, low quality, distorted' : null,
+        numberOfImages,
+        creditsUsed: 0,
       },
     });
 
@@ -288,9 +333,7 @@ export class GenerationService {
 
     // 2. Get Model Tariff
     const modelId = settings.selectedModelId;
-    const modelTariff = await this.prisma.modelTariff.findUnique({
-      where: { modelId },
-    });
+    const modelTariff = await this.creditsService.getCachedModelTariff(modelId);
 
     if (!modelTariff) {
       throw new Error(`Model tariff not found: ${modelId}`);
@@ -314,44 +357,36 @@ export class GenerationService {
       userId
     );
 
-    // 4. Reserve credits before starting generation
+    // 4. Reserve credits
     const reservedAmount = estimatedCost.creditsToDeduct;
     await this.creditsService.reserveCredits(userId, reservedAmount);
 
-    // 5. Create generation record
-    const generation = await this.prisma.generation.create({
+    // 5. Update generation record to PROCESSING
+    const generation = await this.prisma.generation.update({
+      where: { id: params.generationId },
       data: {
-        userId,
-        type: generationType,
-        prompt,
-        negativePrompt: negativePrompt || null,
-        aspectRatio: aspectRatio || settings.aspectRatio,
-        numberOfImages: 1,
-        safetyLevel: settings.safetyLevel,
         status: 'PROCESSING',
-        creditsUsed: 0, // Will be updated
-        modelId: modelId,
+        type: generationType,
+        negativePrompt: negativePrompt || null,
+        numberOfImages: 1,
+        creditsUsed: 0,
       },
     });
 
     this.logger.log(`Image-to-Image generation ${generation.id} started for user ${userId} (reserved: ${reservedAmount} credits)`);
 
     try {
-      // 6. Save input images to database
-      for (let i = 0; i < inputImages.length; i++) {
-        await this.prisma.inputImage.create({
-          data: {
+      // 6. Save input images to database (Batch Insert)
+      if (inputImages.length > 0) {
+        await this.prisma.inputImage.createMany({
+          data: inputImages.map((img, index) => ({
             generationId: generation.id,
-            fileId: inputImages[i].fileId ?? null,
-            order: i,
-          },
+            fileId: img.fileId ?? '', // Handle optional
+            order: index,
+          })),
         });
 
-        if (!inputImages[i].fileId) {
-          this.logger.warn(
-            `Input image #${i} for generation ${generation.id} has no telegram fileId; regeneration from telegram will not be available.`,
-          );
-        }
+        // Log warnings for missing fileIds (optional, skipping for perf in loop)
       }
 
       // 7. Generate via Gemini

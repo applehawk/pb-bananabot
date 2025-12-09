@@ -16,6 +16,53 @@ export class CreditsService {
     private readonly config: ConfigService,
   ) { }
 
+  // Simple in-memory cache
+  private tariffCache: Map<string, { data: any; expiresAt: number }> = new Map();
+  private systemSettingsCache: { data: any; expiresAt: number } | null = null;
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+  /**
+   * Get cached model tariff
+   */
+  async getCachedModelTariff(modelId: string) {
+    const now = Date.now();
+    const cached = this.tariffCache.get(modelId);
+
+    if (cached && cached.expiresAt > now) {
+      return cached.data;
+    }
+
+    const tariff = await this.prisma.modelTariff.findUnique({
+      where: { modelId },
+    });
+
+    if (tariff) {
+      this.tariffCache.set(modelId, { data: tariff, expiresAt: now + this.CACHE_TTL });
+    }
+
+    return tariff;
+  }
+
+  /**
+   * Get cached system settings
+   */
+  async getCachedSystemSettings() {
+    const now = Date.now();
+    if (this.systemSettingsCache && this.systemSettingsCache.expiresAt > now) {
+      return this.systemSettingsCache.data;
+    }
+
+    const settings = await this.prisma.systemSettings.findUnique({
+      where: { key: 'singleton' },
+    });
+
+    if (settings) {
+      this.systemSettingsCache = { data: settings, expiresAt: now + this.CACHE_TTL };
+    }
+
+    return settings;
+  }
+
   /**
    * Calculate credit cost for generation
    */
@@ -109,9 +156,7 @@ export class CreditsService {
     costRub: number;
   }> {
     // 1. Get Model Tariff
-    const model = await this.prisma.modelTariff.findUnique({
-      where: { modelId },
-    });
+    const model = await this.getCachedModelTariff(modelId);
 
     if (!model) {
       throw new Error(`Model tariff not found for ${modelId}`);
@@ -127,9 +172,7 @@ export class CreditsService {
     }
 
     // 3. Get System Settings for global margin
-    const systemSettings = await this.prisma.systemSettings.findUnique({
-      where: { key: 'singleton' },
-    });
+    const systemSettings = await this.getCachedSystemSettings();
 
     // 4. Use shared cost calculator
     const { calculateGenerationCost } = await import('../utils/cost-calculator');
@@ -485,9 +528,7 @@ export class CreditsService {
     isHighRes: boolean = false,
   ): Promise<number> {
     // 1. Get Model Tariff
-    const model = await this.prisma.modelTariff.findUnique({
-      where: { modelId },
-    });
+    const model = await this.getCachedModelTariff(modelId);
 
     if (!model) {
       this.logger.warn(`Model tariff not found for ${modelId} during estimation`);

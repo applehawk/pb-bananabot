@@ -72,7 +72,35 @@ export class BotService {
    * Send a message to a specific chat
    */
   async sendMessage(chatId: number, message: string): Promise<void> {
-    await this.grammyService.bot.api.sendMessage(chatId, message);
+    await this.grammyService.bot.api.sendMessage(chatId, message, {
+      parse_mode: 'HTML',
+    });
+  }
+
+  async sendPhoto(
+    chatId: number,
+    photo: string | any,
+    caption?: string,
+    reply_markup?: any,
+  ): Promise<void> {
+    await this.grammyService.bot.api.sendPhoto(chatId, photo, {
+      caption,
+      reply_markup,
+      parse_mode: 'HTML',
+    });
+  }
+
+  async sendVideo(
+    chatId: number,
+    video: string | any,
+    caption?: string,
+    reply_markup?: any,
+  ): Promise<void> {
+    await this.grammyService.bot.api.sendVideo(chatId, video, {
+      caption,
+      reply_markup,
+      parse_mode: 'HTML',
+    });
   }
 
   /**

@@ -686,20 +686,13 @@ async function performGeneration(
     }
 
     try {
-        // 2. Perform Generation
-        let gen: any;
-        let result: GenerationResult;
+        // 2. Perform Generation (Queueing)
+        let generationType: 'TEXT_TO_IMAGE' | 'IMAGE_TO_IMAGE' = GenerationMode.TEXT_TO_IMAGE === mode ? 'TEXT_TO_IMAGE' : 'IMAGE_TO_IMAGE';
 
-        if (mode === GenerationMode.TEXT_TO_IMAGE) {
-            gen = await ctx.generationService.generateTextToImage({
-                userId: user.id,
-                prompt,
-                aspectRatio: currentRatio,
-            });
-        } else {
-            const imageBuffers: Array<{ buffer: Buffer; mimeType: string; fileId?: string }> = [];
+        const inputImagesPayload: Array<{ buffer: Buffer; mimeType: string; fileId?: string }> = [];
+
+        if (mode === GenerationMode.IMAGE_TO_IMAGE) {
             const token = process.env.TELEGRAM_BOT_TOKEN;
-
             const limit = user.settings?.selectedModel?.inputImagesLimit || 5;
             const filesToProcess = inputImageFileIds.slice(0, limit);
 
@@ -708,9 +701,9 @@ async function performGeneration(
                 try {
                     const file = await ctx.api.getFile(fileId);
                     const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
-                    const response = await axios.get(fileUrl, { responseType: 'arraybuffer' }); // Need axios import
+                    const response = await axios.get(fileUrl, { responseType: 'arraybuffer' });
                     const buffer = Buffer.from(response.data);
-                    imageBuffers.push({
+                    inputImagesPayload.push({
                         buffer,
                         mimeType: 'image/jpeg',
                         fileId
@@ -719,57 +712,31 @@ async function performGeneration(
                     console.error('Failed to download image', fileId, e);
                 }
             }
-
-            gen = await ctx.generationService.generateImageToImage({
-                userId: user.id,
-                prompt,
-                inputImages: imageBuffers,
-                aspectRatio: currentRatio,
-            });
         }
 
-        result = {
-            id: String(gen.id),
-            processingTime: Number(gen.processingTime),
-            imageUrl: gen.imageUrl ? String(gen.imageUrl) : null,
-            fileId: gen.fileId ? String(gen.fileId) : null,
-            imageDataBase64: gen.imageData ? gen.imageData.toString('base64') : null,
-            creditsUsed: Number(gen.creditsUsed || 0)
-        };
+        await ctx.generationService.queueGeneration({
+            userId: user.id,
+            chatId: ctx.chat!.id,
+            prompt,
+            mode: generationType,
+            inputImages: inputImagesPayload,
+            aspectRatio: currentRatio,
+            modelName: (user.settings as any)?.selectedModelId || user.settings?.model
+        });
 
-        // 3. Delete Status Message
-        try { await ctx.api.deleteMessage(ctx.chat!.id, statusMsgId); } catch { }
+        // 3. Update Status Message
+        const startingText = `⏳ <b>Задача в очереди!</b>\n\nЯ уведомлю вас, когда генерация завершится. Можете продолжать общение или создать новую задачу.`;
 
-        // 4. Send Result
-        const caption =
-            `🎨 ${prompt}\n\n` +
-            `💎 Использовано: ${(result.creditsUsed).toFixed(2)} монет\n` +
-            `💰 Осталось: ${(user.credits - result.creditsUsed).toFixed(2)} монет\n` +
-            `⏱ ${(result.processingTime / 1000).toFixed(1)}с`;
-
-        const keyboard = {
-            inline_keyboard: [[
-                { text: '🔄 Вариация', callback_data: `regenerate_${result.id}` },
-                { text: '📜 История', callback_data: 'history' }
-            ]]
-        };
-
-        const source = result.fileId || result.imageUrl;
-
-        if (source) {
-            await ctx.replyWithPhoto(source, { caption, reply_markup: keyboard });
-        } else if (result.imageDataBase64) {
-            const buffer = Buffer.from(result.imageDataBase64, 'base64');
-            await ctx.replyWithPhoto(new InputFile(buffer), { caption, reply_markup: keyboard });
-        } else {
-            await ctx.reply(`✅ Генерация ID: ${result.id} завершена, но нет изображения для отображения.`, { reply_markup: getMainKeyboard() });
+        // Try to edit the "Generating..." message
+        try {
+            await ctx.api.editMessageText(ctx.chat!.id, statusMsgId, startingText, { parse_mode: 'HTML' });
+        } catch (e) {
+            // If failed to edit (e.g. user deleted), try sending new
+            await ctx.reply(startingText, { parse_mode: 'HTML', reply_markup: getMainKeyboard() });
         }
-
-        // Restore Main Keyboard explicitly
-        await ctx.reply('Готово! ✨', { reply_markup: getMainKeyboard() });
 
     } catch (error: any) {
         try { await ctx.api.deleteMessage(ctx.chat!.id, statusMsgId); } catch { }
-        await ctx.reply(`❌ Ошибка генерации:\n${error.message || 'Неизвестная ошибка'}`, { reply_markup: getMainKeyboard() });
+        await ctx.reply(`❌ Ошибка постановки в очередь:\n${error.message || 'Неизвестная ошибка'}`, { reply_markup: getMainKeyboard() });
     }
 }
