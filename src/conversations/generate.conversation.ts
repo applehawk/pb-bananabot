@@ -1,12 +1,14 @@
 import { InlineKeyboard, InputFile } from 'grammy';
 import { MyContext } from '../grammy/grammy-context.interface';
 import { KeyboardCommands, getMainKeyboard } from '../grammy/keyboards/main.keyboard';
+import { GENERATION_PHRASES } from '../constants/generation.phrases';
 import axios from 'axios';
 import { GenerationMode } from '../enum/generation-mode.enum';
 
 interface SafeUser {
     id: string;
     credits: number;
+    totalGenerated: number;
     settings?: { aspectRatio?: string; model?: string; selectedModel?: { inputImagesLimit?: number } };
 }
 
@@ -407,6 +409,7 @@ async function getUser(ctx: MyContext): Promise<SafeUser | null> {
     return {
         id: u.id,
         credits: u.credits,
+        totalGenerated: u.totalGenerated || 0,
         settings: u.settings
     };
 }
@@ -655,6 +658,7 @@ async function handleRegeneration(ctx: MyContext, generationId: string) {
     const user: SafeUser = {
         id: u.id,
         credits: u.credits,
+        totalGenerated: u.totalGenerated || 0,
         settings: u.settings
     };
 
@@ -686,8 +690,17 @@ async function performGeneration(
     currentRatio: string
 ) {
     // 1. Prepare Status Message
-    // Текст об успешном запуске (показываем сразу, чтобы не было лишних состояний)
-    const startingText = `🚀 <b>Генерация запущена!</b> Вы молодец! 🥯✨\n\nКак только ваше творчество испечётся, я сразу пришлю его вам! (Обычно 5-10 секунд)`;
+    // Выбираем случайную фразу
+    const randomPhrase = GENERATION_PHRASES[Math.floor(Math.random() * GENERATION_PHRASES.length)];
+
+    // Проверяем, первый ли раз (или малый опыт) - показываем полную инструкцию
+    // "показывай только первый раз полностью (потом сократи за двух слов)"
+    const isFirstTime = user.totalGenerated === 0;
+    const suffix = isFirstTime
+        ? 'Как только ваше творчество испечётся, я сразу пришлю его вам! (Обычно 5-10 секунд)'
+        : 'Ожидайте результат...';
+
+    const startingText = `🚀 <b>${randomPhrase}</b>\n\n${suffix}`;
 
     // We wait to send this until AFTER queueing is successful
 

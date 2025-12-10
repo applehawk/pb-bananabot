@@ -77,6 +77,7 @@ export class UserService {
     });
     const freeCredits = systemSettings?.freeCreditsAmount ?? 3;
     const referralBonus = systemSettings?.referralBonusAmount ?? 50;
+    const defaultModelId = systemSettings?.defaultNewUserModelId ?? "gemini-2.5-flash-image";
 
     // Handle Referral Logic
     let referrerId: string | undefined;
@@ -139,6 +140,7 @@ export class UserService {
             numberOfImages: 1,
             safetyLevel: 'BLOCK_MEDIUM_AND_ABOVE',
             language: data.languageCode || 'en',
+            selectedModelId: defaultModelId,
           },
         },
         // Create Referral record if referrer found
