@@ -386,6 +386,10 @@ vm-logs-bot:
 	@echo "Streaming logs from Docker container..."
 	@./deploy/google.cloud/docker-compose-logs-bot.sh
 
+vm-logs-admin:
+	@echo "Streaming logs from Docker container..."
+	@./deploy/google.cloud/docker-compose-logs-admin.sh
+
 # ============================================================================
 # Database Commands
 # ============================================================================
@@ -399,8 +403,7 @@ db-generate:
 # Create and apply migration
 db-migrate:
 	@echo "Creating and applying migration..."
-	cd bananabot-admin/prisma && npx prisma migrate dev
-	@echo "✓ Migration applied"
+	cd bananabot-admin && export $$(grep -v '^#' ../.env | xargs) && npx prisma migrate dev
 
 # Open Prisma Studio
 db-studio:

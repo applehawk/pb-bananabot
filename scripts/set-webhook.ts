@@ -17,7 +17,7 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
-const BOT_TOKEN = process.env.BOT_TOKEN;
+const BOT_TOKEN = process.env.BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
 const DOMAIN = process.env.DOMAIN;
 const SECRET_TOKEN = process.env.TELEGRAM_WEBHOOK_SECRET || process.env.TELEGRAM_SECRET_TOKEN;
 
