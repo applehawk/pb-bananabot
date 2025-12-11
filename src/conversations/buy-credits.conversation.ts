@@ -39,7 +39,10 @@ export async function buyCreditsConversation(
   });
 
   if (!user) {
-    await ctx.reply('❌ Пользователь не найден. Используйте /start.');
+    const botInfo = await conversation.external((ctx) => ctx.api.getMe());
+    await ctx.reply('❌ Пользователь не найден. Используйте /start.', {
+      reply_markup: new InlineKeyboard().url('🚀 Начать', `https://t.me/${botInfo.username}?start=start`)
+    });
     return;
   }
 

@@ -300,6 +300,39 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
         const data = ctx.callbackQuery.data;
         if (!data) return false;
 
+        // Handle Random Generation Trigger (from Retention/Marketing)
+        if (data === 'generate_random') {
+            await ctx.answerCallbackQuery();
+
+            const randomPhrase = GENERATION_PHRASES[Math.floor(Math.random() * GENERATION_PHRASES.length)];
+            // We can treat this as a text generation with a random prompt
+            // Force create a new state
+            state = {
+                prompt: randomPhrase,
+                mode: GenerationMode.TEXT_TO_IMAGE,
+                inputImageFileIds: [],
+                uiChatId: ctx.chat?.id,
+                createdAt: Date.now()
+            } as GenerationState;
+
+            // Proceed to generation immediately? 
+            // Better to show the UI with the random phrase so user can confirm/edit?
+            // "Пришлите им кнопку 'Сгенерировать случайный шедевр'" -> implies immediate action or pre-filled input.
+            // Let's pre-fill and trigger logic.
+
+            // We need to inject this into the flow. 
+            // Ideally call enterGenerateFlow but set the prompt.
+            // But we are in processGenerateInput.
+            // Let's manually trigger it.
+
+            const user = await getUser(ctx);
+            if (user) {
+                await performGeneration(ctx, user, randomPhrase, GenerationMode.TEXT_TO_IMAGE, [], '1:1');
+                try { await ctx.deleteMessage(); } catch { } // Delete the retention message if possible? Or just leave it?
+            }
+            return true;
+        }
+
         // Recalculate cost
         const cost = await estimateCost(ctx, user?.id, state);
 
@@ -319,6 +352,50 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
             }
 
             if (!user || user.credits < cost) {
+                // Tripwire Logic
+                const settings = await ctx.userService.getSystemConfig();
+                // We need tripwirePackageId from settings. 
+                // getSystemConfig currently returns limited fields. 
+                // Let's assume we can fetch it or update getSystemConfig.
+                // For now, let's fetch settings directly via prisma if possible, or assume it's added to User Service.
+                // Using a direct Prisma call here is messy but effective if we don't want to change UserService interface yet.
+                // Actually, let's just stick to the plan and check if we can get it.
+                // We'll update UserService later or assume it's available.
+                // Let's use a "tripwire" check.
+
+                // Hack: We need to access prisma directly or use a new method. 
+                // Accessible via ctx.userService['prisma']? No, private.
+                // Let's modify UserService locally or just try to use existing.
+                // I will update UserService to return tripwirePackageId in getSystemConfig as part of the plan.
+
+                const fullSettings = await ctx.userService['getSystemConfig'](); // We will updated this method.
+                const tripwireId = (fullSettings as any).tripwirePackageId;
+
+                const isNewUser = (user?.totalGenerated || 0) < 30; // Simple heuristic for "starter"
+
+                if (tripwireId && isNewUser) {
+                    // Offer Tripwire
+                    const pkg = await ctx.paymentService.getCreditPackage(tripwireId);
+                    if (pkg && pkg.active) {
+                        const url = ctx.paymentService.generateInitPayUrl(Number(user!.id), ctx.chat!.id, pkg.id);
+
+                        const kb = new InlineKeyboard()
+                            .url(`🚀 Купить старт за ${pkg.priceYooMoney || pkg.price}₽`, url)
+                            .row()
+                            .text('🔙 Отмена', 'cancel_generation');
+
+                        await ctx.reply(
+                            `<b>⚠️ Недостаточно кредитов!</b>\n\n` +
+                            `Но для новичков у нас есть спецпредложение!\n` +
+                            `<b>${pkg.name}</b>: ${pkg.credits} монет всего за <b>${pkg.priceYooMoney || pkg.price} рублей</b>.\n` +
+                            `Хватит на ~50 генераций!`,
+                            { parse_mode: 'HTML', reply_markup: kb }
+                        );
+                        await ctx.answerCallbackQuery();
+                        return true;
+                    }
+                }
+
                 await ctx.answerCallbackQuery({ text: '❌ Недостаточно средств!', show_alert: true });
                 updated = true; // refresh UI
             } else {

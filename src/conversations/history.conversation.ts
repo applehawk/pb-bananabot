@@ -1,5 +1,6 @@
 import { Conversation } from '@grammyjs/conversations';
 import { MyContext } from '../grammy/grammy-context.interface';
+import { InlineKeyboard } from 'grammy';
 
 /**
  * HISTORY Conversation
@@ -28,7 +29,10 @@ export async function historyConversation(
   });
 
   if (!user) {
-    await ctx.reply('❌ Пользователь не найден.');
+    const botInfo = await conversation.external((ctx) => ctx.api.getMe());
+    await ctx.reply('❌ Пользователь не найден.', {
+      reply_markup: new InlineKeyboard().url('🚀 Начать', `https://t.me/${botInfo.username}?start=start`)
+    });
     return;
   }
 

@@ -4,6 +4,7 @@ import { Logger } from '@nestjs/common';
 import { GenerationService } from '../../generation/generation.service';
 import { BotService } from '../../grammy/bot.service';
 import { UserService } from '../../user/user.service';
+import { PaymentService } from '../../payment/payment.service';
 import { InputFile } from 'grammy';
 
 export interface GenerationJobData {
@@ -26,6 +27,7 @@ export class GenerationProcessor extends WorkerHost {
         private readonly generationService: GenerationService,
         private readonly botService: BotService,
         private readonly userService: UserService,
+        private readonly paymentService: PaymentService,
     ) {
         super();
     }
@@ -117,11 +119,41 @@ export class GenerationProcessor extends WorkerHost {
                     msg += `\n\n💎 Требуется: ${required}\n💳 Доступно: ${available}`;
                 }
 
-                const keyboard = {
+                // Tripwire Logic check
+                let keyboard: any = {
                     inline_keyboard: [
                         [{ text: '💳 Пополнить баланс', callback_data: 'buy_credits' }]
                     ]
                 };
+
+                try {
+                    const settings: any = await this.userService.getSystemConfig();
+                    const tripwireId = settings?.tripwirePackageId;
+
+                    if (tripwireId) {
+                        const user = await this.userService.findById(userId);
+                        const isNewUser = (user?.totalGenerated || 0) < 5;
+
+                        if (isNewUser) {
+                            const pkg = await this.paymentService.getCreditPackage(tripwireId);
+                            if (pkg && pkg.active) {
+                                // Generate Payment URL
+                                const url = this.paymentService.generateInitPayUrl(Number(userId), chatId, pkg.id);
+                                msg += `\n\n🚀 <b>Спецпредложение для новичков!</b>\n` +
+                                    `<b>${pkg.name}</b>: ${pkg.credits} монет за <b>${pkg.priceYooMoney || pkg.price}₽</b>`;
+
+                                keyboard = {
+                                    inline_keyboard: [
+                                        [{ text: `🚀 Купить старт за ${pkg.priceYooMoney || pkg.price}₽`, url: url }],
+                                        [{ text: '🔙 Отмена', callback_data: 'cancel_generation' }]
+                                    ]
+                                };
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // ignore
+                }
 
                 await this.botService.sendMessage(chatId, msg, { reply_markup: keyboard });
             } else {

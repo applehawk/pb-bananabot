@@ -284,6 +284,7 @@ export class UserService {
       freeCreditsAmount: settings?.freeCreditsAmount ?? 3,
       referralBonusAmount: settings?.referralBonusAmount ?? 50,
       referralFirstPurchaseBonus: settings?.referralFirstPurchaseBonus ?? 150,
+      tripwirePackageId: settings?.tripwirePackageId,
     };
   }
 

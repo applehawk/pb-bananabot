@@ -1,5 +1,6 @@
 import { Conversation } from '@grammyjs/conversations';
 import { MyContext } from '../grammy/grammy-context.interface';
+import { InlineKeyboard } from 'grammy';
 
 /**
  * BALANCE Conversation
@@ -29,8 +30,12 @@ export async function balanceConversation(
   });
 
   if (!user) {
+    const botInfo = await conversation.external((ctx) => ctx.api.getMe());
     await ctx.reply(
       '❌ Пользователь не найден. Используйте /start для регистрации.',
+      {
+        reply_markup: new InlineKeyboard().url('🚀 Начать', `https://t.me/${botInfo.username}?start=start`)
+      }
     );
     return;
   }

@@ -13,7 +13,10 @@ export async function enterSettingsFlow(ctx: MyContext) {
 
     const user = await ctx.userService.findByTelegramId(telegramId);
     if (!user) {
-        await ctx.reply('❌ Пользователь не найден. Введите /start');
+        const botInfo = await ctx.api.getMe();
+        await ctx.reply('❌ Пользователь не найден. Введите /start', {
+            reply_markup: new InlineKeyboard().url('🚀 Начать', `https://t.me/${botInfo.username}?start=start`)
+        });
         return;
     }
 

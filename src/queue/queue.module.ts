@@ -5,6 +5,7 @@ import { GenerationProcessor } from './processors/generation.processor';
 import { GenerationModule } from '../generation/generation.module';
 import { GrammYModule } from '../grammy/grammy.module';
 import { UserModule } from '../user/user.module';
+import { PaymentModule } from '../payment/payment.module';
 
 @Global()
 @Module({
@@ -13,6 +14,7 @@ import { UserModule } from '../user/user.module';
         forwardRef(() => GrammYModule),
         forwardRef(() => GenerationModule),
         UserModule,
+        PaymentModule,
         BullModule.forRootAsync({
             imports: [ConfigModule],
             useFactory: async (configService: ConfigService) => ({
