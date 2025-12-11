@@ -87,14 +87,13 @@ services:
       - bananabot-network
     volumes:
       - ./logs:/app/logs
-      - ./prisma:/app/prisma
+
     healthcheck:
       test: [ "CMD", "bun", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    command: bun dist/src/main-grammy.js
 
   # Admin Panel (Next.js)
   admin:

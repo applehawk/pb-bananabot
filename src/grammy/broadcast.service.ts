@@ -4,6 +4,7 @@ import { PrismaService } from '../database/prisma.service';
 import { GrammYService } from './grammy.service';
 import { ConfigService } from '@nestjs/config';
 import { Api } from 'grammy';
+import { CryptoHelper } from '../utils/crypto.helper';
 
 @Injectable()
 export class BroadcastService {
@@ -26,8 +27,15 @@ export class BroadcastService {
         try {
             this.isProcessing = true;
             const broadcast = await this.prisma.broadcast.findFirst({
-                where: { status: 'PENDING' },
+                where: {
+                    status: 'PENDING',
+                    OR: [
+                        { scheduledFor: null },
+                        { scheduledFor: { lte: new Date() } }
+                    ]
+                },
                 orderBy: { createdAt: 'asc' },
+                include: { creditPackage: true },
             });
 
             if (!broadcast) return;
@@ -43,7 +51,9 @@ export class BroadcastService {
 
             // Determine filter
             const whereClause: any = {};
-            if (broadcast.targetNotSubscribed) {
+            if (broadcast.targetUserIds && broadcast.targetUserIds.length > 0) {
+                whereClause.id = { in: broadcast.targetUserIds };
+            } else if (broadcast.targetNotSubscribed) {
                 whereClause.isSubscribed = false;
             }
 
@@ -60,13 +70,15 @@ export class BroadcastService {
             });
 
             const messageContent = broadcast.message;
+            const creditPackage = broadcast.creditPackage;
+
             let sentCount = 0;
             let failedCount = 0;
             let cursor: string | undefined;
             const batchSize = 100;
 
             while (true) {
-                const users = await this.prisma.user.findMany({
+                const users: any[] = await this.prisma.user.findMany({
                     where: whereClause,
                     take: batchSize,
                     skip: cursor ? 1 : 0,
@@ -77,24 +89,39 @@ export class BroadcastService {
 
                 if (users.length === 0) break;
 
-                // Process batch
-                // Telegram rate limit: ~30 msg/sec. 
-                // We will do a simple sequential or small concurrent batch with delay to be safe.
-                // A simple `for of` with small delay is safest for stability.
-
                 for (const user of users) {
                     try {
-                        // Note: Use the selected api instance
+                        const extra: any = { parse_mode: 'HTML' };
+
+                        if (creditPackage) {
+                            const tariffId = creditPackage.id;
+                            const timestamp = Math.floor(Date.now() / 1000);
+                            const userIdNum = Number(user.telegramId);
+
+                            const secret = this.configService.get('YOOMONEY_SECRET') || 'secret';
+                            const domain = this.configService.get('DOMAIN') || 'https://bananabot.ru';
+
+                            const sign = CryptoHelper.signParams({
+                                userId: userIdNum,
+                                chatId: userIdNum,
+                                tariffId,
+                                timestamp
+                            }, secret);
+
+                            const paymentUrl = `${domain}/payment/init?userId=${userIdNum}&chatId=${userIdNum}&tariffId=${tariffId}&timestamp=${timestamp}&sign=${sign}`;
+
+                            extra.reply_markup = {
+                                inline_keyboard: [[
+                                    { text: `${creditPackage.name} - ${creditPackage.price}₽`, url: paymentUrl }
+                                ]]
+                            };
+                        }
+
                         await api.sendMessage(
                             user.telegramId.toString(),
                             messageContent,
-                            { parse_mode: 'HTML' }
+                            extra
                         );
-
-                        // Log success (create AdminMessage - bulk insert is hard with prisma and relations if we want individual records linked)
-                        // Creating 10k records might be slow.
-                        // Requirement: "сохраняй историй отправленных сообщений пользователю"
-                        // So we MUST create AdminMessage for each user.
 
                         await this.prisma.adminMessage.create({
                             data: {
@@ -108,9 +135,7 @@ export class BroadcastService {
 
                         sentCount++;
                     } catch (error: any) {
-                        // Failed
                         failedCount++;
-                        // Log failure? using AdminMessage
                         await this.prisma.adminMessage.create({
                             data: {
                                 userId: user.id,
@@ -121,16 +146,11 @@ export class BroadcastService {
                                 error: error.message || String(error),
                             }
                         });
-
-                        // Check for Blocked user errors and maybe flag user?
-                        // (Ignoring for this iteration)
                     }
 
-                    // Small delay to avoid hitting limits aggressively
                     await new Promise(resolve => setTimeout(resolve, 50));
                 }
 
-                // Update progress periodically
                 await this.prisma.broadcast.update({
                     where: { id: broadcast.id },
                     data: { sentCount, failedCount }
@@ -139,7 +159,6 @@ export class BroadcastService {
                 cursor = users[users.length - 1].id;
             }
 
-            // Completed
             await this.prisma.broadcast.update({
                 where: { id: broadcast.id },
                 data: {
@@ -154,8 +173,6 @@ export class BroadcastService {
 
         } catch (error) {
             this.logger.error('Error during broadcast processing', error);
-            // Don't mark as FAILED generally unless it's a fatal error, 
-            // but maybe we should so it doesn't loop forever if broken.
         } finally {
             this.isProcessing = false;
         }

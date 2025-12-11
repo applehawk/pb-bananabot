@@ -1,4 +1,5 @@
 #!/bin/bash
 
 # Login to Google Cloud VM
-gcloud compute ssh bananabot-vm -- -t "cd ~/bananabot; bash --login"
+ZONE=${ZONE:-"europe-north1-c"}
+gcloud compute ssh bananabot-vm --zone=$ZONE -- -t "cd ~/bananabot; bash --login"

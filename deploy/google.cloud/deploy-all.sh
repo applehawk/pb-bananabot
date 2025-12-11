@@ -215,13 +215,24 @@ REMOTE_ARGS=""
 if [ "$DEPLOY_ADMIN" = true ]; then REMOTE_ARGS="$REMOTE_ARGS admin"; fi
 if [ "$DEPLOY_BOT" = true ]; then REMOTE_ARGS="$REMOTE_ARGS bot"; fi
 
-# Kill previous deployment if exists
+# Determine Lock Mode
+if [ "$DEPLOY_ADMIN" = true ] && [ "$DEPLOY_BOT" = false ]; then
+    LOCK_MODE="admin"
+elif [ "$DEPLOY_ADMIN" = false ] && [ "$DEPLOY_BOT" = true ]; then
+    LOCK_MODE="bot"
+else
+    LOCK_MODE="unified"
+fi
+
+echo -e "${YELLOW}Using deployment lock: $LOCK_MODE${NC}"
+
+# Kill previous deployment if exists (scoped to this lock mode)
 KILL_CMD="
-    PID_FILE=~/bananabot/deploy.pid
+    PID_FILE=~/bananabot/deploy-${LOCK_MODE}.pid
     if [ -f \"\$PID_FILE\" ]; then
         OLD_PID=\$(cat \"\$PID_FILE\")
         if ps -p \"\$OLD_PID\" > /dev/null; then
-            echo \"[INFO] Interrupting previous deployment (PID: \$OLD_PID)...\"
+            echo \"[INFO] Interrupting previous deployment (\$LOCK_MODE) (PID: \$OLD_PID)...\"
             kill -9 \"\$OLD_PID\" || true
         fi
         rm -f \"\$PID_FILE\"
@@ -232,7 +243,7 @@ gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --quiet --command="$KILL_CMD"
 # Execute remote script in background
 # We redirect output to a temp file initially to avoid immediate hangup issues, 
 # but the script itself handles logging to deploy-unified.log
-EXEC_CMD="nohup bash ~/remote-deploy.sh $REMOTE_ARGS > ~/bananabot/startup.log 2>&1 &"
+EXEC_CMD="nohup bash ~/remote-deploy.sh $REMOTE_ARGS --lock=$LOCK_MODE > ~/bananabot/startup.log 2>&1 &"
 
 gcloud compute ssh "$INSTANCE_NAME" --zone="$ZONE" --quiet --command="$EXEC_CMD"
 

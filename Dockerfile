@@ -74,4 +74,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # 5. Start application
 # Выполняем миграцию Prisma, затем запускаем скомпилированный файл
-CMD ["sh", "-c", "bunx prisma migrate deploy --schema=./prisma/schema.prisma && bun run dist/src/main-grammy.js"]
+CMD ["sh", "-c", "bunx prisma migrate deploy --schema=/app/prisma/schema.prisma && bun run dist/src/main-grammy.js"]

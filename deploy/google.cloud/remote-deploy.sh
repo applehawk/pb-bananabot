@@ -3,24 +3,27 @@
 # Check arguments
 DEPLOY_ADMIN=false
 DEPLOY_BOT=false
+LOCK_MODE="unified"
 
 for arg in "$@"; do
     case $arg in
         admin) DEPLOY_ADMIN=true ;;
         bot) DEPLOY_BOT=true ;;
         all) DEPLOY_ADMIN=true; DEPLOY_BOT=true ;;
+        --lock=*) LOCK_MODE="${arg#*=}" ;;
     esac
 done
 
 # Save PID for next run
-echo $$ > ~/bananabot/deploy.pid
-trap "rm -f ~/bananabot/deploy.pid" EXIT
+PID_FILE=~/bananabot/deploy-${LOCK_MODE}.pid
+echo $$ > "$PID_FILE"
+trap "rm -f $PID_FILE" EXIT
 
 set -e
 mkdir -p ~/bananabot
 cd ~/bananabot
 
-LOG_FILE="deploy-unified.log"
+LOG_FILE="deploy-${LOCK_MODE}.log"
 echo "[Start] Deployment started at $(date)" > $LOG_FILE
 
 # Telegram Helper
@@ -97,6 +100,10 @@ if [ "$DEPLOY_BOT" = true ]; then
         rm ~/deploy-bot-*.tar.gz >> $LOG_FILE 2>&1 || true
         
         echo "Rebuilding BOT service..." >> $LOG_FILE
+        # Ensure previous container is gone to avoid conflicts
+        sudo docker stop bananabot-bot || true
+        sudo docker rm bananabot-bot || true
+        
         sudo docker compose build bot >> $LOG_FILE 2>&1
         sudo docker compose up -d bot >> $LOG_FILE 2>&1
     else

@@ -72,7 +72,7 @@ export async function bonusesConversation(
         message += `🚀 <b>Дополнительный бонус:</b>\nЗа первую покупку вашего друга вы получите еще <b>${referralFirstPurchaseBonus} монет бани</b>!\n\n`;
     }
 
-    message += `Делитесь ссылкой с друзьями:\n`;
+    message += `Делитесь ссылкой с друзьями:\n(Нажми на ссылку чтобы скопировать)\n`;
     message += `<code>${refLink}</code>\n\n`;
 
     message += `<b>📊 Ваша статистика:</b>\n`;
@@ -80,8 +80,11 @@ export async function bonusesConversation(
     message += `💰 Заработано: <b>${data.totalEarned.toFixed(0)} монет</b>\n`;
     message += `\n(Список последних приглашений будет доступен позже)`;
 
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}`;
     const keyboard = new InlineKeyboard()
-        .text('💸 Отправить баланс другу', 'transfer_balance');
+        .text('💸 Отправить баланс другу', 'transfer_balance')
+        .row()
+        .url('💌 Поделиться ссылкой другу', shareUrl);
 
     await ctx.reply(message, {
         parse_mode: 'HTML',
