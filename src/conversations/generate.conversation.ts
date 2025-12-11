@@ -9,6 +9,7 @@ interface SafeUser {
     id: string;
     credits: number;
     totalGenerated: number;
+    freeCreditsUsed?: number;
     settings?: { aspectRatio?: string; model?: string; selectedModel?: { inputImagesLimit?: number } };
 }
 
@@ -370,8 +371,10 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
 
                 const fullSettings = await ctx.userService['getSystemConfig'](); // We will updated this method.
                 const tripwireId = (fullSettings as any).tripwirePackageId;
+                const freeCreditsAmount = (fullSettings as any).freeCreditsAmount || 3;
 
-                const isNewUser = (user?.totalGenerated || 0) < 30; // Simple heuristic for "starter"
+                // Tripwire Condition: User has used up their free credits (or close to it)
+                const isNewUser = (user?.freeCreditsUsed || 0) >= freeCreditsAmount;
 
                 if (tripwireId && isNewUser) {
                     // Offer Tripwire

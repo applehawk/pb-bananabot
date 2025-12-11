@@ -132,7 +132,11 @@ export class GenerationProcessor extends WorkerHost {
 
                     if (tripwireId) {
                         const user = await this.userService.findById(userId);
-                        const isNewUser = (user?.totalGenerated || 0) < 5;
+                        const settings = await this.userService.getSystemConfig();
+                        const freeCreditsAmount = settings.freeCreditsAmount || 3;
+
+                        // Tripwire logic: Offer if they have consumed their free allocation
+                        const isNewUser = (user?.freeCreditsUsed || 0) >= freeCreditsAmount;
 
                         if (isNewUser) {
                             const pkg = await this.paymentService.getCreditPackage(tripwireId);

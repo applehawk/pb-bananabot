@@ -1,6 +1,6 @@
 import { Conversation } from '@grammyjs/conversations';
 import { MyContext } from '../grammy/grammy-context.interface';
-import { getMainKeyboard } from '../grammy/keyboards/main.keyboard';
+import { getMainKeyboard, KeyboardCommands } from '../grammy/keyboards/main.keyboard';
 
 /**
  * HELP Conversation
@@ -47,29 +47,29 @@ export async function helpConversation(
   while (true) {
     const nextCtx = await conversation.wait();
 
-    // Check for callback query (Exit button)
-    if (nextCtx.callbackQuery?.data === 'close_help') {
+    const text = nextCtx.message?.text;
+    const isCallback = !!nextCtx.callbackQuery;
+    const isKeyboardCommand = text && Object.values(KeyboardCommands).some(cmd => cmd === text);
+    const isExitCommand = text && [
+      '/cancel', '/exit', '/stop',
+      'выход', 'выйти', 'закрыть', 'завершить', 'exit', 'close'
+    ].includes(text.toLowerCase());
+
+    // Check for exit conditions
+    if (isCallback || isKeyboardCommand || isExitCommand) {
       await conversation.external(async (ext) => {
-        await ext.api.answerCallbackQuery(nextCtx.callbackQuery!.id);
-        await ext.api.deleteMessage(chatId, messageId);
+        if (nextCtx.callbackQuery) {
+          await ext.api.answerCallbackQuery(nextCtx.callbackQuery.id).catch(() => { });
+        }
+
+        // Delete the support info message
+        await ext.api.deleteMessage(chatId, messageId).catch(() => { });
+
         await ext.reply('✅ Вы вышли из режима чата.', {
           reply_markup: getMainKeyboard(),
         });
       });
       return;
-    }
-
-    // Check for commands
-    if (nextCtx.message?.text?.startsWith('/')) {
-      const text = nextCtx.message.text;
-      if (text === '/cancel' || text === '/exit' || text === '/stop') {
-        await conversation.external(async (ext) => {
-          await ext.reply('✅ Вы вышли из режима чата.', {
-            reply_markup: getMainKeyboard(),
-          });
-        });
-        return;
-      }
     }
 
     // Handle Text Messages

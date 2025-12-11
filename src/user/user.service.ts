@@ -204,6 +204,9 @@ export class UserService {
         totalGenerated: {
           increment: 1,
         },
+        freeCreditsUsed: {
+          increment: amount,
+        },
       },
     });
   }

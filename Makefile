@@ -504,6 +504,10 @@ gc-provision:
 gc-deploy:
 	./deploy/google.cloud/deploy-all.sh all
 
+# Deploy LOCALLY built images to Google Cloud (Prevents server OOM)
+gc-deploy-local:
+	./deploy/google.cloud/deploy-images.sh
+
 # Deploy only bot to Google Cloud VM
 gc-deploy-bot:
 	./deploy/google.cloud/deploy-all.sh bot
@@ -541,6 +545,10 @@ gc-firewall:
 # Clean up Docker system on Google Cloud VM
 gc-cleanup:
 	./deploy/google.cloud/cleanup.sh
+
+# Setup Swap Memory for Google Cloud VM (4GB)
+gc-setup-swap:
+	./deploy/google.cloud/setup-swap.sh
 
 # Resize VM disk (stops VM temporarily)
 gc-resize-disk:

@@ -102,6 +102,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_BOT_USERNAME: ${NEXT_PUBLIC_BOT_USERNAME}
+    image: bananabot-admin:local
     container_name: bananabot-admin
     restart: unless-stopped
     depends_on:
