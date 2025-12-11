@@ -261,7 +261,7 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
             // If we found a messageId (e.g. callback) but no state -> Expired or unknown
             if (ctx.callbackQuery) {
                 const data = ctx.callbackQuery.data;
-                if (data && (data.startsWith('aspect_') || ['generate_trigger', 'buy_credits', 'cancel_generation'].includes(data))) {
+                if (data && (data.startsWith('aspect_') || ['generate_trigger', 'cancel_generation'].includes(data))) {
                     await ctx.answerCallbackQuery({ text: '⚠️ Меню устарело.' });
                     return true;
                 }

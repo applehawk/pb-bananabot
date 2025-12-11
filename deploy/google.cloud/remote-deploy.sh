@@ -99,13 +99,19 @@ if [ "$DEPLOY_BOT" = true ]; then
         # Remove ALL bot archives to prevent accumulation
         rm ~/deploy-bot-*.tar.gz >> $LOG_FILE 2>&1 || true
         
-        echo "Rebuilding BOT service..." >> $LOG_FILE
-        # Ensure previous container is gone to avoid conflicts
-        sudo docker stop bananabot-bot || true
-        sudo docker rm bananabot-bot || true
-        
-        sudo docker compose build bot >> $LOG_FILE 2>&1
-        sudo docker compose up -d bot >> $LOG_FILE 2>&1
+        echo "Building BOT service..." >> $LOG_FILE
+        # Build first to minimize downtime
+        if sudo docker compose build bot >> $LOG_FILE 2>&1; then
+            echo "Build successful. Replacing container..." >> $LOG_FILE
+            # Recreate container with new image
+            sudo docker compose up -d bot >> $LOG_FILE 2>&1
+            
+            # Prune old images
+            sudo docker image prune -f >> $LOG_FILE 2>&1 || true
+        else
+            echo "ERROR: Docker build failed! Keeping old container running." >> $LOG_FILE
+            exit 1
+        fi
     else
         echo "ERROR: Bot archive not found!" >> $LOG_FILE
     fi

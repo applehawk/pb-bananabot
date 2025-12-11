@@ -68,13 +68,6 @@ export async function processSettingsInput(ctx: MyContext): Promise<boolean> {
     // Validate Chat
     if (ctx.chat?.id !== state.uiChatId) return false;
 
-    // Validate Message ID for callbacks to prevent stale menu interactions
-    if (ctx.callbackQuery && ctx.callbackQuery.message && ctx.callbackQuery.message.message_id !== state.uiMessageId) {
-        await ctx.answerCallbackQuery({ text: '⚠️ Меню устарело. Откройте настройки заново.' });
-        try { await ctx.deleteMessage(); } catch { }
-        return true; // handled, stop propagation
-    }
-
     // Text Commands to exit/clear
     if (ctx.message?.text) {
         // If user sends a command or main menu button, we should probably close settings?
@@ -100,6 +93,13 @@ export async function processSettingsInput(ctx: MyContext): Promise<boolean> {
         ['toggle_hd', 'toggle_ask_ratio', 'toggle_model', 'save_settings', 'close_settings'].includes(data);
 
     if (!isSettingsAction) return false;
+
+    // Validate Message ID for callbacks to prevent stale menu interactions
+    if (ctx.callbackQuery.message && ctx.callbackQuery.message.message_id !== state.uiMessageId) {
+        await ctx.answerCallbackQuery({ text: '⚠️ Меню устарело. Откройте настройки заново.' });
+        try { await ctx.deleteMessage(); } catch { }
+        return true; // handled, stop propagation
+    }
 
     // We handle it
     const telegramId = ctx.from?.id;

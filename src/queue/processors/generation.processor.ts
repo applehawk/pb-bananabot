@@ -106,6 +106,24 @@ export class GenerationProcessor extends WorkerHost {
 
             if (isGeminiError) {
                 await this.botService.sendMessage(chatId, 'Упс! Ваше изображение не удалось создать. Попробуйте еще раз, уверен, у вас получится! 🥯');
+            } else if (error.message && error.message.includes('Insufficient credits')) {
+                // Parse amounts from "Insufficient credits. Required: X, Available: Y"
+                const matches = error.message.match(/Required: ([\d.]+), Available: ([\d.]+)/);
+                let msg = '😔 Недостаточно средств для генерации.';
+
+                if (matches && matches.length >= 3) {
+                    const required = matches[1];
+                    const available = matches[2];
+                    msg += `\n\n💎 Требуется: ${required}\n💳 Доступно: ${available}`;
+                }
+
+                const keyboard = {
+                    inline_keyboard: [
+                        [{ text: '💳 Пополнить баланс', callback_data: 'buy_credits' }]
+                    ]
+                };
+
+                await this.botService.sendMessage(chatId, msg, { reply_markup: keyboard });
             } else {
                 await this.botService.sendMessage(chatId, `❌ Ошибка генерации: ${error.message || 'Неизвестная ошибка'}`);
             }
