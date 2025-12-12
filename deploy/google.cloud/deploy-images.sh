@@ -48,6 +48,7 @@ echo -e "${GREEN}Step 3: Uploading and Loading on $INSTANCE_NAME...${NC}"
 
 # We upload the archive
 gcloud compute scp images.tar.gz $INSTANCE_NAME:~/images.tar.gz --zone=$ZONE --quiet
+rm images.tar.gz
 
 # We trigger the load and restart
 echo -e "${GREEN}Step 4: Restarting containers on server...${NC}"
@@ -59,12 +60,13 @@ gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="
     done
 
     echo 'Freeing up space before load...'
-    rm -f ~/images.tar.gz
+
     # Remove dangling images/builders to free space for new load
     docker system prune -f
 
     echo 'Loading images (this may take a minute)...'
     gunzip -c ~/images.tar.gz | docker load
+    rm -f ~/images.tar.gz
     
     echo 'Recreating containers...'
     # Force recreate to pick up new images
@@ -73,11 +75,11 @@ gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="
     echo 'Pruning old images...'
     docker image prune -f
     
-    rm ~/images.tar.gz
+
     echo 'Done!'
 "
 
 # Cleanup local
-rm images.tar.gz
+
 
 echo -e "${GREEN}Deployment Complete!${NC}"
