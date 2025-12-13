@@ -1,9 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { Cron, CronExpression } from '@nestjs/schedule'; // Added imports
 import { PrismaService } from '../database/prisma.service';
 import { UserService } from '../user/user.service';
 import { CreditsService } from '../credits/credits.service';
+import { BurnableBonusService } from '../credits/burnable-bonus.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { ImageStorageService } from './storage/image-storage.service';
 import { GenerationType, GenerationStatus, ModelTariff } from '@prisma/client';
@@ -12,7 +14,7 @@ export interface GenerateTextToImageParams {
   userId: string;
   generationId: string; // Added
   prompt: string;
-  negativePrompt?: string;
+  // negativePrompt removed
   aspectRatio?: string;
   numberOfImages?: number;
 }
@@ -22,7 +24,7 @@ export interface GenerateImageToImageParams {
   generationId: string; // Added
   prompt: string;
   inputImages: Array<{ buffer: Buffer; mimeType: string; fileId?: string }>;
-  negativePrompt?: string;
+  // negativePrompt removed
   aspectRatio?: string;
 }
 
@@ -34,6 +36,7 @@ export class GenerationService {
     private readonly prisma: PrismaService,
     private readonly userService: UserService,
     private readonly creditsService: CreditsService,
+    private readonly burnableBonusService: BurnableBonusService,
     private readonly geminiService: GeminiService,
     private readonly imageStorage: ImageStorageService,
     @InjectQueue('generation') private readonly generationQueue: Queue,
@@ -47,8 +50,9 @@ export class GenerationService {
     inputImages?: Array<{ buffer: Buffer; mimeType: string; fileId?: string }>;
     aspectRatio?: string;
     modelName?: string;
+    username?: string; // Added optional username
   }) {
-    const { userId, prompt, mode, aspectRatio, inputImages, modelName } = data;
+    const { userId, prompt, mode, aspectRatio, inputImages, modelName, username } = data;
 
     // 1. Get settings to ensure we have correct model/params
     const settings = await this.userService.getSettings(userId);
@@ -65,7 +69,7 @@ export class GenerationService {
         userId,
         type: generationType,
         prompt,
-        negativePrompt: settings.useNegativePrompt ? 'blurry, low quality, distorted' : null,
+        negativePrompt: null, // Legacy field, always null now
         aspectRatio: finalAspectRatio,
         numberOfImages: 1, // Default, will be updated if batch works differently later
         safetyLevel: settings.safetyLevel,
@@ -134,184 +138,107 @@ export class GenerationService {
    * Generate image from text (Text-to-Image)
    */
   async generateTextToImage(params: GenerateTextToImageParams): Promise<any> {
-    const {
-      userId,
-      prompt,
-      negativePrompt,
-      aspectRatio,
-      numberOfImages = 1,
-    } = params;
-
+    const { userId, prompt, numberOfImages = 1, generationId } = params;
     const startTime = Date.now();
 
-    // 1. Get user settings
-    const user = await this.userService.findById(userId);
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    const settings = await this.userService.getSettings(userId);
-
-    // 2. Get Model Tariff
-    const modelId = settings.selectedModelId;
-    const modelTariff = await this.creditsService.getCachedModelTariff(modelId);
-
-    if (!modelTariff) {
-      throw new Error(`Model tariff not found: ${modelId}`);
-    }
-
-    // 3. Estimate cost (Pre-check)
-    const isBatch = numberOfImages > 1;
-
-    const { inputTokens: estimatedInputTokens, outputTokens: estimatedOutputTokens } = this.calculateEstimatedTokens(modelTariff, settings, {
-      mode: 'text',
-      numberOfImages,
-    });
-
-    const estimatedCost = await this.creditsService.calculateTokenCost(
-      modelId,
-      estimatedInputTokens,
-      estimatedOutputTokens,
-      userId
-    );
-
-    // 4. Reserve credits before starting generation
-    const reservedAmount = estimatedCost.creditsToDeduct;
-    await this.creditsService.reserveCredits(userId, reservedAmount);
-
-    // 5. Update generation record to PROCESSING
-    // We reuse the existing generation ID created in queue
-    const generation = await this.prisma.generation.update({
-      where: { id: params.generationId },
-      data: {
-        status: 'PROCESSING',
-        // Update these just in case they changed or were not fully set
-        type: isBatch ? 'BATCH' : 'TEXT_TO_IMAGE',
-        negativePrompt: negativePrompt || settings.useNegativePrompt ? 'blurry, low quality, distorted' : null,
+    // 1. Prepare (Validate, Estimate, Reserve, Update DB)
+    const { generation, settings, estimatedInputTokens, estimatedOutputTokens, reservedAmount } =
+      await this.prepareGeneration(userId, generationId, {
+        mode: 'text',
+        prompt,
+        params,
         numberOfImages,
-        creditsUsed: 0,
-      },
-    });
-
-    this.logger.log(`Generation ${generation.id} started for user ${userId} (reserved: ${reservedAmount} credits)`);
+      });
 
     try {
-      // 6. Generate image via Gemini
+      // 2. Execute (Gemini API)
+      let finalPrompt = prompt;
+      let enhancedPromptText: string | undefined;
+      let enhancementCost = 0;
+
+      // Apply Auto Enhance if enabled
+      if (settings.autoEnhance) {
+        this.logger.log(`Auto-enhancing prompt for user ${userId}`);
+        const instruction = settings.enhancementPrompt || undefined; // Use custom prompt if set (or default if null)
+        const enhanceModelId = 'gemini-2.5-flash'; // Explicitly define model for enhancement
+
+        try {
+          // Pass model explicitly
+          enhancedPromptText = await this.geminiService.enhancePrompt(prompt, instruction, enhanceModelId);
+          finalPrompt = enhancedPromptText;
+
+          // Calculate Enhancement Cost
+          try {
+            // Approx tokens: 1 token ~= 4 chars
+            const inputToks = Math.ceil(prompt.length / 4) + (instruction ? Math.ceil(instruction.length / 4) : 100);
+            const outputToks = Math.ceil(enhancedPromptText.length / 4);
+
+            const costResult = await this.creditsService.calculateTokenCost(
+              enhanceModelId,
+              inputToks,
+              outputToks,
+              userId
+            );
+            enhancementCost = costResult.creditsToDeduct;
+            this.logger.log(`Enhancement cost: ${enhancementCost} credits (Model: ${enhanceModelId})`);
+          } catch (costErr) {
+            this.logger.warn(`Failed to calculate enhancement cost: ${costErr.message}`);
+          }
+
+        } catch (e) {
+          this.logger.warn(`Enhancement failed, using original prompt: ${e.message}`);
+        }
+      }
+
+      const isBatch = numberOfImages > 1;
       const result = isBatch
         ? await this.geminiService.generateBatch({
-          prompt,
-          negativePrompt: generation.negativePrompt,
+          prompt: finalPrompt,
+          // negativePrompt removed
           aspectRatio: generation.aspectRatio,
           numberOfImages,
           modelName: settings.selectedModelId,
         })
         : await this.geminiService.generateFromText({
-          prompt,
-          negativePrompt: generation.negativePrompt,
+          prompt: finalPrompt,
+          // negativePrompt removed
           aspectRatio: generation.aspectRatio,
           modelName: settings.selectedModelId,
         });
 
-      // 7. Upload to storage
-      let imageUrl: string;
-      let thumbnailUrl: string;
-
-      if (this.imageStorage.isConfigured()) {
-        const imageBuffer = Buffer.from(result.images[0].data, 'base64');
-        imageUrl = await this.imageStorage.uploadImage(
-          imageBuffer,
-          generation.id,
-        );
-        thumbnailUrl = await this.imageStorage.createThumbnail(
-          imageBuffer,
-          generation.id,
-        );
-      } else {
-        // Fallback: store base64 in metadata
-        this.logger.warn('Image storage not configured, using base64 fallback');
-        imageUrl = null;
+      // If we enhanced it here, override result.enhancedPrompt if needed (or prefer result's)
+      // GeminiService.generateFromText usually returns the prompt used.
+      // If we passed finalPrompt, it returns it as enhancedPrompt?
+      // Actually result.enhancedPrompt in GeminiService is set to fullPrompt (which IS finalPrompt).
+      // So result.enhancedPrompt should already cover it.
+      // But let's be explicit if we have external enhancement.
+      if (enhancedPromptText) {
+        result.enhancedPrompt = enhancedPromptText;
       }
 
-      // 8. Calculate Final Cost
-      // TODO: Get actual token usage from Gemini response if available.
-      // For now, use tariff defaults based on resolution/model.
-      // Assuming result might have usageMetadata in future.
-
-      const inputTokens = estimatedInputTokens;
-      const outputTokens = estimatedOutputTokens; // Use estimated as actual for now since we don't have usage metadata
-
-      const finalCost = await this.creditsService.calculateTokenCost(
-        modelId,
-        inputTokens,
-        outputTokens,
-        userId
-      );
-
-      // 9. Commit credits (release reservation and deduct actual cost)
-      await this.creditsService.commitCredits(
+      // 3. Finalize (Upload, Cost, Commit, Update DB)
+      return this.finalizeGeneration({
+        startTime,
         userId,
-        reservedAmount,
-        finalCost.creditsToDeduct,
-        generation.id,
-        {
-          type: generation.type,
-          prompt: prompt.substring(0, 100),
-          costDetails: finalCost.details
-        }
-      );
-
-      // 10. Update generation record
-      const processingTime = Date.now() - startTime;
-
-      const completed = await this.prisma.generation.update({
-        where: { id: generation.id },
-        data: {
-          status: 'COMPLETED',
-          imageUrl,
-          thumbnailUrl,
+        generation,
+        settings,
+        result: {
+          images: result.images,
           enhancedPrompt: result.enhancedPrompt,
-          processingTime,
-          completedAt: new Date(),
-          creditsUsed: finalCost.creditsToDeduct,
-          inputTokens,
-          outputTokens,
-          totalTokens: inputTokens + outputTokens,
-          totalCostUsd: finalCost.totalCostUsd,
-          costDetails: finalCost.details as any, // Cast to any for Json
           metadata: {
-            geminiResponse: result.images.length > 1 ? 'batch' : 'single',
-            storageConfigured: this.imageStorage.isConfigured(),
-          },
+            geminiResponse: isBatch ? 'batch' : 'single',
+            enhancementCost
+          }
         },
+        estimatedInputTokens,
+        estimatedOutputTokens,
+        reservedAmount,
+        numberOfImages,
+        extraCost: enhancementCost // Pass extra cost
       });
 
-      this.logger.log(
-        `Generation ${generation.id} completed in ${processingTime}ms. Cost: ${finalCost.creditsToDeduct} credits ($${finalCost.totalCostUsd})`,
-      );
-
-      return {
-        ...completed,
-        imageData: imageUrl ? null : result.images[0].data, // Return base64 only if no storage
-      };
     } catch (error) {
-      this.logger.error(
-        `Generation ${generation.id} failed: ${error.message}`,
-        error.stack,
-      );
-
-      // Release reserved credits on failure
-      await this.creditsService.releaseCredits(userId, reservedAmount);
-
-      // Update status to failed
-      await this.prisma.generation.update({
-        where: { id: generation.id },
-        data: {
-          status: 'FAILED',
-          errorMessage: error.message,
-        },
-      });
-
-      throw error;
+      await this.handleGenerationError(generation.id, userId, reservedAmount, error);
     }
   }
 
@@ -319,80 +246,36 @@ export class GenerationService {
    * Generate image from image + text (Image-to-Image)
    */
   async generateImageToImage(params: GenerateImageToImageParams): Promise<any> {
-    const { userId, prompt, inputImages, negativePrompt, aspectRatio } = params;
-
+    const { userId, prompt, inputImages, generationId } = params;
     const startTime = Date.now();
 
-    // 1. Get user and settings
-    const user = await this.userService.findById(userId);
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    const settings = await this.userService.getSettings(userId);
-
-    // 2. Get Model Tariff
-    const modelId = settings.selectedModelId;
-    const modelTariff = await this.creditsService.getCachedModelTariff(modelId);
-
-    if (!modelTariff) {
-      throw new Error(`Model tariff not found: ${modelId}`);
-    }
-
-    // 3. Estimate cost based on number of input images
+    // 1. Prepare
     const numInputImages = inputImages.length;
-    const generationType: GenerationType =
-      numInputImages > 1 ? 'MULTI_IMAGE' : 'IMAGE_TO_IMAGE';
-
-    // Estimate tokens:
-    const { inputTokens: estimatedInputTokens, outputTokens: estimatedOutputTokens } = this.calculateEstimatedTokens(modelTariff, settings, {
-      mode: 'image',
-      numberOfImages: numInputImages,
-    });
-
-    const estimatedCost = await this.creditsService.calculateTokenCost(
-      modelId,
-      estimatedInputTokens,
-      estimatedOutputTokens,
-      userId
-    );
-
-    // 4. Reserve credits
-    const reservedAmount = estimatedCost.creditsToDeduct;
-    await this.creditsService.reserveCredits(userId, reservedAmount);
-
-    // 5. Update generation record to PROCESSING
-    const generation = await this.prisma.generation.update({
-      where: { id: params.generationId },
-      data: {
-        status: 'PROCESSING',
-        type: generationType,
-        negativePrompt: negativePrompt || null,
-        numberOfImages: 1,
-        creditsUsed: 0,
-      },
-    });
-
-    this.logger.log(`Image-to-Image generation ${generation.id} started for user ${userId} (reserved: ${reservedAmount} credits)`);
+    const { generation, settings, estimatedInputTokens, estimatedOutputTokens, reservedAmount } =
+      await this.prepareGeneration(userId, generationId, {
+        mode: 'image',
+        prompt,
+        params,
+        numberOfImages: numInputImages,
+        inputImages // Pass input images for saving if needed
+      });
 
     try {
-      // 6. Save input images to database (Batch Insert)
+      // Save input images to database (Batch Insert)
       if (inputImages.length > 0) {
         await this.prisma.inputImage.createMany({
           data: inputImages.map((img, index) => ({
             generationId: generation.id,
-            fileId: img.fileId ?? '', // Handle optional
+            fileId: img.fileId ?? '',
             order: index,
           })),
         });
-
-        // Log warnings for missing fileIds (optional, skipping for perf in loop)
       }
 
-      // 7. Generate via Gemini
+      // 2. Execute
       const result = await this.geminiService.generateFromImage({
         prompt,
-        negativePrompt: generation.negativePrompt,
+        // negativePrompt removed
         aspectRatio: generation.aspectRatio,
         inputImages: inputImages.map((img) => ({
           data: img.buffer,
@@ -401,98 +284,237 @@ export class GenerationService {
         modelName: settings.selectedModelId,
       });
 
-      // 8. Upload result
-      let imageUrl: string;
-      let thumbnailUrl: string;
-
-      if (this.imageStorage.isConfigured()) {
-        const imageBuffer = Buffer.from(result.images[0].data, 'base64');
-        imageUrl = await this.imageStorage.uploadImage(
-          imageBuffer,
-          generation.id,
-        );
-        thumbnailUrl = await this.imageStorage.createThumbnail(
-          imageBuffer,
-          generation.id,
-        );
-      } else {
-        imageUrl = null;
-      }
-
-      // 9. Calculate Final Cost
-      const inputTokens = estimatedInputTokens; // Approximation
-      const outputTokens = estimatedOutputTokens; // Approximation
-
-      const finalCost = await this.creditsService.calculateTokenCost(
-        modelId,
-        inputTokens,
-        outputTokens,
-        userId
-      );
-
-      // 10. Commit credits (release reservation and deduct actual cost)
-      await this.creditsService.commitCredits(
+      // 3. Finalize
+      return this.finalizeGeneration({
+        startTime,
         userId,
+        generation,
+        settings,
+        result: {
+          images: result.images,
+          enhancedPrompt: null, // Img2img usually doesn't enhance prompt the same way or it's not in result type yet
+          metadata: { inputImagesCount: numInputImages }
+        },
+        estimatedInputTokens,
+        estimatedOutputTokens,
         reservedAmount,
-        finalCost.creditsToDeduct,
-        generation.id,
-        {
-          type: generation.type,
-          inputImagesCount: numInputImages,
-          costDetails: finalCost.details
-        }
-      );
-
-      // 11. Update generation
-      const processingTime = Date.now() - startTime;
-
-      const completed = await this.prisma.generation.update({
-        where: { id: generation.id },
-        data: {
-          status: 'COMPLETED',
-          imageUrl,
-          thumbnailUrl,
-          processingTime,
-          completedAt: new Date(),
-          creditsUsed: finalCost.creditsToDeduct,
-          inputTokens,
-          outputTokens,
-          totalTokens: inputTokens + outputTokens,
-          totalCostUsd: finalCost.totalCostUsd,
-          costDetails: finalCost.details as any,
-          metadata: {
-            inputImagesCount: numInputImages,
-          },
-        },
+        numberOfImages: 1 // Output is usually 1 for img2img
       });
 
-      this.logger.log(
-        `Image-to-Image generation ${generation.id} completed in ${processingTime}ms. Cost: ${finalCost.creditsToDeduct} credits`,
-      );
-
-      return {
-        ...completed,
-        imageData: imageUrl ? null : result.images[0].data,
-      };
     } catch (error) {
-      this.logger.error(
-        `Image-to-Image generation ${generation.id} failed: ${error.message}`,
-        error.stack,
-      );
-
-      // Release reserved credits on failure
-      await this.creditsService.releaseCredits(userId, reservedAmount);
-
-      await this.prisma.generation.update({
-        where: { id: generation.id },
-        data: {
-          status: 'FAILED',
-          errorMessage: error.message,
-        },
-      });
-
-      throw error;
+      await this.handleGenerationError(generation.id, userId, reservedAmount, error);
     }
+  }
+
+  // =================================================================================================
+  // HELPER METHODS
+  // =================================================================================================
+
+  private async prepareGeneration(
+    userId: string,
+    generationId: string,
+    options: {
+      mode: 'text' | 'image';
+      prompt: string;
+      numberOfImages: number; // For Text: output count. For Image: input count.
+      params: any; // Original params for extracting aspectRatio
+      inputImages?: any[];
+    }
+  ) {
+    const { mode, prompt, numberOfImages, params, inputImages } = options;
+
+    // 1. Get user & settings
+    const user = await this.userService.findById(userId);
+    if (!user) throw new Error('User not found');
+
+    const settings = await this.userService.getSettings(userId);
+    const modelId = settings.selectedModelId;
+    const modelTariff = await this.creditsService.getCachedModelTariff(modelId);
+
+    if (!modelTariff) throw new Error(`Model tariff not found: ${modelId}`);
+
+    // 2. Estimate tokens
+    const { inputTokens, outputTokens } = this.calculateEstimatedTokens(modelTariff, settings, {
+      mode,
+      numberOfImages,
+    });
+
+    // 3. Estimate cost & Reserve
+    const estimatedCost = await this.creditsService.calculateTokenCost(
+      modelId,
+      inputTokens,
+      outputTokens,
+      userId
+    );
+    const reservedAmount = estimatedCost.creditsToDeduct;
+    await this.creditsService.reserveCredits(userId, reservedAmount);
+
+    // 4. Update Generation to PROCESSING
+    const isBatch = mode === 'text' && numberOfImages > 1;
+    const generationType = mode === 'text'
+      ? (isBatch ? 'BATCH' : 'TEXT_TO_IMAGE')
+      : (inputImages && inputImages.length > 1 ? 'MULTI_IMAGE' : 'IMAGE_TO_IMAGE');
+
+    const finalAspectRatio = params.aspectRatio || settings.aspectRatio;
+
+    // Original logic: Img2Img didn't use settings.useNegativePrompt fallback
+    // Negative Prompt logic removed
+    let finalNegativePrompt = null;
+    // if (mode === 'text' && !finalNegativePrompt && settings.useNegativePrompt) {
+    //   finalNegativePrompt = 'blurry, low quality, distorted';
+    // }
+
+    // Original logic: Img2Img saved 1 as numberOfImages (output), but processed multiple inputs
+    // We use 'numberOfImages' var for cost calc (which is input count for img2img), 
+    // but we should save 1 to DB for img2img.
+    const dbNumberOfImages = mode === 'text' ? numberOfImages : 1;
+
+    const generation = await this.prisma.generation.update({
+      where: { id: generationId },
+      data: {
+        status: 'PROCESSING',
+        type: generationType,
+        negativePrompt: finalNegativePrompt || null,
+        aspectRatio: options.mode === 'text' ? finalAspectRatio : undefined,
+        numberOfImages: dbNumberOfImages,
+        creditsUsed: 0,
+        reservedAmount: reservedAmount,
+      },
+    });
+
+    this.logger.log(`${generationType} generation ${generation.id} started for user ${userId} (reserved: ${reservedAmount})`);
+
+    return {
+      generation,
+      settings,
+      estimatedInputTokens: inputTokens,
+      estimatedOutputTokens: outputTokens,
+      reservedAmount
+    };
+  }
+
+  private async finalizeGeneration(params: {
+    startTime: number;
+    userId: string;
+    generation: any;
+    settings: any;
+    result: { images: any[], enhancedPrompt?: string, metadata?: any };
+    estimatedInputTokens: number;
+    estimatedOutputTokens: number;
+    reservedAmount: number;
+    numberOfImages: number;
+    extraCost?: number; // Added optional extraCost
+  }) {
+    const {
+      startTime, userId, generation, settings, result,
+      estimatedInputTokens, estimatedOutputTokens, reservedAmount, numberOfImages,
+      extraCost = 0 // Default to 0
+    } = params;
+
+    // 1. Upload
+    let imageUrl: string;
+    let thumbnailUrl: string;
+
+    if (this.imageStorage.isConfigured()) {
+      const imageBuffer = Buffer.from(result.images[0].data, 'base64');
+      imageUrl = await this.imageStorage.uploadImage(imageBuffer, generation.id);
+      thumbnailUrl = await this.imageStorage.createThumbnail(imageBuffer, generation.id);
+    } else {
+      this.logger.warn('Image storage not configured, using base64 fallback');
+      imageUrl = null;
+    }
+
+    // 2. Final Cost
+    const modelId = settings.selectedModelId;
+    const finalCost = await this.creditsService.calculateTokenCost(
+      modelId,
+      estimatedInputTokens,
+      estimatedOutputTokens,
+      userId
+    );
+
+    const totalCreditsToDeduct = finalCost.creditsToDeduct + extraCost;
+
+    // 3. Commit Credits
+    await this.creditsService.commitCredits(
+      userId,
+      reservedAmount,
+      totalCreditsToDeduct,
+      generation.id,
+      {
+        type: generation.type,
+        prompt: generation.prompt.substring(0, 100),
+        costDetails: {
+          ...finalCost.details,
+          extraCost,
+          reason: extraCost > 0 ? 'Includes enhancement cost' : undefined
+        },
+        imagesCount: numberOfImages
+      }
+    );
+
+    // 4. Bonus
+    await this.burnableBonusService.onGeneration(userId);
+
+    // 5. Update DB
+    const processingTime = Date.now() - startTime;
+    const completed = await this.prisma.generation.update({
+      where: { id: generation.id },
+      data: {
+        status: 'COMPLETED',
+        imageUrl,
+        thumbnailUrl,
+        enhancedPrompt: result.enhancedPrompt,
+        processingTime,
+        completedAt: new Date(),
+        creditsUsed: finalCost.creditsToDeduct + extraCost,
+        inputTokens: estimatedInputTokens,
+        outputTokens: estimatedOutputTokens,
+        totalTokens: estimatedInputTokens + estimatedOutputTokens,
+        totalCostUsd: finalCost.totalCostUsd,
+        costDetails: finalCost.details as any,
+        metadata: {
+          ...result.metadata,
+          storageConfigured: this.imageStorage.isConfigured(),
+        },
+      },
+    });
+
+    this.logger.log(
+      `Generation ${generation.id} completed in ${processingTime}ms. Cost: ${finalCost.creditsToDeduct} credits`,
+    );
+
+    return {
+      ...completed,
+      imageData: imageUrl ? null : result.images[0].data,
+    };
+  }
+
+  private async handleGenerationError(
+    generationId: string,
+    userId: string,
+    reservedAmount: number,
+    error: any
+  ) {
+    this.logger.error(`Generation ${generationId} failed: ${error.message}`, error.stack);
+
+    // Release credits
+    try {
+      await this.creditsService.releaseCredits(userId, reservedAmount);
+    } catch (e) {
+      this.logger.error(`Failed to release credits for ${generationId}`, e);
+    }
+
+    // Update status
+    await this.prisma.generation.update({
+      where: { id: generationId },
+      data: {
+        status: 'FAILED',
+        errorMessage: error.message,
+      },
+    });
+
+    throw error;
   }
 
   /**
@@ -612,6 +634,82 @@ export class GenerationService {
       const inputTokens = (modelTariff.inputImageTokens || 258) * numberOfImages + 100;
       const outputTokens = perImageTokens; // Always 1 output image for img2img currently
       return { inputTokens, outputTokens };
+    }
+  }
+
+
+  /**
+   * Cleanup Stuck Generations (Cron Job)
+   * Runs every 10 minutes to fail generations stuck in PROCESSING for > 15 minutes
+   */
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async cleanupStuckGenerations() {
+    this.logger.log('Running stuck generation cleanup...');
+    const timeoutThreshold = new Date(Date.now() - 15 * 60 * 1000); // 15 minutes ago
+
+    const stuckGenerations = await this.prisma.generation.findMany({
+      where: {
+        status: 'PROCESSING',
+        createdAt: {
+          lt: timeoutThreshold, // Older than 15 mins
+        },
+      },
+    });
+
+    if (stuckGenerations.length === 0) {
+      return;
+    }
+
+    this.logger.warn(`Found ${stuckGenerations.length} stuck generations. Cleaning up...`);
+
+    for (const gen of stuckGenerations) {
+      try {
+        // Calculate estimated cost to release
+        let amountToRelease = 0;
+
+        if (gen.reservedAmount && gen.reservedAmount > 0) {
+          // Use stored reserved amount if available (NEW LOGIC)
+          amountToRelease = gen.reservedAmount;
+        } else {
+          // Fallback to recalculation (OLD LOGIC)
+          try {
+            const settings = await this.userService.getSettings(gen.userId);
+            const modelId = gen.modelId || settings?.selectedModelId || 'gemini-2.5-flash-image';
+            const modelTariff = await this.creditsService.getCachedModelTariff(modelId);
+
+            if (modelTariff) {
+              const { inputTokens, outputTokens } = this.calculateEstimatedTokens(modelTariff, settings, {
+                mode: gen.type === 'TEXT_TO_IMAGE' ? 'text' : 'image',
+                numberOfImages: gen.numberOfImages || 1
+              });
+
+              const cost = await this.creditsService.calculateTokenCost(modelId, inputTokens, outputTokens, gen.userId);
+              amountToRelease = cost.creditsToDeduct;
+            }
+          } catch (calcErr) {
+            this.logger.warn(`Could not calculate release amount for stuck generation ${gen.id}: ${calcErr.message}. Releasing 0.`);
+          }
+        }
+
+        // Release reserved credits
+        if (amountToRelease > 0) {
+          await this.creditsService.releaseCredits(gen.userId, amountToRelease);
+        }
+
+        // Set status to FAILED
+        await this.prisma.generation.update({
+          where: { id: gen.id },
+          data: {
+            status: 'FAILED',
+            errorMessage: 'Timeout: Generation stuck in processing',
+          },
+        });
+
+        this.logger.log(`Cleaned up stuck generation ${gen.id} for user ${gen.userId}. Released ${amountToRelease}`);
+
+      } catch (err) {
+        this.logger.error(`Failed to cleanup generation ${gen.id}`, err);
+      }
     }
   }
 }

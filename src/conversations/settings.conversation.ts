@@ -43,7 +43,9 @@ export async function enterSettingsFlow(ctx: MyContext) {
             // So: settings.askAspectRatio ?? false
             // ACTUALLY, I should check what prisma returns. defaults are applied.
             // But let's mirror what we passed.
-            selectedModelId: settings.selectedModelId || 'gemini-2.5-flash-image'
+            selectedModelId: settings.selectedModelId || 'gemini-2.5-flash-image',
+            autoEnhance: settings.autoEnhance ?? true,
+            enhancementPrompt: settings.enhancementPrompt || 'You are an expert at writing prompts for AI image generation.\nTake this user prompt and enhance it to create a detailed, high-quality image generation prompt.\nAdd details about style, lighting, composition, and quality while keeping the original intent.\nReturn ONLY the enhanced prompt, nothing else.'
         }
     };
 
@@ -65,54 +67,116 @@ export async function enterSettingsFlow(ctx: MyContext) {
  * Middleware handler for Settings Interactions
  */
 export async function processSettingsInput(ctx: MyContext): Promise<boolean> {
-    const state = ctx.session.settingsState;
-    if (!state || !state.draft) return false;
+    const telegramId = ctx.from?.id;
+    if (!telegramId) return false;
 
-    // Validate Chat
-    if (ctx.chat?.id !== state.uiChatId) return false;
-
-    // Text Commands to exit/clear
+    // 1. Handle Text Input (Requires existing state)
     if (ctx.message?.text) {
-        // If user sends a command or main menu button, we should probably close settings?
-        // Or just let it persist? 
-        // In generate, we closed on main menu. Here, let's close on /start or /reset.
+        const state = ctx.session.settingsState;
+        if (!state || !state.draft) return false;
+
+        // Validate Chat
+        if (ctx.chat?.id !== state.uiChatId) return false;
+
         const text = ctx.message.text;
+
+        // Handle Prompt Editing Input
+        if (state.editingField === 'enhancementPrompt') {
+            // Update draft
+            state.draft.enhancementPrompt = text;
+
+            // Delete previous UI (Main Menu or previous Confirmation) to prevent stale state
+            await deleteUiMessage(ctx);
+
+            // Delete user's text message to keep chat clean
+            try { await ctx.deleteMessage(); } catch { }
+
+            // Show confirmation UI (New message)
+            const m = await ctx.reply(
+                `✨ **Новый промпт:**\n\n\`${text}\`\n\nСохранить?`,
+                {
+                    parse_mode: 'Markdown',
+                    reply_markup: new InlineKeyboard()
+                        .text('✅ Сохранить', 'save_prompt_edit')
+                        .text('✏️ Изменить', 'edit_prompt') // Re-trigger edit
+                        .text('❌ Отмена', 'cancel_prompt_edit')
+                }
+            );
+
+            // Update UI Message ID so callbacks on this new message are accepted
+            state.uiMessageId = m.message_id;
+
+            return true; // handled
+        }
+
         if (text === '/start' || text === '/reset') {
             await deleteUiMessage(ctx);
             ctx.session.settingsState = undefined;
             return false; // propagate
         }
-        // If it's something else, ignore? Or return false?
         return false;
     }
 
+    // 2. Handle Callbacks
     if (!ctx.callbackQuery) return false;
 
     const data = ctx.callbackQuery.data;
     if (!data) return false;
 
-    // Ensure it looks like settings data
+    // Check if it is a settings action
     const isSettingsAction = data.startsWith('aspect_') ||
-        ['toggle_hd', 'toggle_ask_ratio', 'toggle_model', 'save_settings', 'close_settings'].includes(data);
+        ['toggle_hd', 'toggle_ask_ratio', 'toggle_model', 'save_settings', 'close_settings',
+            'open_prompt_settings', 'toggle_auto_enhance', 'edit_prompt', 'cancel_prompt_edit',
+            'save_prompt_edit', 'back_to_main', 'save_prompt_only'].includes(data);
 
     if (!isSettingsAction) return false;
 
-    // Validate Message ID for callbacks to prevent stale menu interactions
-    if (ctx.callbackQuery.message && ctx.callbackQuery.message.message_id !== state.uiMessageId) {
-        await ctx.answerCallbackQuery({ text: '⚠️ Меню устарело. Откройте настройки заново.' });
-        try { await ctx.deleteMessage(); } catch { }
-        return true; // handled, stop propagation
+    // Recovery: If state is missing but it's a settings action, try to init state
+    let state = ctx.session.settingsState;
+    if (!state || !state.draft) {
+        // Try to recover from DB
+        const user = await ctx.userService.findByTelegramId(telegramId);
+        if (!user) return false;
+
+        const uAny = user as any;
+        const settings = uAny.settings || {};
+
+        ctx.session.settingsState = {
+            uiChatId: ctx.chat?.id,
+            // Use current message ID as UI message if possible
+            uiMessageId: ctx.callbackQuery.message?.message_id,
+            draft: {
+                aspectRatio: settings.aspectRatio || '1:1',
+                hdQuality: settings.hdQuality || false,
+                askAspectRatio: settings.askAspectRatio !== false,
+                selectedModelId: settings.selectedModelId || 'gemini-2.5-flash-image',
+                autoEnhance: settings.autoEnhance ?? true,
+                enhancementPrompt: settings.enhancementPrompt || 'You are an expert at writing prompts for AI image generation.\nTake this user prompt and enhance it to create a detailed, high-quality image generation prompt.\nAdd details about style, lighting, composition, and quality while keeping the original intent.\nReturn ONLY the enhanced prompt, nothing else.'
+            }
+        };
+        state = ctx.session.settingsState;
+    }
+
+    // Double check state exists now
+    if (!state || !state.draft) return false;
+
+    if (ctx.callbackQuery.message) {
+        const msgId = ctx.callbackQuery.message.message_id;
+        // Relaxed Validation: Always track current UI message
+        if (state.uiMessageId !== msgId) {
+            state.uiMessageId = msgId;
+        }
     }
 
     // We handle it
-    const telegramId = ctx.from?.id;
-    if (!telegramId) return true; // Consume but do nothing
+    // telegramId is already defined at top scope and checked
 
     const user = await ctx.userService.findByTelegramId(telegramId);
     if (!user) return true;
 
     // Handle Actions
     let updated = false;
+    let view: 'MAIN' | 'PROMPT' | 'PROMPT_CONFIRM' = 'MAIN';
 
     if (data.startsWith('aspect_')) {
         state.draft.aspectRatio = data.split('_')[1];
@@ -128,26 +192,86 @@ export async function processSettingsInput(ctx: MyContext): Promise<boolean> {
             ? 'gemini-3-pro-image-preview'
             : 'gemini-2.5-flash-image';
         updated = true;
+    } else if (data === 'open_prompt_settings') {
+        view = 'PROMPT';
+        updated = true;
+    } else if (data === 'toggle_auto_enhance') {
+        state.draft.autoEnhance = !state.draft.autoEnhance;
+        view = 'PROMPT';
+        updated = true;
+    } else if (data === 'edit_prompt') {
+        state.editingField = 'enhancementPrompt';
+        await ctx.answerCallbackQuery();
+        await ctx.reply('✏️ **Введите новый промпт для улучшения:**\n\nТекущий:\n`' + state.draft.enhancementPrompt + '`\n\nОтправьте текст сообщения.', { parse_mode: 'Markdown' });
+        // We do NOT update the UI message here, we just sent a new one.
+        // User will reply text.
+        return true;
+    } else if (data === 'save_prompt_edit') {
+        // Commit draft specific fields? No, draft is already updated locally.
+        // We stay in prompt menu.
+        state.editingField = undefined;
+        // Also save to DB immediately? 
+        // User request: "можно сообщение сохранить...". 
+        // Logic: "save settings" saves everything. 
+        // But here we might want to "accept" the edited text into the draft.
+        // "Confirm" means keep it in draft.
+        view = 'PROMPT';
+        updated = true;
+    } else if (data === 'cancel_prompt_edit') {
+        // Revert draft prompt to User settings (DB)
+        const uSettings = (user as any).settings;
+        state.draft.enhancementPrompt = uSettings?.enhancementPrompt || '...default...'; // Revert
+        state.editingField = undefined;
+        view = 'PROMPT';
+        updated = true;
+    } else if (data === 'back_to_main') {
+        state.editingField = undefined; // Clear editing field just in case
+        view = 'MAIN';
+        updated = true;
+    } else if (data === 'save_prompt_only') {
+        // Save ONLY the prompt/auto-enhance settings and stay in this menu.
+        await ctx.userService.updateSettings(user.id, {
+            autoEnhance: state.draft.autoEnhance,
+            enhancementPrompt: state.draft.enhancementPrompt
+        });
+
+        // Show toast
+        await ctx.answerCallbackQuery({ text: '✅ Настройки промпта сохранены!' });
+
+        // Force rebuild/update of message to ensure consistency (though usually draft matches UI)
+        view = 'PROMPT';
+        updated = true;
     } else if (data === 'save_settings') {
         await ctx.userService.updateSettings(user.id, {
             aspectRatio: state.draft.aspectRatio,
             hdQuality: state.draft.hdQuality,
             askAspectRatio: state.draft.askAspectRatio,
-            selectedModelId: state.draft.selectedModelId
+            selectedModelId: state.draft.selectedModelId,
+            autoEnhance: state.draft.autoEnhance,
+            enhancementPrompt: state.draft.enhancementPrompt
         });
 
         await ctx.answerCallbackQuery({ text: '✅ Настройки сохранены!' });
         await deleteUiMessage(ctx);
 
         const modelName = state.draft.selectedModelId === 'gemini-3-pro-image-preview' ? 'Продвинутая' : 'Простая';
-        await ctx.reply(
-            `✅ Настройки сохранены!\n📐 Формат: **${state.draft.aspectRatio}**\n💎 Качество: **${state.draft.hdQuality ? '4K' : '2K'}**\n❓ Спрашивать: **${state.draft.askAspectRatio ? 'Да' : 'Нет'}**\n🤖 Модель: **${modelName}**`,
-            { parse_mode: 'Markdown', reply_markup: getMainKeyboard() } // Ensure main keyboard is there
-        );
+        let successMsg = `✅ Настройки сохранены!\n\n` +
+            `📐 Формат: **${state.draft.aspectRatio}**\n` +
+            `💎 Качество: **${state.draft.hdQuality ? '4K' : '2K'}**\n` +
+            `❓ Спрашивать: **${state.draft.askAspectRatio ? 'Да' : 'Нет'}**\n` +
+            `🤖 Модель: **${modelName}**\n` +
+            `✨ Авто-улучшение: **${state.draft.autoEnhance ? 'Вкл' : 'Выкл'}**`;
+
+        if (state.draft.autoEnhance) {
+            successMsg += `\n\n📝 **Промпт улучшения:**\n\`${state.draft.enhancementPrompt}\``;
+        }
+
+        await ctx.reply(successMsg, { parse_mode: 'Markdown', reply_markup: getMainKeyboard() });
 
         ctx.session.settingsState = undefined;
         return true;
     } else if (data === 'close_settings') {
+        // ... (existing close_settings logic)
         await ctx.answerCallbackQuery();
         await deleteUiMessage(ctx);
         ctx.session.settingsState = undefined;
@@ -155,11 +279,13 @@ export async function processSettingsInput(ctx: MyContext): Promise<boolean> {
     }
 
     if (updated) {
-        await ctx.answerCallbackQuery(); // just acknowledge
+        // ... (existing update logic)
+        await ctx.answerCallbackQuery();
 
-        // Rebuild UI
         const prices = await fetchPrices(ctx, user.id, state.draft.hdQuality);
-        const ui = buildSettingsUI(state.draft, prices);
+        const ui = view === 'PROMPT'
+            ? buildPromptSettingsUI(state.draft)
+            : buildSettingsUI(state.draft, prices);
 
         if (state.uiMessageId && state.uiChatId) {
             try {
@@ -176,7 +302,30 @@ export async function processSettingsInput(ctx: MyContext): Promise<boolean> {
     return true;
 }
 
-// --- Helpers ---
+// ...
+
+function buildPromptSettingsUI(draft: SettingsDraft) {
+    const { autoEnhance, enhancementPrompt } = draft;
+    const keyboard = new InlineKeyboard();
+
+    // Toggle Auto Enhance
+    const toggleText = autoEnhance ? '✅ Улучшать промпт' : '⬜️ Улучшать промпт';
+    keyboard.text(toggleText, 'toggle_auto_enhance').row();
+
+    // Edit Button
+    keyboard.text('✏️ Изменить', 'edit_prompt').row();
+
+    // Save Button - New!
+    keyboard.text('✅ Сохранить', 'save_settings').row();
+
+    // Back
+    keyboard.text('🔙 Назад', 'back_to_main');
+
+    return {
+        text: `✨ **Настройки промпта генерации**\n\nИнструкция по улучшению промпта генерации:\n\n\`${enhancementPrompt}\`\n\n_Включите или измените инструкцию._`,
+        keyboard
+    };
+}
 
 async function fetchPrices(ctx: MyContext, userId: string, isHd: boolean) {
     const [costPro, costSimple] = await Promise.all([
@@ -201,6 +350,8 @@ interface SettingsDraft {
     hdQuality: boolean;
     askAspectRatio: boolean;
     selectedModelId: string;
+    autoEnhance: boolean;
+    enhancementPrompt: string;
 }
 
 function buildSettingsUI(draft: SettingsDraft, prices: { pro: number, simple: number }) {
@@ -225,6 +376,9 @@ function buildSettingsUI(draft: SettingsDraft, prices: { pro: number, simple: nu
     const isPro = selectedModelId === 'gemini-3-pro-image-preview';
     const modelText = isPro ? '✅ 🤖 Модель: Продвинутая' : '⬜️ 🤖 Модель: Простая';
     keyboard.text(modelText, 'toggle_model').row();
+
+    // Enhancement Prompt
+    keyboard.text('✨ Промпт генерации', 'open_prompt_settings').row();
 
     keyboard.text('✅ Сохранить', 'save_settings').row();
     keyboard.text('🔙 Назад', 'close_settings');

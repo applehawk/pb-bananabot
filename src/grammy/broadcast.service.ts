@@ -5,6 +5,7 @@ import { GrammYService } from './grammy.service';
 import { ConfigService } from '@nestjs/config';
 import { Api } from 'grammy';
 import { CryptoHelper } from '../utils/crypto.helper';
+import { BurnableBonusService } from '../credits/burnable-bonus.service';
 
 @Injectable()
 export class BroadcastService {
@@ -15,6 +16,7 @@ export class BroadcastService {
         private readonly prisma: PrismaService,
         private readonly grammyService: GrammYService,
         private readonly configService: ConfigService,
+        private readonly burnableBonusService: BurnableBonusService,
     ) { }
 
     @Cron(CronExpression.EVERY_MINUTE)
@@ -34,8 +36,7 @@ export class BroadcastService {
                         { scheduledFor: { lte: new Date() } }
                     ]
                 },
-                orderBy: { createdAt: 'asc' },
-                include: { creditPackage: true },
+                include: { creditPackage: true, burnableBonus: true },
             });
 
             if (!broadcast) return;
@@ -132,6 +133,16 @@ export class BroadcastService {
                                 status: 'SENT',
                             }
                         });
+
+                        // Grant Burnable Bonus if attached
+                        if (broadcast.burnableBonus) {
+                            try {
+                                await this.burnableBonusService.grantBonus(user.id, broadcast.burnableBonus.id);
+                                this.logger.log(`Granted burnable bonus ${broadcast.burnableBonus.id} to user ${user.id} via broadcast`);
+                            } catch (e) {
+                                this.logger.error(`Failed to grant broadcast bonus to user ${user.id}`, e);
+                            }
+                        }
 
                         sentCount++;
                     } catch (error: any) {

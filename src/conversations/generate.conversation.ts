@@ -8,6 +8,7 @@ import { GenerationMode } from '../enum/generation-mode.enum';
 interface SafeUser {
     id: string;
     credits: number;
+    reservedCredits: number;
     totalGenerated: number;
     freeCreditsUsed?: number;
     settings?: { aspectRatio?: string; model?: string; selectedModel?: { inputImagesLimit?: number } };
@@ -183,7 +184,7 @@ export async function enterGenerateFlow(ctx: MyContext) {
 
     if (canSkip &&
         (state.mode === GenerationMode.TEXT_TO_IMAGE || state.inputImageFileIds.length > 0)) {
-        if (user && user.credits >= cost) {
+        if (user && (user.credits - user.reservedCredits) >= cost) {
             console.log('[GENERATE] Fast path taken');
             await performGeneration(ctx, user, state.prompt, state.mode, state.inputImageFileIds, currentRatio);
             return; // Done, no session needed
@@ -191,7 +192,8 @@ export async function enterGenerateFlow(ctx: MyContext) {
     }
 
     // Build UI
-    const canGenerate = (user?.credits ?? 0) >= cost;
+    const available = (user?.credits ?? 0) - (user?.reservedCredits ?? 0);
+    const canGenerate = available >= cost;
 
     // settings.askAspectRatio default is now FALSE in schema.
     const isExplicitlyEnabled = (user?.settings as any)?.askAspectRatio === true;
@@ -200,7 +202,7 @@ export async function enterGenerateFlow(ctx: MyContext) {
     const shouldAsk = isExplicitlyEnabled || isFirstTime;
     const modelName = (user?.settings as any)?.selectedModel?.displayName || (user?.settings as any)?.model || 'flux-pro';
     const limit = user?.settings?.selectedModel?.inputImagesLimit || 5;
-    const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGenerate, currentRatio, user?.credits ?? 0, shouldAsk, modelName, limit);
+    const ui = buildGenerateUI(state.mode, state.prompt, state.inputImageFileIds.length, cost, canGenerate, currentRatio, user?.credits ?? 0, user?.reservedCredits ?? 0, shouldAsk, modelName, limit);
 
     // Send Main Keyboard first (as requested previously) - Actually assuming it's there or attached
     console.log('[GENERATE] Sending new UI message');
@@ -352,7 +354,9 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
                 return true;
             }
 
-            if (!user || user.credits < cost) {
+            const available = (user?.credits ?? 0) - (user?.reservedCredits ?? 0);
+
+            if (!user || available < cost) {
                 // Tripwire Logic
                 const settings = await ctx.userService.getSystemConfig();
                 // We need tripwirePackageId from settings. 
@@ -489,6 +493,7 @@ async function getUser(ctx: MyContext): Promise<SafeUser | null> {
     return {
         id: u.id,
         credits: u.credits,
+        reservedCredits: u.reservedCredits || 0,
         totalGenerated: u.totalGenerated || 0,
         settings: u.settings
     };
@@ -511,12 +516,13 @@ async function updateGenerationUI(ctx: MyContext, existingStateId: string, exist
 
     const user = await getUser(ctx);
     const cost = await estimateCost(ctx, user?.id, existingState);
-    const canGen = (user?.credits ?? 0) >= cost;
+    const available = (user?.credits ?? 0) - (user?.reservedCredits ?? 0);
+    const canGen = available >= cost;
     const shouldAsk = (user?.settings as any)?.askAspectRatio === true || (user as any)?.totalGenerated === 0;
 
     const modelName = (user?.settings as any)?.selectedModel?.displayName || (user?.settings as any)?.model || 'flux-pro';
     const limit = user?.settings?.selectedModel?.inputImagesLimit || 5;
-    const ui = buildGenerateUI(existingState.mode, existingState.prompt, existingState.inputImageFileIds.length, cost, canGen, existingState.aspectRatio || '1:1', user?.credits ?? 0, shouldAsk, modelName, limit);
+    const ui = buildGenerateUI(existingState.mode, existingState.prompt, existingState.inputImageFileIds.length, cost, canGen, existingState.aspectRatio || '1:1', user?.credits ?? 0, user?.reservedCredits ?? 0, shouldAsk, modelName, limit);
 
     const currentMsgId = ctx.message?.message_id || 0;
     const gap = currentMsgId - existingState.uiMessageId;
@@ -592,6 +598,7 @@ function buildGenerateUI(
     canGenerate: boolean,
     currentRatio: string,
     userBalance: number = 0,
+    reservedCredits: number = 0,
     showAspectRatioOptions: boolean = true,
     modelName: string = 'flux-pro',
     limit: number = 5
@@ -634,7 +641,11 @@ function buildGenerateUI(
         messageText += `\n\n🤖 Модель: <b>${modelName}</b>`;
         messageText += `\n📐 Соотношение: <b>${currentRatio}</b>`;
         messageText += `\n💰 Стоимость: <b>${cost.toFixed(2)} монет</b>`;
-        messageText += `\n💳 Баланс: <b>${userBalance.toFixed(2)} монет</b>`;
+        if (reservedCredits > 0) {
+            messageText += `\n💳 Баланс: ${userBalance.toFixed(2)} (${reservedCredits.toFixed(2)} в резерве) = <b>${(userBalance - reservedCredits).toFixed(2)} доступно</b>`;
+        } else {
+            messageText += `\n💳 Баланс: <b>${userBalance.toFixed(2)} монет</b>`;
+        }
     }
 
     if (readyToGenerate) {
@@ -654,7 +665,7 @@ function buildGenerateUI(
             messageText += `\n\nНажмите кнопку ниже, чтобы начать.`;
         } else {
             keyboard.text('💳 Пополнить баланс', 'buy_credits').row();
-            messageText += `\n\n⚠️ <b>Недостаточно средств!</b>\nДля генерации требуется ${cost.toFixed(2)} монет.\nВаш баланс: <b>${userBalance.toFixed(2)}</b> монет.`;
+            messageText += `\n\n⚠️ <b>Недостаточно средств!</b>\nДля генерации требуется ${cost.toFixed(2)} монет.\nДоступный баланс: <b>${(userBalance - reservedCredits).toFixed(2)}</b> монет.`;
         }
     } else {
         // Not ready (Waiting for input)
@@ -738,11 +749,12 @@ async function handleRegeneration(ctx: MyContext, generationId: string) {
     const user: SafeUser = {
         id: u.id,
         credits: u.credits,
+        reservedCredits: u.reservedCredits || 0,
         totalGenerated: u.totalGenerated || 0,
         settings: u.settings
     };
 
-    if (user.credits < cost) {
+    if ((user.credits - user.reservedCredits) < cost) {
         await ctx.reply('❌ Недостаточно кредитов', { reply_markup: getMainKeyboard() });
         return;
     }
@@ -837,7 +849,8 @@ async function performGeneration(
             mode: generationType,
             inputImages: inputImagesPayload,
             aspectRatio: currentRatio,
-            modelName: (user.settings as any)?.selectedModelId || user.settings?.model
+            modelName: (user.settings as any)?.selectedModelId || user.settings?.model,
+            username: ctx.from?.username // Pass username directly
         });
 
         // 3. Status SENT HERE (After queueing)

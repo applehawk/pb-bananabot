@@ -5,6 +5,7 @@ import { MyContext } from './grammy-context.interface';
 import { UserService } from '../user/user.service';
 import { User } from '@prisma/client';
 import { PaymentSystemEnum } from '../payment/enum/payment-system.enum';
+import { PrismaService } from '../database/prisma.service';
 
 /**
  * Bot Service (grammY version)
@@ -16,8 +17,6 @@ import { PaymentSystemEnum } from '../payment/enum/payment-system.enum';
  */
 @Injectable()
 export class BotService {
-  private readonly adminChatId: string;
-  private readonly adminChatId2: string;
   private readonly isProd: boolean;
   readonly minimumBalance: number;
 
@@ -29,11 +28,10 @@ export class BotService {
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
+    private readonly prisma: PrismaService,
   ) {
     this.logger.log('BotService initialized');
     this.minimumBalance = configService.get('MINIMUM_BALANCE');
-    this.adminChatId = configService.get('ADMIN_CHAT_ID');
-    this.adminChatId2 = configService.get('ADMIN_CHAT_ID_2');
     this.isProd = configService.get('NODE_ENV') === 'production';
   }
 
@@ -104,6 +102,19 @@ export class BotService {
     });
   }
 
+  async sendDocument(
+    chatId: number,
+    document: string | any,
+    caption?: string,
+    reply_markup?: any,
+  ): Promise<void> {
+    await this.grammyService.bot.api.sendDocument(chatId, document, {
+      caption,
+      reply_markup,
+      parse_mode: 'HTML',
+    });
+  }
+
   /**
    * Notify user of insufficient balance
    */
@@ -126,6 +137,7 @@ export class BotService {
   async sendPaymentSuccessMessage(
     chatId: number,
     balance: number,
+    change: number,
   ): Promise<void> {
     await this.sendMessage(
       chatId,
@@ -134,28 +146,60 @@ export class BotService {
   }
 
   /**
-   * Notify admins of successful payment
+   * Notify admins of new generation
    */
-  async sendPaymentSuccessMessageToAdmin(
+  async sendAdminGenerationNotification(
     username: string,
-    balance: number,
-    amount: number,
-    paymentSystem: PaymentSystemEnum,
+    prompt: string,
+    photo: string | any,
+    generationId: string,
+    enhancedPrompt?: string,
   ): Promise<void> {
-    const adminIds = [this.adminChatId, this.adminChatId2].filter(Boolean);
+    try {
+      const admins = await this.prisma.adminUser.findMany({
+        where: { telegramId: { not: null } }
+      });
 
-    for (const adminId of adminIds) {
-      try {
-        await this.grammyService.bot.api.sendMessage(
-          adminId,
-          `Пользователь ${username} оплатил, его баланс ${balance}. Оплаченная сумма: ${amount}. Платежная система ${paymentSystem} 🎉`,
-        );
-      } catch (error) {
-        this.logger.error(
-          `Failed to send admin notification to ${adminId}:`,
-          error,
-        );
+      // Escape HTML characters to prevent breaking the message
+      const safePrompt = prompt
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      let caption = `🎨 <b>Новая генерация!</b>\n\n` +
+        `👤 Пользователь: @${username}\n` +
+        `🆔 GenID: ${generationId}\n` +
+        `📝 Промпт: ${safePrompt.length > 500 ? safePrompt.slice(0, 500) + '...' : safePrompt}`;
+
+      if (enhancedPrompt && enhancedPrompt !== prompt) {
+        const safeEnhanced = enhancedPrompt
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        caption += `\n✨ Улучшенный промпт: ${safeEnhanced.length > 500 ? safeEnhanced.slice(0, 500) + '...' : safeEnhanced}`;
       }
+
+      // Check final length
+      if (caption.length > 1024) {
+        caption = caption.slice(0, 1021) + '...';
+      }
+
+      for (const admin of admins) {
+        if (!admin.telegramId) continue;
+        try {
+          await this.grammyService.bot.api.sendPhoto(Number(admin.telegramId), photo, {
+            caption,
+            parse_mode: 'HTML',
+          });
+        } catch (error) {
+          this.logger.error(
+            `Failed to send admin generation notification to ${admin.telegramId}:`,
+            error,
+          );
+        }
+      }
+    } catch (e) {
+      this.logger.error('Failed to fetch admins or send notifications', e);
     }
   }
 }

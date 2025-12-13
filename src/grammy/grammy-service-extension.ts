@@ -4,6 +4,7 @@ import { GrammYService } from './grammy.service';
 import { CreditsService } from '../credits/credits.service';
 import { GenerationService } from '../generation/generation.service';
 import { PaymentService } from '../payment/payment.service';
+import { BurnableBonusService } from '../credits/burnable-bonus.service';
 
 /**
  * Extension для GrammYService
@@ -19,6 +20,8 @@ export class GrammYServiceExtension {
     private readonly generationService: GenerationService,
     @Inject(forwardRef(() => PaymentService))
     private readonly paymentService: PaymentService,
+    @Inject(forwardRef(() => BurnableBonusService))
+    private readonly burnableBonusService: BurnableBonusService,
   ) {
     // Расширяем middleware для инъекции новых сервисов
     this.setupImageGenServices();
@@ -31,7 +34,9 @@ export class GrammYServiceExtension {
     bot.use(async (ctx, next) => {
       ctx.creditsService = this.creditsService;
       ctx.generationService = this.generationService;
+      ctx.generationService = this.generationService;
       ctx.paymentService = this.paymentService;
+      ctx.burnableBonusService = this.burnableBonusService;
       await next();
     });
 

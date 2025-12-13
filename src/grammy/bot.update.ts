@@ -81,6 +81,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     this.logger.log('Bot update handlers registered');
 
     // IMPORTANT: Start bot after all handlers AND conversations are registered
+    // IMPORTANT: Start bot after all handlers AND conversations are registered
     await this.grammyService.startBot();
     this.logger.log('Bot started successfully');
   }
@@ -591,6 +592,11 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
       }
 
       // If it's not a command and not a button, assume it's a prompt for generation
+
+      // 0. Handle Settings Input (Higher priority than generation)
+      if (await processSettingsInput(ctx)) {
+        return;
+      }
 
       // 1. Try to process as input for existing flow
       if (await processGenerateInput(ctx)) {

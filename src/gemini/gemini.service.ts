@@ -6,7 +6,7 @@ import { lastValueFrom } from 'rxjs';
 
 export interface GenerateImageParams {
   prompt: string;
-  negativePrompt?: string;
+  // negativePrompt removed
   aspectRatio?: string;
   numberOfImages?: number;
   inputImages?: Array<{ data: Buffer; mimeType: string }>;
@@ -15,7 +15,7 @@ export interface GenerateImageParams {
 
 export interface GenerateVideoParams {
   prompt: string;
-  negativePrompt?: string;
+  // negativePrompt removed
   inputImage?: { data: Buffer; mimeType: string };
   aspectRatio?: '16:9' | '9:16';
   durationSeconds?: '4' | '8';
@@ -76,16 +76,22 @@ export class GeminiService {
   /**
    * Enhance prompt with AI
    */
-  async enhancePrompt(prompt: string, modelName?: string): Promise<string> {
+  async enhancePrompt(
+    prompt: string,
+    instruction?: string,
+    modelName: string = 'gemini-2.5-flash',
+  ): Promise<string> {
     try {
-      const enhancementPrompt =
+      const defaultInstruction =
         'You are an expert at writing prompts for AI image generation.\n' +
         'Take this user prompt and enhance it to create a detailed, high-quality image generation prompt.\n' +
         'Add details about style, lighting, composition, and quality while keeping the original intent.\n' +
-        'User prompt: "' +
-        prompt +
-        '"\n\n' +
         'Return ONLY the enhanced prompt, nothing else.';
+
+      const systemInstruction = instruction || defaultInstruction;
+
+      const enhancementPrompt =
+        systemInstruction + '\n\nUser prompt: "' + prompt + '"';
 
       const model = this.getModel(modelName);
       const result = await model.generateContent(enhancementPrompt);
@@ -110,7 +116,7 @@ export class GeminiService {
   ): Promise<GenerationResult> {
     const {
       prompt,
-      negativePrompt,
+      // negativePrompt removed
       aspectRatio = '1:1',
       numberOfImages = 1,
       modelName,
@@ -123,11 +129,8 @@ export class GeminiService {
     );
 
     try {
-      // Build full prompt with negative prompt
-      let fullPrompt = prompt;
-      if (negativePrompt) {
-        fullPrompt += '\n\nNegative prompt (avoid these): ' + negativePrompt;
-      }
+      // Build full prompt
+      const fullPrompt = prompt;
 
       const model = this.getModel(modelName);
       const result = await model.generateContent({
@@ -334,7 +337,7 @@ export class GeminiService {
   ): Promise<VideoGenerationResult> {
     const {
       prompt,
-      negativePrompt,
+      // negativePrompt removed
       inputImage,
       aspectRatio = '16:9',
       modelName = VeoModels.VEO_3_1,
@@ -361,9 +364,7 @@ export class GeminiService {
       },
     };
 
-    if (negativePrompt) {
-      requestBody.parameters.negativePrompt = negativePrompt;
-    }
+    // Negative prompt logic removed
 
     if (inputImage) {
       requestBody.instances[0].image = {

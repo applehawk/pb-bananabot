@@ -69,11 +69,63 @@ export class GenerationProcessor extends WorkerHost {
             const creditsUsed = Number(result.creditsUsed || 0);
             const processingTime = Number(result.processingTime || 0);
 
-            const caption =
-                `🎨 ${prompt.length > 50 ? prompt.slice(0, 50) + '...' : prompt}\n\n` +
-                `💎 Использовано: ${creditsUsed.toFixed(2)} монет\n` +
+            // Escape HTML characters to prevent breaking the message
+            const safePrompt = prompt
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            // 1. Prepare Base Prompt (Original)
+            // If we have enhanced prompt, show less of original to save space
+            const hasEnhanced = result.enhancedPrompt && result.enhancedPrompt !== prompt;
+            const maxPromptLength = hasEnhanced ? 200 : 850; // Reserve space if enhanced exists
+
+            const displayPrompt = safePrompt.length > maxPromptLength
+                ? safePrompt.slice(0, maxPromptLength) + '...'
+                : safePrompt;
+
+            let caption = `🎨 ${displayPrompt}\n\n`;
+
+            // 2. Prepare Stats String (to calculate remaining space)
+            const stats = `💎 Использовано: ${creditsUsed.toFixed(2)} монет\n` +
                 `💳 Баланс: ${userBalance} монет\n` +
                 `⏱ ${(processingTime / 1000).toFixed(1)}с`;
+
+            // 3. Add Enhanced Prompt (safely truncated)
+            if (hasEnhanced) {
+                const safeEnhanced = result.enhancedPrompt
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+
+                // Calculate available space
+                // Limit: 1024
+                // Used so far: caption.length (original prompt + header)
+                // Overhead for tags: "✨ <b>...</b>\n<i></i>\n\n" -> approx 50 chars
+                // NOTE: We do NOT reserve space for stats anymore as they are low priority.
+                const currentLen = caption.length;
+                const maxEnhancedLen = 1024 - currentLen - 50;
+
+                // Ensure we have at least SOME space
+                if (maxEnhancedLen > 20) {
+                    const displayEnhanced = safeEnhanced.length > maxEnhancedLen
+                        ? safeEnhanced.slice(0, maxEnhancedLen) + '...'
+                        : safeEnhanced;
+
+                    caption += `✨ <b>Улучшенный промпт:</b>\n<i>${displayEnhanced}</i>\n\n`;
+                }
+            }
+
+            // 4. Append Stats (If space permits)
+            if (caption.length + stats.length <= 1024) {
+                caption += stats;
+            } else {
+                // Try minimal stats if full stats don't fit
+                const shortStats = `💎 ${creditsUsed.toFixed(2)} | 💳 ${userBalance}`;
+                if (caption.length + shortStats.length <= 1024) {
+                    caption += shortStats;
+                }
+            }
 
             // Send Result with Variation Button
             const keyboard = {
@@ -85,15 +137,51 @@ export class GenerationProcessor extends WorkerHost {
             if (result.imageUrl) {
                 // Note: sendPhoto in BotService takes (chatId, photo, caption, reply_markup)
                 await this.botService.sendPhoto(chatId, result.imageUrl, caption, keyboard);
+                // Send as document (file)
+                await this.botService.sendDocument(chatId, result.imageUrl, '📂 Оригинал высокого качества');
             } else if (result.imageData || result.imageDataBase64) {
                 const imageContent = result.imageData || result.imageDataBase64;
                 const buffer = Buffer.isBuffer(imageContent)
                     ? imageContent
                     : Buffer.from(imageContent, 'base64');
+
                 await this.botService.sendPhoto(chatId, new InputFile(buffer), caption, keyboard);
+
+                // Send as document (file)
+                // Try to give it a name
+                const filename = `generation_${generationId}.png`;
+                await this.botService.sendDocument(chatId, new InputFile(buffer, filename), '📂 Оригинал высокого качества');
             } else {
                 // Note: sendMessage in BotService now takes (chatId, text, options)
                 await this.botService.sendMessage(chatId, '✅ Генерация завершена, но результат не получен.', { reply_markup: keyboard });
+            }
+
+            // Notify Admins
+            try {
+                const imageContent = result.imageData || result.imageDataBase64;
+                const imageForAdmin = result.imageUrl
+                    ? result.imageUrl
+                    : (imageContent
+                        ? (Buffer.isBuffer(imageContent)
+                            ? new InputFile(imageContent)
+                            : new InputFile(Buffer.from(imageContent, 'base64')))
+                        : null);
+
+                if (imageForAdmin) {
+                    // We need username, prompt.
+                    // username is in job.data? Yes.
+                    // prompt is in job.data.
+                    const username = job.data.username || (user ? user.username : 'Unknown');
+                    await this.botService.sendAdminGenerationNotification(
+                        username,
+                        prompt,
+                        imageForAdmin,
+                        generationId,
+                        result.enhancedPrompt
+                    );
+                }
+            } catch (e) {
+                this.logger.error(`Failed to notify admins regarding generation ${generationId}`, e);
             }
 
         } catch (error) {

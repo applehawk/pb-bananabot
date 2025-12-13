@@ -1,6 +1,8 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, ModulesContainer } from '@nestjs/core';
 import { BotModule } from './grammy/bot.module';
 import { Logger } from '@nestjs/common';
+import { SpelunkerModule } from 'nestjs-spelunker';
+import { DebugService } from './debug/debug.service';
 
 async function bootstrap() {
   const isDev = process.env.NODE_ENV !== 'production';
@@ -32,6 +34,49 @@ async function bootstrap() {
 
   // Debug: Check if providers are initialized
   Logger.log('Checking provider initialization...', 'Bootstrap');
+
+  // Visualization: Generate dependency graph
+  try {
+    const tree = SpelunkerModule.explore(app);
+
+    // ENRICHMENT: Standard providers don't show constructor injections in Spelunker by default.
+    // We manually inspecting the ModulesContainer to find them via Reflect metadata.
+    const modulesContainer = app.get(ModulesContainer);
+    const modules = [...modulesContainer.values()];
+
+    tree.forEach((moduleNode) => {
+      const moduleRef = modules.find((m) => m.metatype.name === moduleNode.name);
+      if (!moduleRef) return;
+
+      for (const [token, details] of Object.entries(moduleNode.providers)) {
+        if (details.method === 'standard') {
+          const providerWrapper = [...moduleRef.providers.values()].find(
+            (p) =>
+              p.name === token ||
+              (typeof p.token === 'function' && p.token.name === token),
+          );
+
+          if (providerWrapper && providerWrapper.metatype) {
+            const paramTypes = Reflect.getMetadata(
+              'design:paramtypes',
+              providerWrapper.metatype,
+            );
+            if (paramTypes) {
+              (details as any).injections = paramTypes.map((t: any) => t ? t.name : 'Unknown');
+            }
+          }
+        }
+      }
+    });
+
+    // We pass 'tree' (output of explore) because it contains the full detailed structure including providers and injections
+    const debugService = app.get(DebugService);
+    debugService.setGraph(tree);
+
+    Logger.log('Dependency graph generated and stored in DebugService', 'Bootstrap');
+  } catch (e) {
+    Logger.error('Failed to generate dependency graph', e, 'Bootstrap');
+  }
 }
 
 bootstrap();

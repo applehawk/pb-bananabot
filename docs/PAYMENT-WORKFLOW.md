@@ -157,26 +157,11 @@ async handlePendingPayments() {
   const pendingPayments = await this.paymentService.getPendingPayments();
 
   for (const payment of pendingPayments) {
-    // Проверяем статус через API YooMoney
-    const isPaid = await this.paymentService.validatePayment(
-      payment.paymentId
-    );
-
-    if (isPaid) {
-      const user = await this.userService.findOneByUserId(payment.userId);
-
-      // Отправляем уведомления
-      await this.botService.sendPaymentSuccessMessage(
-        payment.chatId,
-        user.balance
-      );
-
-      await this.botService.sendPaymentSuccessMessageToAdmin(
-        user.username,
-        user.balance,
-        payment.amount,
-        PaymentSystemEnum[payment.paymentSystem]
-      );
+    try {
+        // Проверяем и валидируем через сервис (включает уведомления)
+        await this.paymentService.validatePayment(payment.paymentId);
+    } catch (e) {
+        // Log error
     }
   }
 }
@@ -402,27 +387,24 @@ async sendPaymentSuccessMessage(
 ### 2. Успешная оплата (админам)
 
 ```typescript
-async sendPaymentSuccessMessageToAdmin(
-  username: string,
-  balance: number,
-  amount: number,
-  paymentSystem: PaymentSystemEnum
-): Promise<void> {
-  const adminIds = [this.adminChatId, this.adminChatId2].filter(Boolean);
+### 2. Успешная оплата (админам)
 
-  for (const adminId of adminIds) {
-    try {
-      await this.grammyService.bot.api.sendMessage(
-        adminId,
-        `💰 Новый платёж!\n` +
-        `👤 Пользователь: @${username}\n` +
-        `💵 Сумма: ${amount}₽\n` +
-        `💳 Система: ${paymentSystem}\n` +
-        `💰 Новый баланс: ${balance}₽`
-      );
-    } catch (error) {
-      this.logger.error(`Failed to notify admin ${adminId}:`, error);
-    }
+Уведомления отправляются всем администраторам, зарегистрированным в базе данных (таблица `AdminUser`) с привязанным `telegramId`.
+
+**Файл:** [payment.service.ts](../src/payment/payment.service.ts)
+
+```typescript
+private async notifyAdmins(transaction: Transaction, username: string) {
+  // Получаем всех админов
+  const admins = await this.prisma.adminUser.findMany({
+    where: { telegramId: { not: null } }
+  });
+
+  const message = `💰 <b>Новая оплата!</b>\n...`;
+
+  for (const admin of admins) {
+     // Отправляем сообщение каждому админу
+     await this.grammyService.bot.api.sendMessage(Number(admin.telegramId), message, { parse_mode: 'HTML' });
   }
 }
 ```

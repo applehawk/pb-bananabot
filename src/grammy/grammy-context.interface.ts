@@ -7,6 +7,7 @@ import { UserService } from '../user/user.service';
 import { PaymentService } from '../payment/payment.service';
 import { CreditsService } from '../credits/credits.service';
 import { GenerationService } from '../generation/generation.service';
+import { BurnableBonusService } from '../credits/burnable-bonus.service';
 import { GenerationMode } from '../enum/generation-mode.enum';
 
 /**
@@ -47,11 +48,14 @@ export interface SessionData {
   settingsState?: {
     uiMessageId?: number;
     uiChatId?: number;
+    editingField?: 'enhancementPrompt'; // Field currently being edited
     draft?: {
       aspectRatio: string;
       hdQuality: boolean;
       askAspectRatio: boolean;
       selectedModelId: string;
+      autoEnhance: boolean;
+      enhancementPrompt: string;
     }
   };
 }
@@ -66,6 +70,7 @@ export interface CustomContextProps {
   creditsService: CreditsService;
   generationService: GenerationService;
   paymentService: PaymentService;
+  burnableBonusService: BurnableBonusService;
 }
 
 /**

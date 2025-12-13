@@ -48,11 +48,43 @@ export async function bonusesConversation(
             ? fullStats.referralsList.reduce((sum: number, ref: any) => sum + (ref.bonusAmount || 0), 0)
             : 0;
 
-        return { referralCount, totalEarned, config, credits: user.credits };
+        // Fetch active burnable bonuses
+        const burnableBonusService = (ctx as any).burnableBonusService;
+        let activeBonuses: any[] = [];
+        if (burnableBonusService) {
+            try {
+                activeBonuses = await burnableBonusService.getActiveBonuses(user.id);
+            } catch (e) { console.error('Error fetching bonuses', e); }
+        }
+
+        return { referralCount, totalEarned, config, credits: user.credits, activeBonuses };
     });
 
     let message = `🎁 <b>Бонусы и Реферальная программа</b>\n\n`;
-    message += `💳 Ваш текущий баланс: <b>${data.credits.toFixed(2)} монет</b>\n\n`;
+    message += `💳 Ваш текущий баланс: <b>${data.credits.toFixed(2)} монет</b>\n`;
+
+    // Display Active Burnable Bonuses
+    if (data.activeBonuses && data.activeBonuses.length > 0) {
+        message += `\n🔥 <b>Активные сгораемые бонусы:</b>\n`;
+        for (const bonus of data.activeBonuses) {
+            const now = Date.now();
+            const deadline = new Date(bonus.deadline).getTime();
+            const diffMs = deadline - now;
+            const hoursLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60)));
+            const minsLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60))) % 60; // Just for more detail if < 1h? No, hours is fine.
+
+            let conditionStatus = '';
+            if (bonus.generationsRequired) {
+                conditionStatus = `${bonus.generationsMade}/${bonus.generationsRequired} генераций`;
+            } else if (bonus.topUpAmountRequired) {
+                conditionStatus = `${bonus.topUpMade}/${bonus.topUpAmountRequired}₽ пополнений`;
+            }
+
+            message += `• <b>+${bonus.amount} монет</b>: (${conditionStatus})\n  ⏳ Сгорит через: <b>${hoursLeft} ч.</b>\n`;
+        }
+    }
+
+    message += `\n`;
 
     const { freeCreditsAmount, referralBonusAmount, referralFirstPurchaseBonus } = data.config;
 
@@ -78,7 +110,6 @@ export async function bonusesConversation(
     message += `<b>📊 Ваша статистика:</b>\n`;
     message += `👥 Приглашено друзей: <b>${data.referralCount}</b>\n`;
     message += `💰 Заработано: <b>${data.totalEarned.toFixed(0)} монет</b>\n`;
-    message += `\n(Список последних приглашений будет доступен позже)`;
 
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}`;
     const keyboard = new InlineKeyboard()

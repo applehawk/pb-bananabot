@@ -5,6 +5,7 @@ import { GrammYService } from '../grammy/grammy.service';
 import { ConfigService } from '@nestjs/config';
 import { InlineKeyboard } from 'grammy';
 import { PaymentService } from '../payment/payment.service';
+import { BurnableBonusService } from '../credits/burnable-bonus.service';
 
 @Injectable()
 export class RetentionService {
@@ -16,6 +17,7 @@ export class RetentionService {
         private readonly grammyService: GrammYService,
         private readonly configService: ConfigService,
         private readonly paymentService: PaymentService,
+        private readonly burnableBonusService: BurnableBonusService,
     ) { }
 
     @Cron(CronExpression.EVERY_10_MINUTES)
@@ -247,6 +249,11 @@ export class RetentionService {
                                 // Do NOT update lastActiveAt to avoid killing the "Since Last Activity" timer for next stages
                             }
                         });
+
+                        // Grant Burnable Bonus if configured
+                        if (stage.burnableBonusId) {
+                            await this.burnableBonusService.grantBonus(user.id, stage.burnableBonusId);
+                        }
 
                         this.logger.log(`Stage ${stage.order} message sent to user ${user.id} (${user.username || user.firstName})`);
                     } catch (error) {

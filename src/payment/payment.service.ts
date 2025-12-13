@@ -17,6 +17,7 @@ import { PaymentStrategyFactory } from './strategies/factory/payment-strategy.fa
 import { GrammYService } from '../grammy/grammy.service'; // Fix import path if needed
 import { UserService } from '../user/user.service';
 import { CreditsService } from '../credits/credits.service';
+import { BurnableBonusService } from '../credits/burnable-bonus.service';
 import { PrismaService } from '../database/prisma.service';
 
 /**
@@ -42,6 +43,7 @@ export class PaymentService {
     private readonly paymentStrategyFactory: PaymentStrategyFactory,
     private readonly yooMoney: YooMoneyClient,
     private readonly grammyService: GrammYService,
+    private readonly burnableBonusService: BurnableBonusService,
   ) { }
 
   generateInitPayUrl(userId: number, chatId: number, tariffId: string): string {
@@ -245,25 +247,44 @@ export class PaymentService {
         true,
       );
 
-      // NOTIFY USER
+      // Fetch User (needed for notifications and referral)
+      let user = null;
       try {
-        const user = await this.userService.findById(transaction.userId);
-        if (user && user.telegramId) {
+        user = await this.userService.findById(transaction.userId);
+      } catch (e) {
+        this.logger.error(`Failed to fetch user ${transaction.userId} for notifications`, e);
+      }
+
+      // NOTIFY USER
+      if (user && user.telegramId) {
+        try {
           await this.grammyService.bot.api.sendMessage(
             Number(user.telegramId),
             `✅ <b>Оплата прошла успешно!</b>\n\nВам начислено <b>${transaction.creditsAdded}</b> монет бани.` +
             `\nТекущий баланс: ${user.credits.toFixed(1)} монет`,
             { parse_mode: 'HTML' }
           );
+        } catch (e) {
+          this.logger.error(`Failed to send payment notification to ${transaction.userId}`, e);
         }
-      } catch (e) {
-        this.logger.error(`Failed to send payment notification to ${transaction.userId}`, e);
       }
+
+      // NOTIFY ADMINS
+      if (user) {
+        try {
+          await this.notifyAdmins(transaction, user.username || user.firstName);
+        } catch (e) {
+          this.logger.error(`Failed to notify admins about payment ${paymentId}`, e);
+        }
+      }
+
+      // Check Burnable Bonuses (Conditions)
+      await this.burnableBonusService.onTopUp(transaction.userId, transaction.amount || 0);
 
       // === REFERRAL LOGIC: First Purchase Bonus ===
       try {
         // Check if user was referred by someone
-        const user = await this.userService.findById(transaction.userId);
+        // User already fetched
         if (user && user.referredBy) {
           // Find the referral record
           const referral = await this.prisma.referral.findFirst({
@@ -438,5 +459,26 @@ export class PaymentService {
     return this.prisma.creditPackage.findUnique({
       where: { id: packageId },
     });
+  }
+
+  private async notifyAdmins(transaction: Transaction, username: string) {
+    const admins = await this.prisma.adminUser.findMany({
+      where: { telegramId: { not: null } }
+    });
+
+    const message = `💰 <b>Новая оплата!</b>\n\n` +
+      `Пользователь: <b>@${username}</b> (ID: ${transaction.userId})\n` +
+      `Сумма: <b>${transaction.amount} ${transaction.currency}</b>\n` +
+      `Пакет: ${transaction.creditsAdded} монет\n` +
+      `Система: ${transaction.paymentMethod}`;
+
+    for (const admin of admins) {
+      if (!admin.telegramId) continue;
+      try {
+        await this.grammyService.bot.api.sendMessage(Number(admin.telegramId), message, { parse_mode: 'HTML' });
+      } catch (e) {
+        this.logger.error(`Failed to send admin notification to ${admin.telegramId}`, e);
+      }
+    }
   }
 }
