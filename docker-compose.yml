@@ -125,6 +125,8 @@ services:
       - '${ADMIN_PORT:-3001}:3001'
     networks:
       - bananabot-network
+    volumes:
+      - ./logs:/app/logs:ro
     healthcheck:
       test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/admin/api/health" ]
       interval: 30s
@@ -140,6 +142,7 @@ services:
     depends_on:
       - bot
       - admin
+
     ports:
       - '80:80'
       - '443:443'

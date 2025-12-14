@@ -9,6 +9,8 @@ import { BurnableBonusService } from '../credits/burnable-bonus.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { ImageStorageService } from './storage/image-storage.service';
 import { GenerationType, GenerationStatus, ModelTariff } from '@prisma/client';
+import { FSMService } from '../services/fsm/fsm.service';
+import { FSMEvent } from '../services/fsm/fsm.types';
 
 export interface GenerateTextToImageParams {
   userId: string;
@@ -40,6 +42,7 @@ export class GenerationService {
     private readonly geminiService: GeminiService,
     private readonly imageStorage: ImageStorageService,
     @InjectQueue('generation') private readonly generationQueue: Queue,
+    private readonly fsmService: FSMService,
   ) { }
 
   async queueGeneration(data: {
@@ -89,6 +92,13 @@ export class GenerationService {
     });
 
     this.logger.log(`Queued generation job ${job.id} (GenID: ${generation.id}) for user ${userId}`);
+
+    // FSM Trigger: GENERATION_PENDING
+    this.fsmService.trigger(userId, FSMEvent.GENERATION_PENDING, {
+      generationId: generation.id,
+      modelId: finalModelId
+    }).catch(e => this.logger.warn(`Failed to trigger GENERATION_PENDING: ${e.message}`));
+
     return { job, generationId: generation.id };
   }
 
@@ -484,6 +494,26 @@ export class GenerationService {
       `Generation ${generation.id} completed in ${processingTime}ms. Cost: ${finalCost.creditsToDeduct} credits`,
     );
 
+    // FSM Trigger: GENERATION
+    this.fsmService.trigger(userId, FSMEvent.GENERATION, {
+      generationId: generation.id,
+      creditsUsed: finalCost.creditsToDeduct + extraCost
+    }).catch(e => this.logger.warn(`Failed to trigger GENERATION: ${e.message}`));
+
+    // Check for FIRST_GENERATION
+    // We fetch user stats to see if this was their first one
+    const userStats = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { totalGenerated: true }
+    });
+
+    if (userStats && userStats.totalGenerated === 1) {
+      this.fsmService.trigger(userId, FSMEvent.FIRST_GENERATION, {
+        generationId: generation.id,
+        reason: 'User completed their first generation'
+      }).catch(e => this.logger.warn(`Failed to trigger FIRST_GENERATION: ${e.message}`));
+    }
+
     return {
       ...completed,
       imageData: imageUrl ? null : result.images[0].data,
@@ -513,6 +543,12 @@ export class GenerationService {
         errorMessage: error.message,
       },
     });
+
+    // FSM Trigger: GENERATION_FAILED
+    this.fsmService.trigger(userId, FSMEvent.GENERATION_FAILED, {
+      generationId,
+      error: error.message
+    }).catch(e => this.logger.warn(`FSM Trigger Failed: ${e.message}`));
 
     throw error;
   }

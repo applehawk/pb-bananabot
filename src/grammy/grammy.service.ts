@@ -16,6 +16,7 @@ import { hydrate } from '@grammyjs/hydrate';
 import { MyContext, SessionData } from './grammy-context.interface';
 import { BotService } from './bot.service';
 import { UserService } from '../user/user.service';
+import { FSMService } from '../services/fsm/fsm.service';
 
 /**
  * GrammY Service
@@ -32,6 +33,7 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
   public bot: Bot<MyContext>;
   private readonly useWebhook: boolean;
   private botStarted = false;
+  private redis: Redis;
 
   constructor(
     private readonly configService: ConfigService,
@@ -39,6 +41,8 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     private readonly botService: BotService,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
+    @Inject(forwardRef(() => FSMService))
+    private readonly fsmService: FSMService,
     // @Inject(forwardRef(() => TariffService)) // Legacy VPN module
     // private readonly tariffService: TariffService,
     // @Inject(forwardRef(() => PaymentService)) // Legacy VPN module
@@ -55,7 +59,20 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     this.useWebhook =
       this.configService.get<string>('NODE_ENV') === 'production';
 
+    // Initialize Redis
+    const redisUrl = this.configService.get<string>('REDIS_URL');
+    this.redis = new Redis(redisUrl || 'redis://localhost:6379');
+
+    this.redis.on('error', (err) => {
+      this.logger.error('Redis error:', err);
+    });
+
+    this.redis.on('connect', () => {
+      this.logger.log('Connected to Redis');
+    });
+
     this.setupBasicMiddlewares();
+    this.setupActivityTrackingMiddleware();
     this.setupServiceMiddlewares();
     this.setupHandlers();
   }
@@ -64,18 +81,6 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
    * Setup basic bot middlewares (session and hydration)
    */
   private setupBasicMiddlewares(): void {
-    // Redis connection
-    const redisUrl = this.configService.get<string>('REDIS_URL');
-    const redis = new Redis(redisUrl || 'redis://localhost:6379');
-
-    redis.on('error', (err) => {
-      this.logger.error('Redis error:', err);
-    });
-
-    redis.on('connect', () => {
-      this.logger.log('Connected to Redis');
-    });
-
     // Session management - must be first
     // Using a session key version to invalidate old sessions after service injection changes
 
@@ -96,7 +101,7 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
           awaitingPhoto: undefined,
           generationPrompt: undefined,
         }),
-        storage: new RedisAdapter({ instance: redis }),
+        storage: new RedisAdapter({ instance: this.redis }),
         getSessionKey: (ctx) => {
           // Add version to session key to invalidate old sessions
           const version = 'v3'; // Increment this to clear all sessions
@@ -124,6 +129,7 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
       // Make services available in conversation handlers
       ctx.botService = this.botService;
       ctx.userService = this.userService;
+      ctx.fsmService = this.fsmService;
       // Legacy VPN services (disabled)
       // ctx.tariffService = this.tariffService;
       // ctx.paymentService = this.paymentService;
@@ -137,6 +143,45 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
     this.logger.log(
       'Service injection middlewares initialized',
     );
+  }
+
+  /**
+   * Setup activity tracking middleware
+   * Updates lastActiveAt in DB throttled by Redis (every 5 mins)
+   */
+  private setupActivityTrackingMiddleware(): void {
+    this.bot.use(async (ctx, next) => {
+      // Run mostly non-blocking, but wait for redis check so we don't start query if not needed?
+      // Actually, we can let it run in background if we don't await next() immediately,
+      // but we need to pass next().
+
+      const nextPromise = next(); // Start processing next middleware
+
+      if (ctx.from?.id) {
+        const userId = ctx.from.id;
+        const key = `user:activity_cooldown:${userId}`;
+
+        // This can run in background parallel to next()
+        this.redis.get(key).then(async (result) => {
+          if (!result) {
+            // Key missing, so update DB and set key
+            try {
+              await this.userService.updateLastActive(userId);
+              // Set key with 5 minutes TTL (300 seconds)
+              await this.redis.set(key, '1', 'EX', 300);
+            } catch (e) {
+              this.logger.warn(`Failed to update last active for ${userId}: ${e.message}`);
+            }
+          }
+        }).catch(err => {
+          this.logger.error('Redis error in activity middleware', err);
+        });
+      }
+
+      await nextPromise;
+    });
+
+    this.logger.log('Activity tracking middleware initialized');
   }
 
   /**

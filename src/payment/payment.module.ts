@@ -9,6 +9,7 @@ import { UserModule } from '../user/user.module';
 import { CreditsModule } from '../credits/credits.module';
 import { PaymentStrategyFactory } from './strategies/factory/payment-strategy.factory';
 import { PaymentScheduler } from './payment.scheduler';
+import { FSMModule } from '../services/fsm/fsm.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PaymentScheduler } from './payment.scheduler';
     DatabaseModule,
     YooMoneyClientModule,
     forwardRef(() => BotModule),
+    FSMModule,
   ],
   providers: [
     PaymentService,

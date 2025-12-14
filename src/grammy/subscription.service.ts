@@ -4,6 +4,9 @@ import { ConfigService } from '@nestjs/config';
 import { Bot } from 'grammy';
 import { MyContext } from './grammy-context.interface';
 
+import { FSMService } from '../services/fsm/fsm.service';
+import { FSMEvent } from '../services/fsm/fsm.types';
+
 @Injectable()
 export class SubscriptionService {
     private readonly logger = new Logger(SubscriptionService.name);
@@ -11,6 +14,7 @@ export class SubscriptionService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly configService: ConfigService,
+        private readonly fsmService: FSMService,
     ) { }
 
     /**
@@ -56,6 +60,12 @@ export class SubscriptionService {
                     where: { id: userId },
                     data: { isSubscribed: true },
                 });
+
+                // Trigger FSM Event
+                this.fsmService.trigger(userId, FSMEvent.CHANNEL_SUBSCRIPTION, {
+                    reason: 'User verified subscription to channel'
+                }).catch(e => this.logger.warn(`Failed to trigger CHANNEL_SUBSCRIPTION: ${e.message}`));
+
                 return true;
             }
         } catch (error) {

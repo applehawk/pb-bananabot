@@ -23,6 +23,15 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
+
+# 0. Backup Database
+if [ -f "./deploy/google.cloud/backup-db.sh" ]; then
+    echo -e "${GREEN}Step 0: Creating Database Backup...${NC}"
+    ./deploy/google.cloud/backup-db.sh
+else
+    echo -e "${YELLOW}Warning: Backup script not found. Skipping backup.${NC}"
+fi
+
 echo -e "${GREEN}Step 1: Building Images for Linux/AMD64...${NC}"
 echo "Note: This targets the server architecture (amd64), which might be different from yours."
 
@@ -59,23 +68,28 @@ gcloud compute ssh $INSTANCE_NAME --zone=$ZONE --quiet --command="
          sleep 10
     done
 
-    echo 'Freeing up space before load...'
+    echo 'Current disk usage:'
+    df -h / | tail -n 1
 
-    # Remove dangling images/builders to free space for new load
-    docker system prune -f
+    echo 'Stopping containers to free up space...'
+    # We stop containers so we can delete their images
+    cd ~/bananabot && docker compose down || true
+
+    echo 'Freeing up space (aggressive prune)...'
+    # Remove ALL unused images (including the ones we just stopped using)
+    # This is crucial for small disks
+    docker system prune -af
+
+    echo 'Disk usage after cleanup:'
+    df -h / | tail -n 1
 
     echo 'Loading images (this may take a minute)...'
     gunzip -c ~/images.tar.gz | docker load
     rm -f ~/images.tar.gz
     
-    echo 'Recreating containers...'
-    # Force recreate to pick up new images
-    cd ~/bananabot && docker compose up -d --force-recreate
+    echo 'Starting containers...'
+    cd ~/bananabot && docker compose up -d
     
-    echo 'Pruning old images...'
-    docker image prune -f
-    
-
     echo 'Done!'
 "
 

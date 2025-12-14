@@ -6,6 +6,9 @@ import { ConfigService } from '@nestjs/config';
 import { Api } from 'grammy';
 import { CryptoHelper } from '../utils/crypto.helper';
 import { BurnableBonusService } from '../credits/burnable-bonus.service';
+import { FSMService } from '../services/fsm/fsm.service';
+import { UserService } from '../user/user.service';
+import { FSMEvent } from '../services/fsm/fsm.types';
 
 @Injectable()
 export class BroadcastService {
@@ -17,6 +20,8 @@ export class BroadcastService {
         private readonly grammyService: GrammYService,
         private readonly configService: ConfigService,
         private readonly burnableBonusService: BurnableBonusService,
+        private readonly fsmService: FSMService, // Injected dependency
+        private readonly userService: UserService, // Injected dependency
     ) { }
 
     @Cron(CronExpression.EVERY_MINUTE)
@@ -147,6 +152,22 @@ export class BroadcastService {
                         sentCount++;
                     } catch (error: any) {
                         failedCount++;
+
+                        // Indirect Block Detection
+                        // Error message usually contains: "Forbidden: bot was blocked by the user"
+                        const errorMsg = error.message || String(error);
+                        if (errorMsg.includes('Forbidden') && errorMsg.includes('blocked')) {
+                            this.logger.warn(`User ${user.id} (TG: ${user.telegramId}) blocked the bot (detected via broadcast)`);
+                            try {
+                                await this.userService.setBlockedStatus(user.id, true);
+                                await this.fsmService.trigger(user.id, FSMEvent.UNSUBSCRIBE, {
+                                    reason: 'Indirect detection: Broadcast failure'
+                                });
+                            } catch (e) {
+                                this.logger.error(`Failed to handle indirect block for ${user.id}`, e);
+                            }
+                        }
+
                         await this.prisma.adminMessage.create({
                             data: {
                                 userId: user.id,
@@ -154,7 +175,7 @@ export class BroadcastService {
                                 isBroadcast: true,
                                 broadcastId: broadcast.id,
                                 status: 'FAILED',
-                                error: error.message || String(error),
+                                error: errorMsg,
                             }
                         });
                     }

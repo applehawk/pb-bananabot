@@ -1,3 +1,4 @@
+
 import {
   Injectable,
   Logger,
@@ -21,6 +22,8 @@ import { enterSettingsFlow, processSettingsInput } from '../conversations/settin
 import { GrammYServiceExtension } from './grammy-service-extension';
 
 import { SubscriptionService } from './subscription.service';
+import { FSMService } from '../services/fsm/fsm.service';
+import { FSMEvent } from '../services/fsm/fsm.types';
 
 /**
  * Bot Update Handler (grammY version)
@@ -46,6 +49,7 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     private readonly prisma: PrismaService,
     // Inject extension to force instantiation before BotUpdate runs
     private readonly grammyServiceExtension: GrammYServiceExtension,
+    private readonly fsmService: FSMService, // Injected
   ) {
     this.logger.log('BotUpdate constructor called');
     this.adminChatId = Number(configService.get('ADMIN_CHAT_ID'));
@@ -77,7 +81,9 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     this.registerCommands();
     this.registerCallbackHandlers();
     this.registerTextHandlers();
+    this.registerTextHandlers();
     this.registerPhotoHandlers();
+    this.registerChatMemberHandlers();
     this.logger.log('Bot update handlers registered');
 
     // IMPORTANT: Start bot after all handlers AND conversations are registered
@@ -340,6 +346,22 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
 
     // Send Welcome Message
     const user = await this.userService.findByTelegramId(ctx.from!.id);
+
+    if (user) {
+      // Trigger FSM: BOT_START
+      this.fsmService.trigger(user.id, FSMEvent.BOT_START, {
+        reason: '/start command'
+      }).catch(e => this.logger.warn(`Failed to trigger BOT_START: ${e.message}`));
+
+      // Trigger FSM: REFERRAL_INVITE
+      if (referralCode) {
+        this.fsmService.trigger(user.id, FSMEvent.REFERRAL_INVITE, {
+          referralCode,
+          reason: 'Joined via referral link'
+        }).catch(e => this.logger.warn(`Failed to trigger REFERRAL_INVITE: ${e.message}`));
+      }
+    }
+
     const credits = Math.round(user?.credits || 0);
 
     const welcomeMessage = `🤖 *Добро пожаловать в @BaniBaniBot!*
@@ -611,6 +633,43 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     } catch (error) {
       this.logger.error('Error handling text message:', error);
     }
+  }
+
+  /**
+   * Register chat member handlers (block/unblock)
+   */
+  private registerChatMemberHandlers(): void {
+    const bot = this.grammyService.bot;
+
+    bot.on('my_chat_member', async (ctx) => {
+      const status = ctx.myChatMember.new_chat_member.status;
+      const oldStatus = ctx.myChatMember.old_chat_member.status;
+      const userId = ctx.from.id;
+
+      this.logger.log(`MyChatMember update for user ${userId}: ${oldStatus} -> ${status}`);
+
+      try {
+        const user = await this.userService.findByTelegramId(userId);
+        if (!user) return;
+
+        if (status === 'kicked') {
+          // User blocked the bot
+          await this.userService.setBlockedStatus(user.id, true); // Update DB
+          this.fsmService.trigger(user.id, FSMEvent.UNSUBSCRIBE, {
+            reason: 'User blocked bot (kicked)'
+          }).catch(e => this.logger.warn(`Failed to trigger UNSUBSCRIBE: ${e.message}`));
+        } else if (status === 'member' && oldStatus === 'kicked') {
+          // User unblocked the bot
+          await this.userService.setBlockedStatus(user.id, false); // Update DB
+          // Treat as restart/start
+          this.fsmService.trigger(user.id, FSMEvent.BOT_START, {
+            reason: 'User unblocked bot'
+          }).catch(e => this.logger.warn(`Failed to trigger BOT_START (unblock): ${e.message}`));
+        }
+      } catch (e) {
+        this.logger.error(`Error handling my_chat_member for ${userId}`, e);
+      }
+    });
   }
 
   /**

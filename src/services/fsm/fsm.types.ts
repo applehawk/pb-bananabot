@@ -3,57 +3,30 @@ import { FSMEvent, FSMActionType } from '@prisma/client';
 export { FSMEvent, FSMActionType };
 
 // Re-export state codes if needed, or keep local if not in DB enum
-export enum FSMStateCode {
-    // A. System
+export export enum FSMStateCode {
+    // Lifecycle States
     NEW = 'NEW',
-    STARTED = 'STARTED',
-
-    // B. Activation
-    DEAD = 'DEAD',
-    FIRST_GENERATION = 'FIRST_GENERATION',
-    EARLY_EXPERIMENTER = 'EARLY_EXPERIMENTER',
-
-    // C. Free Usage
+    ACTIVATING = 'ACTIVATING',
     ACTIVE_FREE = 'ACTIVE_FREE',
-    LOW_BALANCE_FREE = 'LOW_BALANCE_FREE',
-    FREE_EXHAUSTED = 'FREE_EXHAUSTED',
-    FREELOADER_EXPERIMENTER = 'FREELoader_EXPERIMENTER',
-
-    // D. Monetization
-    TRIPWIRE_ELIGIBLE = 'TRIPWIRE_ELIGIBLE',
-    TRIPWIRE_OFFERED = 'TRIPWIRE_OFFERED',
-    TRIPWIRE_EXPIRED = 'TRIPWIRE_EXPIRED',
-
-    PAYMENT_CLICKED = 'PAYMENT_CLICKED',
-    PAYMENT_FAILED = 'PAYMENT_FAILED',
-
+    PAYWALL = 'PAYWALL',
     PAID_ACTIVE = 'PAID_ACTIVE',
-    PAID_LOW_BALANCE = 'PAID_LOW_BALANCE',
-    PAID_EXHAUSTED = 'PAID_EXHAUSTED',
-
-    // E. Offer / Bonus
-    BURNABLE_BONUS_ACTIVE = 'BURNABLE_BONUS_ACTIVE',
-    BURNABLE_BONUS_EXPIRING = 'BURNABLE_BONUS_EXPIRING',
-    BURNABLE_BONUS_EXPIRED = 'BURNABLE_BONUS_EXPIRED',
-
-    SPECIAL_OFFER_SHOWN = 'SPECIAL_OFFER_SHOWN',
-    SPECIAL_OFFER_EXPIRED = 'SPECIAL_OFFER_EXPIRED',
-
-    // F. Referral
-    REFERRAL_ELIGIBLE = 'REFERRAL_ELIGIBLE',
-    REFERRAL_ACTIVE = 'REFERRAL_ACTIVE',
-    REFERRAL_REWARDED = 'REFERRAL_REWARDED',
-    REFERRAL_PAID_REWARDED = 'REFERRAL_PAID_REWARDED',
-
-    // G. Activity / Inactivity
-    INACTIVE_FREE = 'INACTIVE_FREE',
-    INACTIVE_PAID = 'INACTIVE_PAID',
-    CHURN_RISK = 'CHURN_RISK',
-    LONG_TERM_CHURN = 'LONG_TERM_CHURN',
-
-    // H. Terminal
+    INACTIVE = 'INACTIVE',
+    CHURNED = 'CHURNED',
     BLOCKED = 'BLOCKED',
-    SUPPRESSED = 'SUPPRESSED',
+}
+
+export enum OverlayType {
+    TRIPWIRE = 'TRIPWIRE',
+    BONUS = 'BONUS',
+    REFERRAL = 'REFERRAL',
+    SPECIAL_OFFER = 'SPECIAL_OFFER',
+}
+
+export interface OverlayState {
+    type: OverlayType;
+    state: 'ELIGIBLE' | 'ACTIVE' | 'EXPIRING' | 'EXPIRED';
+    expiresAt?: Date;
+    metadata?: any;
 }
 
 export enum FSMConditionOperator {
@@ -77,15 +50,29 @@ export interface FSMContext {
     totalPayments: number;
     lastGenerationAt?: Date;
     lastPaymentAt?: Date;
+    lastPaymentFailed: boolean;
     createdAt: Date;
-    // ... any other dynamic data needed for evaluation
+    preferredModel?: string;
+    // Virtual fields
+    isPaidUser: boolean;
+    isLowBalance: boolean; // credits < needed
+    daysSinceCreated: number;
+    hoursSinceLastPay?: number;
+    hoursSinceLastGen?: number;
+    hoursSinceLastActivity?: number;
 }
 
 // Payload passed when triggering an event
 export interface FSMEventPayload {
-    amount?: number; // for payment/credits
     generationId?: string;
-    error?: string; // for failures
     modelId?: string;
-    paymentMethod?: string;
+    transactionId?: string;
+    amount?: number;
+    currency?: string;
+    packageId?: string;
+    credits?: number; // For PACKAGE_PURCHASE or general credit info
+    creditsUsed?: number; // For GENERATION and INSUFFICIENT_CREDITS
+    referralCode?: string; // For REFERRAL_INVITE
+    reason?: string;
+    error?: string;
 }

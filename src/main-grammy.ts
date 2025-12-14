@@ -2,6 +2,8 @@ import { NestFactory, ModulesContainer } from '@nestjs/core';
 import { BotModule } from './grammy/bot.module';
 import { Logger } from '@nestjs/common';
 import { SpelunkerModule } from 'nestjs-spelunker';
+import { WinstonModule, utilities as nestWinstonUtilities } from 'nest-winston';
+import * as winston from 'winston';
 import { DebugService } from './debug/debug.service';
 
 async function bootstrap() {
@@ -17,8 +19,34 @@ async function bootstrap() {
     );
   }
 
+  // Create logs directory if not exists
+  const fs = await import('fs');
+  if (!fs.existsSync('./logs')) {
+    fs.mkdirSync('./logs');
+  }
+
   const app = await NestFactory.create(BotModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    logger: WinstonModule.createLogger({
+      transports: [
+        new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.ms(),
+            nestWinstonUtilities.format.nestLike('BananaBot', {
+              colors: true,
+              prettyPrint: true,
+            }),
+          ),
+        }),
+        new winston.transports.File({
+          filename: 'logs/bot.log',
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.json(),
+          ),
+        }),
+      ],
+    }),
   });
 
   // Enable CORS with security-conscious defaults

@@ -31,7 +31,7 @@ export class PaymentScheduler {
                         const diffMinutes = (now - createdAt) / 1000 / 60;
 
                         if (diffMinutes > 15) {
-                            await this.paymentService.failPayment(payment.paymentId, 'Timeout > 15 min');
+                            await this.paymentService.expirePayment(payment.paymentId);
                             continue;
                         }
 

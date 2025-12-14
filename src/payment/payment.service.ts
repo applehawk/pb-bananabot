@@ -14,11 +14,14 @@ import { createHash } from 'crypto';
 import { ConfigService } from '@nestjs/config';
 import { YooMoneyClient } from '@app/yoomoney-client';
 import { PaymentStrategyFactory } from './strategies/factory/payment-strategy.factory';
-import { GrammYService } from '../grammy/grammy.service'; // Fix import path if needed
+import { GrammYService } from '../grammy/grammy.service';
 import { UserService } from '../user/user.service';
 import { CreditsService } from '../credits/credits.service';
 import { BurnableBonusService } from '../credits/burnable-bonus.service';
 import { PrismaService } from '../database/prisma.service';
+import { FSMService } from '../services/fsm/fsm.service';
+import { FSMEvent } from '../services/fsm/fsm.types';
+import { CryptoHelper } from '../utils/crypto.helper';
 
 /**
  * Payment Service (adapted for Credits System)
@@ -29,8 +32,6 @@ import { PrismaService } from '../database/prisma.service';
  * - Webhook notifications from payment providers
  * - Credit crediting after successful payment
  */
-import { CryptoHelper } from '../utils/crypto.helper';
-
 @Injectable()
 export class PaymentService {
   private readonly logger = new Logger(PaymentService.name);
@@ -44,11 +45,12 @@ export class PaymentService {
     private readonly yooMoney: YooMoneyClient,
     private readonly grammyService: GrammYService,
     private readonly burnableBonusService: BurnableBonusService,
+    private readonly fsmService: FSMService,
   ) { }
 
   generateInitPayUrl(userId: number, chatId: number, tariffId: string): string {
     const domain = this.configService.get('DOMAIN');
-    const secret = this.configService.get('YOOMONEY_SECRET') || 'default_secret'; // Fallback or strict? Better strict but user said fallback ok.
+    const secret = this.configService.get('YOOMONEY_SECRET') || 'default_secret';
 
     const params = {
       userId,
@@ -90,11 +92,6 @@ export class PaymentService {
 
   /**
    * Create a new payment for a credit package
-   *
-   * @param userId - Telegram user ID (BigInt as string)
-   * @param packageId - Credit package ID
-   * @param paymentSystem - Payment system (YOOMONEY, STARS, CRYPTO)
-   * @param paymentAt - Payment initiation date
    */
   async createPayment(
     userId: string,
@@ -110,6 +107,13 @@ export class PaymentService {
     });
     if (!creditPackage)
       throw new Error(`Credit package with id ${packageId} not found`);
+
+    // Trigger FSM Event: PAYMENT_CLICKED
+    // We do this async without awaiting to not slow down link generation
+    this.fsmService.trigger(String(userId), FSMEvent.PAYMENT_CLICKED, {
+      packageId,
+      reason: 'User requested payment link'
+    }).catch(e => this.logger.warn(`Failed to trigger PAYMENT_CLICKED: ${e.message}`));
 
     // Determine payment method and price
     let paymentMethod: PaymentMethod;
@@ -137,10 +141,10 @@ export class PaymentService {
       this.paymentStrategyFactory.createPaymentStrategy(paymentSystem);
 
     const paymentData = await paymentStrategy.createPayment({
-      userId: Number(user.telegramId), // Legacy interface expects number
+      userId: Number(user.telegramId),
       chatId: Number(user.telegramId),
-      tariffId: creditPackage.id, // Legacy field name (was tariffId, now packageId)
-      tariffPrice: price, // Legacy field name
+      tariffId: creditPackage.id,
+      tariffPrice: price,
       paymentAt: paymentAt || DateTime.local().toJSDate(),
     });
 
@@ -159,12 +163,19 @@ export class PaymentService {
         isFinal: false,
         metadata: {
           form: paymentData._payment.form,
-          url: paymentData._payment.url, // Save direct URL
+          url: paymentData._payment.url,
           packageName: creditPackage.name,
         },
         description: `Purchase ${creditPackage.name} (${creditPackage.credits} credits)`,
       },
     });
+
+    // FSM Trigger: PAYMENT_PENDING
+    this.fsmService.trigger(user.id, FSMEvent.PAYMENT_PENDING, {
+      transactionId: transaction.id,
+      amount: price,
+      currency: creditPackage.currency
+    }).catch(e => this.logger.warn(`Failed to trigger PAYMENT_PENDING: ${e.message}`));
 
     return transaction;
   }
@@ -187,7 +198,38 @@ export class PaymentService {
           description: `${transaction.description} [FAILED: ${reason}]`,
         },
       });
+
+      // FSM Trigger: PAYMENT_FAILED
+      this.fsmService.trigger(transaction.userId, FSMEvent.PAYMENT_FAILED, {
+        transactionId: transaction.id,
+        reason
+      }).catch(e => this.logger.warn(`FSM Trigger PAYMENT_FAILED Failed: ${e.message}`));
     }
+  }
+
+  /**
+   * Expire a payment by timeout
+   */
+  async expirePayment(paymentId: string): Promise<void> {
+    const transaction = await this.findPaymentByPaymentId(paymentId);
+    if (!transaction || transaction.status !== TransactionStatus.PENDING) return;
+
+    this.logger.log(`Marking payment ${paymentId} as TIMEOUT`);
+
+    await this.prisma.transaction.update({
+      where: { id: transaction.id },
+      data: {
+        status: TransactionStatus.TIMEOUT,
+        isFinal: true,
+        description: `${transaction.description} [TIMEOUT]`,
+      },
+    });
+
+    // FSM Trigger: PAYMENT_TIMEOUT
+    this.fsmService.trigger(transaction.userId, FSMEvent.PAYMENT_TIMEOUT, {
+      transactionId: transaction.id,
+      reason: 'Payment timeout (15m)'
+    }).catch(e => this.logger.warn(`FSM Trigger PAYMENT_TIMEOUT Failed: ${e.message}`));
   }
 
   /**
@@ -225,19 +267,18 @@ export class PaymentService {
     const externalStatus = await paymentStrategy.validateTransaction(paymentId);
 
     // Map to TransactionStatus
-    const isPaid = externalStatus === 'PAID'; // PaymentStatusEnum.PAID
+    const isPaid = externalStatus === 'PAID';
 
     if (isPaid && transaction.status !== TransactionStatus.COMPLETED) {
       this.logger.log(
         `Payment ${paymentId} confirmed. Crediting ${transaction.creditsAdded} credits to user ${transaction.userId}`,
       );
 
-      // Get package name from metadata (already included via findPaymentByPaymentId)
+      // Get package name from metadata
       const packageName =
         (transaction.metadata as any)?.packageName || 'Credit Package';
 
-      // Credit user directly (updating balance) without creating a duplicate transaction record
-      // The existing "PENDING" transaction will be updated to "COMPLETED" and serve as the record.
+      // Credit user directly (updating balance)
       await this.userService.updateCredits(transaction.userId, transaction.creditsAdded);
 
       // Update transaction status
@@ -247,7 +288,20 @@ export class PaymentService {
         true,
       );
 
-      // Fetch User (needed for notifications and referral)
+      // FSM Trigger: PAYMENT_COMPLETED
+      this.fsmService.trigger(transaction.userId, FSMEvent.PAYMENT_COMPLETED, {
+        transactionId: transaction.id,
+        amount: transaction.amount || 0,
+        currency: transaction.currency || 'USD'
+      }).catch(e => this.logger.warn(`FSM Trigger PAYMENT_COMPLETED Failed: ${e.message}`));
+
+      // FSM Trigger: PACKAGE_PURCHASE
+      this.fsmService.trigger(transaction.userId, FSMEvent.PACKAGE_PURCHASE, {
+        packageId: transaction.packageId,
+        credits: transaction.creditsAdded
+      }).catch(e => this.logger.warn(`FSM Trigger PACKAGE_PURCHASE Failed: ${e.message}`));
+
+      // Fetch User
       let user = null;
       try {
         user = await this.userService.findById(transaction.userId);
@@ -278,32 +332,26 @@ export class PaymentService {
         }
       }
 
-      // Check Burnable Bonuses (Conditions)
+      // Check Burnable Bonuses
       await this.burnableBonusService.onTopUp(transaction.userId, transaction.amount || 0);
 
       // === REFERRAL LOGIC: First Purchase Bonus ===
       try {
-        // Check if user was referred by someone
-        // User already fetched
         if (user && user.referredBy) {
-          // Find the referral record
           const referral = await this.prisma.referral.findFirst({
             where: {
               referredId: user.id,
-              // First purchase not yet recorded
               firstPurchase: false,
             },
             include: { referrer: true },
           });
 
           if (referral) {
-            // Get system settings for bonus amount
             const settings = await this.prisma.systemSettings.findUnique({
               where: { key: 'singleton' },
             });
             const bonusAmount = settings?.referralFirstPurchaseBonus ?? 150;
 
-            // Update Referral Record
             await this.prisma.referral.update({
               where: { id: referral.id },
               data: {
@@ -312,19 +360,17 @@ export class PaymentService {
               },
             });
 
-            // Credit Referrer
             await this.creditsService.addCredits(
               referral.referrerId,
               bonusAmount,
               TransactionType.REFERRAL,
-              PaymentMethod.FREE, // System bonus
+              PaymentMethod.FREE,
               {
                 description: `Bonus for first purchase of invited user ${user.username || user.firstName}`,
                 sourceUserId: user.id,
               },
             );
 
-            // Notify Referrer
             if (referral.referrer.telegramId) {
               await this.grammyService.bot.api.sendMessage(
                 Number(referral.referrer.telegramId),
@@ -334,6 +380,12 @@ export class PaymentService {
             }
 
             this.logger.log(`Granted ${bonusAmount} first-purchase bonus to referrer ${referral.referrerId}`);
+
+            // FSM Trigger: REFERRAL_PAID
+            this.fsmService.trigger(referral.referrerId, FSMEvent.REFERRAL_PAID, {
+              credits: bonusAmount,
+              reason: 'Referral First Purchase'
+            }).catch(e => this.logger.warn(`FSM Trigger REFERRAL_PAID Failed: ${e.message}`));
           }
         }
       } catch (e) {
@@ -384,8 +436,6 @@ export class PaymentService {
 
   /**
    * YooMoney Webhook Handler
-   *
-   * Validates webhook signature and credits user if payment is successful
    */
   async yooMoneyWebHook({
     operation_id,

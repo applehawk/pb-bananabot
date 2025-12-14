@@ -4,6 +4,9 @@ import { CreditsService } from './credits.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { GrammYService } from '../grammy/grammy.service'; // Fix import path if needed
 
+import { FSMService } from '../services/fsm/fsm.service';
+import { FSMEvent } from '../services/fsm/fsm.types';
+
 @Injectable()
 export class BurnableBonusService {
     private readonly logger = new Logger(BurnableBonusService.name);
@@ -12,6 +15,7 @@ export class BurnableBonusService {
         private readonly prisma: PrismaService,
         private readonly creditsService: CreditsService,
         private readonly grammyService: GrammYService,
+        private readonly fsmService: FSMService,
     ) { }
 
     /**
@@ -65,6 +69,12 @@ export class BurnableBonusService {
 
             // Notify user
             await this.sendBonusNotification(userId, bonusTemplate.amount, deadline, bonusTemplate.conditionGenerations, bonusTemplate.conditionTopUpAmount);
+
+            // FSM Trigger: BONUS_GRANTED
+            this.fsmService.trigger(userId, FSMEvent.BONUS_GRANTED, {
+                amount: bonusTemplate.amount,
+                reason: 'Burnable Bonus Granted'
+            }).catch(e => this.logger.warn(`Failed to trigger BONUS_GRANTED: ${e.message}`));
 
         } catch (error) {
             this.logger.error(`Failed to grant burnable bonus to user ${userId}`, error);
@@ -266,6 +276,12 @@ export class BurnableBonusService {
                         completedAt: new Date()
                     }
                 });
+
+                // FSM Trigger: BONUS_EXPIRED
+                this.fsmService.trigger(userId, FSMEvent.BONUS_EXPIRED, {
+                    amount,
+                    reason: 'Burnable Bonus Expired'
+                }).catch(e => this.logger.warn(`Failed to trigger BONUS_EXPIRED: ${e.message}`));
             });
 
             this.logger.log(`Revoked bonus ${amount} from user ${userId}`);

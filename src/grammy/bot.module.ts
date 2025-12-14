@@ -23,6 +23,7 @@ import { BroadcastService } from './broadcast.service';
 import { SubscriptionService } from './subscription.service';
 import { RetentionModule } from '../retention/retention.module';
 import { DebugModule } from '../debug/debug.module';
+import { FSMModule } from '../services/fsm/fsm.module';
 
 /**
  * Bot Module (grammY version)
@@ -49,6 +50,7 @@ import { DebugModule } from '../debug/debug.module';
     // QueueModule, // Added Queue Module for BullMQ integration
     HealthModule,
     DebugModule,
+    FSMModule,
   ],
   controllers: [],
   providers: [

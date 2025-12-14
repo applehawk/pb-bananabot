@@ -4,6 +4,7 @@ import { KeyboardCommands, getMainKeyboard } from '../grammy/keyboards/main.keyb
 import { GENERATION_PHRASES } from '../constants/generation.phrases';
 import axios from 'axios';
 import { GenerationMode } from '../enum/generation-mode.enum';
+import { FSMEvent } from '../services/fsm/fsm.types';
 
 interface SafeUser {
     id: string;
@@ -386,6 +387,12 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
                     if (pkg && pkg.active) {
                         const url = ctx.paymentService.generateInitPayUrl(Number(user!.id), ctx.chat!.id, pkg.id);
 
+                        // FSM Trigger: TRIPWIRE_SHOWN
+                        ctx.fsmService.trigger(user.id, FSMEvent.TRIPWIRE_SHOWN, {
+                            packageId: tripwireId,
+                            reason: 'Insufficient credits for generation (new user)'
+                        }).catch(e => console.warn(`Failed to trigger TRIPWIRE_SHOWN: ${e.message}`));
+
                         const kb = new InlineKeyboard()
                             .url(`🚀 Купить старт за ${pkg.priceYooMoney || pkg.price}₽`, url)
                             .row()
@@ -402,6 +409,13 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
                         return true;
                     }
                 }
+
+                // FSM Trigger: INSUFFICIENT_CREDITS
+                ctx.fsmService.trigger(user.id, FSMEvent.INSUFFICIENT_CREDITS, {
+                    creditsUsed: cost, // Needed amount
+                    credits: available, // Current balance
+                    reason: 'Generation attempt failed'
+                }).catch(e => console.warn(`Failed to trigger INSUFFICIENT_CREDITS: ${e.message}`));
 
                 await ctx.answerCallbackQuery({ text: '❌ Недостаточно средств!', show_alert: true });
                 updated = true; // refresh UI

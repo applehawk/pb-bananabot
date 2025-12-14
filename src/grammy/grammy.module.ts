@@ -10,6 +10,7 @@ import { CreditsModule } from '../credits/credits.module';
 import { GenerationModule } from '../generation/generation.module';
 import { ImageGenModule } from './image-gen.module';
 import { GrammYServiceExtension } from './grammy-service-extension';
+import { FSMModule } from '../services/fsm/fsm.module';
 
 /**
  * GrammY Integration Module
@@ -31,6 +32,7 @@ import { GrammYServiceExtension } from './grammy-service-extension';
     forwardRef(() => CreditsModule),
     forwardRef(() => GenerationModule),
     forwardRef(() => PaymentModule),
+    forwardRef(() => FSMModule),
     ImageGenModule, // Handles image generation commands (imports ConversationsModule internally)
   ],
   providers: [

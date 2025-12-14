@@ -2,12 +2,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { User, UserSettings } from '@prisma/client';
 import { nanoid } from 'nanoid';
+import { FSMService } from '../services/fsm/fsm.service';
+import { FSMEvent } from '../services/fsm/fsm.types';
 
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly fsmService: FSMService,
+  ) { }
 
   /**
    * Find user by Telegram ID
@@ -69,6 +74,7 @@ export class UserService {
     }
 
     // Create new user
+
     const referralCode = nanoid(8);
 
     // Get settings
@@ -227,10 +233,20 @@ export class UserService {
     userId: string,
     data: Partial<UserSettings>,
   ): Promise<UserSettings> {
-    return this.prisma.userSettings.update({
+    const result = await this.prisma.userSettings.update({
       where: { userId },
       data,
     });
+
+    // Check for Model Change
+    if (data.selectedModelId) {
+      this.fsmService.trigger(userId, FSMEvent.MODEL_SELECTED, {
+        modelId: data.selectedModelId,
+        reason: 'User changed model in settings'
+      }).catch(e => this.logger.warn(`Failed to trigger MODEL_SELECTED: ${e.message}`));
+    }
+
+    return result;
   }
 
   /**
@@ -384,5 +400,29 @@ export class UserService {
 
       return { fromUser: updatedSender, toUser: updatedReceiver };
     });
+  }
+
+  /**
+   * Set user blocked status
+   */
+  async setBlockedStatus(userId: string, isBlocked: boolean): Promise<User> {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { isBlocked },
+    });
+  }
+
+  /**
+   * Lightweight update for last active timestamp
+   */
+  async updateLastActive(telegramId: bigint | number): Promise<void> {
+    try {
+      await this.prisma.user.update({
+        where: { telegramId: BigInt(telegramId) },
+        data: { lastActiveAt: new Date() },
+      });
+    } catch (e) {
+      // Ignore errors (user might not exist yet)
+    }
   }
 }

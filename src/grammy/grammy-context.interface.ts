@@ -2,12 +2,11 @@ import { Context, SessionFlavor } from 'grammy';
 import { ConversationFlavor } from '@grammyjs/conversations';
 import { BotService } from './bot.service';
 import { UserService } from '../user/user.service';
-// Legacy VPN modules (disabled)
-// import { TariffService } from '../tariff/tariff.service';
 import { PaymentService } from '../payment/payment.service';
 import { CreditsService } from '../credits/credits.service';
 import { GenerationService } from '../generation/generation.service';
 import { BurnableBonusService } from '../credits/burnable-bonus.service';
+import { FSMService } from '../services/fsm/fsm.service';
 import { GenerationMode } from '../enum/generation-mode.enum';
 
 /**
@@ -71,6 +70,7 @@ export interface CustomContextProps {
   generationService: GenerationService;
   paymentService: PaymentService;
   burnableBonusService: BurnableBonusService;
+  fsmService: FSMService;
 }
 
 /**
