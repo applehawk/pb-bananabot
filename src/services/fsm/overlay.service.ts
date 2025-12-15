@@ -1,10 +1,11 @@
-
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { User, LifecycleState, OverlayType, FSMEvent, UserOverlay } from '@prisma/client';
+import { User, LifecycleState, OverlayType, FSMEvent, UserOverlay, PaymentMethod } from '@prisma/client';
 import { BurnableBonusService } from '../../credits/burnable-bonus.service';
-
-
+import { BotService } from '../../grammy/bot.service';
+import { PaymentService } from '../../payment/payment.service';
+import { PaymentSystemEnum } from '../../payment/enum/payment-system.enum';
+import { InlineKeyboard } from 'grammy';
 
 @Injectable()
 export class OverlayService {
@@ -12,7 +13,11 @@ export class OverlayService {
 
     constructor(
         private readonly prisma: PrismaService,
-        private readonly burnableBonusService: BurnableBonusService
+        private readonly burnableBonusService: BurnableBonusService,
+        @Inject(forwardRef(() => BotService))
+        private readonly botService: BotService,
+        @Inject(forwardRef(() => PaymentService))
+        private readonly paymentService: PaymentService
     ) { }
 
     /**
@@ -44,7 +49,7 @@ export class OverlayService {
      * AND No active Tripwire
      * -> ACTIVATE TRIPWIRE
      */
-    async activateTripwire(user: User) {
+    async activateTripwire(user: User, silent: boolean = false) {
         // Double check existence to be safe, though 'force' might imply override. 
         // For now, we idempotent-check.
         const existing = await this.prisma.userOverlay.findFirst({
@@ -67,7 +72,63 @@ export class OverlayService {
             }
         });
 
-        // TODO: Emit side-effect (Trigger Notification message via BotService)
+        if (!silent) {
+            await this.sendTripwireMessage(user);
+        }
+    }
+
+    private async sendTripwireMessage(user: User) {
+        try {
+            // Fetch Tripwire Package
+            const settings = await this.prisma.systemSettings.findUnique({ where: { key: 'singleton' } });
+            const packageId = settings?.tripwirePackageId;
+
+            if (!packageId) {
+                this.logger.warn(`No tripwirePackageId configured in SystemSettings. Cannot send tripwire message to user ${user.id}`);
+                return;
+            }
+
+            const pkg = await this.prisma.creditPackage.findUnique({ where: { id: packageId } });
+            if (!pkg) {
+                this.logger.warn(`Tripwire package ${packageId} not found.`);
+                return;
+            }
+
+            // Create Payment/URL
+            // We use YooMoney by default for RU users or general
+            // Use PaymentService to generate URL or just a callback button if we use PaymentScene?
+            // The user's example used a direct URL.
+            // But PaymentService.createPayment returns a Transaction which has a URL (if supported) or we need to start flow.
+            // For a button, we usually want "Pay" button to open URL directly or trigger a command.
+
+            // Let's fallback to creating a pending transaction and getting the URL for YooMoney
+            const transaction = await this.paymentService.createPayment(user.id, pkg.id, PaymentSystemEnum.YOOMONEY);
+
+            // Assuming metadata.url is where the link is (YooMoney returns confirmationUrl)
+            const url = (transaction.metadata as any)?.url || (transaction.metadata as any)?.confirmation?.confirmation_url || null;
+
+            if (!url) {
+                this.logger.warn('Could not generate payment URL for Tripwire');
+                return;
+            }
+
+            const kb = new InlineKeyboard()
+                .url(`🚀 Купить старт за ${pkg.priceYooMoney || pkg.price}₽`, url)
+                .row()
+                .text('🔙 Отмена', 'cancel_generation'); // Or 'hide_overlay'
+
+            await this.botService.sendMessage(
+                Number(user.telegramId),
+                `<b>⚠️ Недостаточно кредитов!</b>\n\n` +
+                `Но для новичков у нас есть спецпредложение!\n` +
+                `<b>${pkg.name}</b>: ${pkg.credits} монет всего за <b>${pkg.priceYooMoney || pkg.price} рублей</b>.\n` +
+                `Хватит на ~50 генераций!`,
+                { reply_markup: kb }
+            );
+
+        } catch (e) {
+            this.logger.error(`Failed to send Tripwire message to ${user.id}: ${e.message}`);
+        }
     }
 
     /**
@@ -81,7 +142,7 @@ export class OverlayService {
      */
     private async checkTripwire(user: User, event: FSMEvent) {
         // Only relevant on usage events
-        if (event !== FSMEvent.GENERATION && event !== FSMEvent.CREDITS_CHANGED && event !== FSMEvent.CREDITS_ZERO) return;
+        if (event !== FSMEvent.GENERATION_COMPLETED && event !== FSMEvent.CREDITS_CHANGED && event !== FSMEvent.CREDITS_ZERO) return;
 
         // 1. Eligibility Check
         const eligibleStates: LifecycleState[] = ['ACTIVE_FREE', 'ACTIVATING'];
@@ -136,7 +197,7 @@ export class OverlayService {
      * -> GRANT BONUS
      */
     private async checkBurnableBonus(user: User, event: FSMEvent) {
-        if (event !== FSMEvent.GENERATION) return;
+        if (event !== FSMEvent.GENERATION_COMPLETED) return;
         if (user.lifecycleState !== 'PAID_ACTIVE') return;
 
         // Modulo check (simplified, effectively every 50th gen)
@@ -151,7 +212,7 @@ export class OverlayService {
      * AND No referral overlay ever
      * -> ENABLE REFERRAL
      */
-    async enableReferral(user: User) {
+    async enableReferral(user: User, silent: boolean = false) {
         const existing = await this.prisma.userOverlay.findFirst({
             where: { userId: user.id, type: OverlayType.REFERRAL }
         });
@@ -165,10 +226,24 @@ export class OverlayService {
                     state: 'ELIGIBLE'
                 }
             });
+
+            if (!silent) {
+                // Determine ReferraL Link
+                // const link = `https://t.me/MyBot?start=${user.referralCode}`;
+                const botInfo = await this.botService['grammyService'].bot.api.getMe(); // Hack to get bot username if needed? Or just hardcode
+                const link = `https://t.me/${botInfo.username}?start=${user.referralCode}`;
+
+                await this.botService.sendMessage(
+                    Number(user.telegramId),
+                    `🤝 <b>Реферальная программа активирована!</b>\n\n` +
+                    `Приглашайте друзей и получайте бонусы!\n` +
+                    `Ваша ссылка: ${link}`
+                );
+            }
         }
     }
 
-    async activateSpecialOffer(user: User, offerId: string) {
+    async activateSpecialOffer(user: User, offerId: string, silent: boolean = false) {
         this.logger.log(`Activating SPECIAL_OFFER ${offerId} for user ${user.id}`);
         // Implementation for generic special offers
         await this.prisma.userOverlay.create({
@@ -180,6 +255,39 @@ export class OverlayService {
                 metadata: { offerId }
             }
         });
+
+        if (!silent) {
+            await this.sendSpecialOfferMessage(user, offerId);
+        }
+    }
+
+    private async sendSpecialOfferMessage(user: User, offerId: string) {
+        try {
+            // Assuming offerId is a CreditPackage ID for now
+            const pkg = await this.prisma.creditPackage.findUnique({ where: { id: offerId } });
+            if (!pkg) {
+                this.logger.warn(`Special Offer package ${offerId} not found.`);
+                return;
+            }
+
+            const transaction = await this.paymentService.createPayment(user.id, pkg.id, PaymentSystemEnum.YOOMONEY);
+            const url = (transaction.metadata as any)?.url || (transaction.metadata as any)?.confirmation?.confirmation_url || null;
+
+            if (!url) return;
+
+            const kb = new InlineKeyboard()
+                .url(`🔥 Купить: ${pkg.name}`, url);
+
+            await this.botService.sendMessage(
+                Number(user.telegramId),
+                `✨ <b>Специальное предложение!</b>\n\n` +
+                `Только для вас: <b>${pkg.name}</b>\n` +
+                `${pkg.credits} монет за ${pkg.priceYooMoney || pkg.price}₽`,
+                { reply_markup: kb }
+            );
+        } catch (e) {
+            this.logger.error(`Failed to send Special Offer to ${user.id}: ${e.message}`);
+        }
     }
 
     /**

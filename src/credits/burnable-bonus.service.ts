@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CreditsService } from './credits.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -14,7 +14,9 @@ export class BurnableBonusService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly creditsService: CreditsService,
+        @Inject(forwardRef(() => GrammYService))
         private readonly grammyService: GrammYService,
+        @Inject(forwardRef(() => FSMService))
         private readonly fsmService: FSMService,
     ) { }
 

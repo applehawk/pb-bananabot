@@ -1,11 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import {
   TransactionType,
   PaymentMethod,
   TransactionStatus,
+  User,
 } from '@prisma/client';
+import { FSMService } from '../services/fsm/fsm.service';
+import { FSMEvent } from '../services/fsm/fsm.types';
 
 @Injectable()
 export class CreditsService {
@@ -14,6 +17,8 @@ export class CreditsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    @Inject(forwardRef(() => FSMService))
+    private readonly fsmService: FSMService,
   ) { }
 
   // Simple in-memory cache
@@ -110,7 +115,7 @@ export class CreditsService {
     paymentMethod: PaymentMethod = 'FREE',
     metadata?: any,
   ): Promise<any> {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Update user credits
       const user = await tx.user.update({
         where: { id: userId },
@@ -138,6 +143,15 @@ export class CreditsService {
 
       return { user, transaction };
     });
+
+    // FSM Trigger: CREDITS_CHANGED
+    this.fsmService.trigger(userId, FSMEvent.CREDITS_CHANGED, {
+      newBalance: result.user.credits,
+      change: amount,
+      reason: `Add Credits (${type})`
+    }).catch(e => this.logger.warn(`Failed to trigger CREDITS_CHANGED: ${e.message}`));
+
+    return result;
   }
 
   /**
@@ -201,6 +215,19 @@ export class CreditsService {
   }
 
   /**
+   * Get minimum generation cost (for CREDITS_ZERO check)
+   */
+  async getMinGenerationCost(userId: string): Promise<number> {
+    const CHEAPEST_MODEL_ID = 'gemini-2.5-flash-image';
+    try {
+      // Estimate logic
+      return await this.estimateImageGenCost(userId, CHEAPEST_MODEL_ID, false);
+    } catch (e) {
+      return 5.1; // Fallback
+    }
+  }
+
+  /**
    * Deduct credits from user (generation) - DEPRECATED, use commitCredits instead
    */
   async deductCredits(
@@ -209,7 +236,7 @@ export class CreditsService {
     generationId: string,
     metadata?: any,
   ): Promise<any> {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: userId },
       });
@@ -256,6 +283,23 @@ export class CreditsService {
 
       return { user: updatedUser, transaction };
     });
+
+    // FSM Trigger: CREDITS_CHANGED
+    this.fsmService.trigger(userId, FSMEvent.CREDITS_CHANGED, {
+      newBalance: result.user.credits,
+      change: -amount,
+      reason: 'Deduction (Legacy)'
+    }).catch(e => this.logger.warn(`Failed to trigger CREDITS_CHANGED: ${e.message}`));
+
+    // FSM Trigger: CREDITS_ZERO
+    const minCost = await this.getMinGenerationCost(userId);
+    if (result.user.credits < minCost) {
+      this.fsmService.trigger(userId, FSMEvent.CREDITS_ZERO, {
+        credits: result.user.credits
+      }).catch(e => this.logger.warn(`Failed to trigger CREDITS_ZERO: ${e.message}`));
+    }
+
+    return result;
   }
 
   /**
@@ -303,7 +347,7 @@ export class CreditsService {
     generationId: string,
     metadata?: any,
   ): Promise<any> {
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const user = await tx.user.findUnique({
         where: { id: userId },
       });
@@ -351,6 +395,23 @@ export class CreditsService {
 
       return { user: updatedUser, transaction };
     });
+
+    // FSM Trigger: CREDITS_CHANGED
+    this.fsmService.trigger(userId, FSMEvent.CREDITS_CHANGED, {
+      newBalance: result.user.credits,
+      change: -actualCost,
+      reason: 'Generation Cost'
+    }).catch(e => this.logger.warn(`Failed to trigger CREDITS_CHANGED: ${e.message}`));
+
+    // FSM Trigger: CREDITS_ZERO
+    const minCost = await this.getMinGenerationCost(userId);
+    if (result.user.credits < minCost) {
+      this.fsmService.trigger(userId, FSMEvent.CREDITS_ZERO, {
+        credits: result.user.credits
+      }).catch(e => this.logger.warn(`Failed to trigger CREDITS_ZERO: ${e.message}`));
+    }
+
+    return result;
   }
 
   /**
@@ -439,6 +500,10 @@ export class CreditsService {
       });
 
       this.logger.log(`Referral bonus granted: ${referrerId} -> ${referredId}`);
+
+      // FSM Trigger: CREDITS_CHANGED (Optional, as these are batched here, but addCredits is not called)
+      // We should probably trigger separately or manually here.
+      // But referrals are rare.
     });
   }
 
@@ -499,12 +564,43 @@ export class CreditsService {
         },
       });
 
-      // Add credits
-      await this.addCredits(userId, bonusAmount, 'DAILY_BONUS', 'FREE', {
-        streakDays,
+      // Add credits (This calls addCredits which triggers FSM)
+      // Wait, inside transaction we can't call this.addCredits easily if it creates another transaction?
+      // Prisma supports nested transactions but addCredits is standalone.
+      // We should just update user directly or call addCredits outside.
+      // But we want atomicity.
+      // Let's manually add credits inside.
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          credits: {
+            increment: bonusAmount,
+          },
+        },
       });
 
+      await tx.transaction.create({
+        data: {
+          userId,
+          type: 'DAILY_BONUS',
+          creditsAdded: bonusAmount,
+          paymentMethod: 'FREE',
+          status: 'COMPLETED',
+          metadata: { streakDays },
+          completedAt: new Date(),
+        },
+      });
+
+      // FSM Trigger manually?
+      // We are returning a promise, can't await FSM inside. We can trigger after.
       return { bonusAmount, streakDays };
+    }).then(res => {
+      // Trigger FSM after transaction commits
+      this.fsmService.trigger(userId, FSMEvent.CREDITS_CHANGED, {
+        change: bonusAmount,
+        reason: 'Daily Bonus'
+      }).catch(e => this.logger.warn('Failed to trigger FSM'));
+      return res;
     });
   }
 

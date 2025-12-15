@@ -3,6 +3,7 @@ import { MyContext } from '../grammy/grammy-context.interface';
 import { PaymentSystemEnum } from '../payment/enum/payment-system.enum';
 import { InlineKeyboard } from 'grammy';
 import { CreditPackage } from '@prisma/client';
+import { FSMEvent } from '../services/fsm/fsm.types';
 
 export async function buyCreditsConversation(
   conversation: Conversation<MyContext>,
@@ -94,6 +95,14 @@ export async function buyCreditsConversation(
     await ctx.reply(message, {
       parse_mode: 'HTML',
       reply_markup: keyboard,
+    });
+
+    // FSM Trigger: PACKAGE_VIEW
+    await conversation.external(async (ctx) => {
+      ctx.fsmService.trigger(user.id, FSMEvent.PACKAGE_VIEW, {
+        count: packages.length,
+        reason: 'User opened buy credits menu'
+      }).catch(e => console.warn(`Failed to trigger PACKAGE_VIEW: ${e.message}`));
     });
 
     // In this "fire and forget" mode, the conversation ends immediately.

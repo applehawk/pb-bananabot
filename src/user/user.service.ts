@@ -417,10 +417,18 @@ export class UserService {
    */
   async updateLastActive(telegramId: bigint | number): Promise<void> {
     try {
-      await this.prisma.user.update({
+      // Check if user exists first to avoid "Record not found" error logs
+      const user = await this.prisma.user.findUnique({
         where: { telegramId: BigInt(telegramId) },
-        data: { lastActiveAt: new Date() },
+        select: { id: true }
       });
+
+      if (user) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { lastActiveAt: new Date() },
+        });
+      }
     } catch (e) {
       // Ignore errors (user might not exist yet)
     }

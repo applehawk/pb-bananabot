@@ -8,6 +8,7 @@ import { FSMEvent } from '../services/fsm/fsm.types';
 
 interface SafeUser {
     id: string;
+    telegramId?: bigint;
     credits: number;
     reservedCredits: number;
     totalGenerated: number;
@@ -114,17 +115,18 @@ export async function enterGenerateFlow(ctx: MyContext) {
         }
 
         // 2. Try Implicit Context (Latching to latest state in chat)
-        // Only if we are sending images (Text latching is handled in processGenerateInput)
-        // AND ONLY if this is NOT a new Media Group (Album). Albums should start fresh if not matched above.
-
-        // DISABLED: User requested new images (separate messages) to always start NEW state, not latch.
-        // Previously we checked findLatestState() here. Now we skip it to force new UI.
-        /* 
+        // We enable latching ONLY for very recent states (< 15 seconds) to handle rapid-fire uploads
+        // without breaking the "New Image = New State" rule for distinct interactions.
         if (!existingStateId && state.inputImageFileIds.length > 0 && !state.mediaGroupId) {
-             const latest = findLatestState(ctx);
-             // ...
-        } 
-        */
+            const latest = findLatestState(ctx);
+            // Only latch if state is recent (e.g. created < 15 seconds ago) OR has no prompt yet
+            const isRecent = latest && (Date.now() - (latest.createdAt || 0) < 15000);
+
+            if (latest && (isRecent || !latest.prompt)) {
+                existingStateId = latest.uiMessageId ? String(latest.uiMessageId) : undefined;
+                if (existingStateId) console.log('[GENERATE] Latching to recent state:', existingStateId);
+            }
+        }
 
         if (existingStateId && ctx.session.generationStates) {
             const existingState = ctx.session.generationStates[existingStateId];
@@ -396,7 +398,7 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
                         }).catch(e => console.warn(`Failed to trigger TRIPWIRE_SHOWN: ${e.message}`));
 
                         // Ensure UserOverlay is created so Main Menu shows special offer
-                        await ctx.overlayService.activateTripwire(user as unknown as any).catch(e => console.warn(`Failed to activate tripwire overlay: ${e.message}`));
+                        await ctx.overlayService.activateTripwire(user as unknown as any, true).catch(e => console.warn(`Failed to activate tripwire overlay: ${e.message}`));
 
                         const kb = new InlineKeyboard()
                             .url(`🚀 Купить старт за ${pkg.priceYooMoney || pkg.price}₽`, url)
@@ -511,6 +513,7 @@ async function getUser(ctx: MyContext): Promise<SafeUser | null> {
     const u = dbUser as any;
     return {
         id: u.id,
+        telegramId: u.telegramId,
         credits: u.credits,
         reservedCredits: u.reservedCredits || 0,
         totalGenerated: u.totalGenerated || 0,

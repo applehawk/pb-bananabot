@@ -83,9 +83,19 @@ export interface FSMEventPayload {
     transactionId?: string;
     amount?: number;
     currency?: string;
+    // Offers
     packageId?: string;
+    count?: number; // For PACKAGE_VIEW
+
+    // Bonus
+    streakDays?: number;
     credits?: number; // For PACKAGE_PURCHASE or general credit info
     creditsUsed?: number; // For GENERATION and INSUFFICIENT_CREDITS
+
+    // Balance
+    newBalance?: number;
+    change?: number;
+
     referralCode?: string; // For REFERRAL_INVITE
     reason?: string;
     error?: string;

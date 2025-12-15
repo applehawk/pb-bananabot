@@ -7,7 +7,7 @@ import { UserService } from '../user/user.service';
 import { CreditsService } from '../credits/credits.service';
 import { BurnableBonusService } from '../credits/burnable-bonus.service';
 import { GeminiService } from '../gemini/gemini.service';
-import { ImageStorageService } from './storage/image-storage.service';
+//import { ImageStorageService } from './storage/image-storage.service';
 import { GenerationType, GenerationStatus, ModelTariff } from '@prisma/client';
 import { FSMService } from '../services/fsm/fsm.service';
 import { FSMEvent } from '../services/fsm/fsm.types';
@@ -40,7 +40,7 @@ export class GenerationService {
     private readonly creditsService: CreditsService,
     private readonly burnableBonusService: BurnableBonusService,
     private readonly geminiService: GeminiService,
-    private readonly imageStorage: ImageStorageService,
+    //    private readonly imageStorage: ImageStorageService,
     @InjectQueue('generation') private readonly generationQueue: Queue,
     private readonly fsmService: FSMService,
   ) { }
@@ -465,14 +465,14 @@ export class GenerationService {
     let imageUrl: string;
     let thumbnailUrl: string;
 
-    if (this.imageStorage.isConfigured()) {
-      const imageBuffer = Buffer.from(result.images[0].data, 'base64');
-      imageUrl = await this.imageStorage.uploadImage(imageBuffer, generation.id);
-      thumbnailUrl = await this.imageStorage.createThumbnail(imageBuffer, generation.id);
-    } else {
-      this.logger.warn('Image storage not configured, using base64 fallback');
-      imageUrl = null;
-    }
+    // if (this.imageStorage.isConfigured()) {
+    //   const imageBuffer = Buffer.from(result.images[0].data, 'base64');
+    //   imageUrl = await this.imageStorage.uploadImage(imageBuffer, generation.id);
+    //   thumbnailUrl = await this.imageStorage.createThumbnail(imageBuffer, generation.id);
+    // } else {
+    //   this.logger.warn('Image storage not configured, using base64 fallback');
+    //   imageUrl = null;
+    // }
 
     // 2. Final Cost
     const modelId = settings.selectedModelId;
@@ -525,7 +525,7 @@ export class GenerationService {
         costDetails: finalCost.details as any,
         metadata: {
           ...result.metadata,
-          storageConfigured: this.imageStorage.isConfigured(),
+          //storageConfigured: this.imageStorage.isConfigured(),
         },
       },
     });
@@ -534,11 +534,11 @@ export class GenerationService {
       `Generation ${generation.id} completed in ${processingTime}ms. Cost: ${finalCost.creditsToDeduct} credits`,
     );
 
-    // FSM Trigger: GENERATION
-    this.fsmService.trigger(userId, FSMEvent.GENERATION, {
+    // FSM Trigger: GENERATION_COMPLETED
+    this.fsmService.trigger(userId, FSMEvent.GENERATION_COMPLETED, {
       generationId: generation.id,
       creditsUsed: finalCost.creditsToDeduct + extraCost
-    }).catch(e => this.logger.warn(`Failed to trigger GENERATION: ${e.message}`));
+    }).catch(e => this.logger.warn(`Failed to trigger GENERATION_COMPLETED: ${e.message}`));
 
     // Check for FIRST_GENERATION
     // We fetch user stats to see if this was their first one

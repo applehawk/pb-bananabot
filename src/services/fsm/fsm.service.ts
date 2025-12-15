@@ -4,6 +4,8 @@ import { FSMEvent, FSMActionType, FSMConditionOperator, FSMContext, FSMEventPayl
 import { FSMState, FSMTransition, FSMCondition, User, UserFSMState, TransactionStatus, TransactionType, FSMEvent as PrismaFSMEvent } from '@prisma/client';
 import { OverlayService } from './overlay.service';
 import { BotService } from '../../grammy/bot.service';
+import { RulesService } from '../rules/rules.service';
+import { RuleTrigger } from '@prisma/client';
 
 @Injectable()
 export class FSMService {
@@ -13,7 +15,9 @@ export class FSMService {
         private readonly prisma: PrismaService,
         private readonly overlayService: OverlayService,
         @Inject(forwardRef(() => BotService))
-        private readonly botService: BotService
+        private readonly botService: BotService,
+        @Inject(forwardRef(() => RulesService))
+        private readonly rulesService: RulesService
     ) { }
 
     /**
@@ -93,9 +97,12 @@ export class FSMService {
         // If no transition found, we might need to stay in same state or log "No transition"
         this.logger.debug(`No valid transition found for ${event} from state ${currentState.name}`);
 
-        // [NEW] Overlay Processing (Parallel to Lifecycle)
-        // Even if no lifecycle transition happened, overlays might trigger (e.g. Generation count incremented)
-        await this.overlayService.process(user, event as unknown as PrismaFSMEvent);
+        // [NEW] Rules Engine Processing (Parallel to Lifecycle)
+        // Even if no lifecycle transition happened, rules might trigger (e.g. Generation count incremented)
+        const ruleTrigger = this.mapEventToRuleTrigger(event);
+        if (ruleTrigger) {
+            await this.rulesService.process(userId, ruleTrigger, payload);
+        }
     }
 
     /**
@@ -343,10 +350,13 @@ export class FSMService {
             await this.dispatchAction(user, action, payload);
         }
 
-        // [NEW] Overlay Processing (After Transition)
-        // Context has changed (state updated), so we re-evaluate overlays
+        // [NEW] Rules Engine Processing (After Transition)
+        // Context has changed (state updated), so we re-evaluate rules
         if (transition.triggerEvent) {
-            await this.overlayService.process(user, transition.triggerEvent as unknown as PrismaFSMEvent);
+            const ruleTrigger = this.mapEventToRuleTrigger(transition.triggerEvent);
+            if (ruleTrigger) {
+                await this.rulesService.process(user.id, ruleTrigger, payload);
+            }
         }
     }
 
@@ -560,6 +570,24 @@ export class FSMService {
 
         for (const u of users) {
             await this.evaluateUserStrict(u.userId);
+        }
+    }
+
+    private mapEventToRuleTrigger(event: any): RuleTrigger | null {
+        // Safe mapping using string comparison if Enums allow, otherwise explicit
+        const e = event.toString();
+        switch (e) {
+            case 'BOT_START': return RuleTrigger.BOT_START;
+            case 'GENERATION_COMPLETED': return RuleTrigger.GENERATION_COMPLETED;
+            case 'CREDITS_CHANGED': return RuleTrigger.CREDITS_CHANGED;
+            case 'PAYMENT_COMPLETED': return RuleTrigger.PAYMENT_COMPLETED;
+            case 'PAYMENT_FAILED': return RuleTrigger.PAYMENT_FAILED;
+            case 'TIMEOUT': return RuleTrigger.TIME; // Map timeout to time?
+            case 'REFERRAL_INVITE': return RuleTrigger.REFERRAL_INVITE;
+            case 'REFERRAL_PAID': return RuleTrigger.REFERRAL_PAID;
+            case 'TRIPWIRE_SHOWN': return RuleTrigger.OVERLAY_ACTIVATED; // Kind of?
+            case 'GENERATION_PENDING': return RuleTrigger.GENERATION_REQUESTED;
+            default: return null;
         }
     }
 }

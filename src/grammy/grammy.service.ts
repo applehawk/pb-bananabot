@@ -156,12 +156,13 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
       // but we need to pass next().
 
       const nextPromise = next(); // Start processing next middleware
+      await nextPromise; // Wait for message processing (and potential user creation) to complete
 
       if (ctx.from?.id) {
         const userId = ctx.from.id;
         const key = `user:activity_cooldown:${userId}`;
 
-        // This can run in background parallel to next()
+        // This can run in background
         this.redis.get(key).then(async (result) => {
           if (!result) {
             // Key missing, so update DB and set key
@@ -178,7 +179,6 @@ export class GrammYService implements OnModuleInit, OnModuleDestroy {
         });
       }
 
-      await nextPromise;
     });
 
     this.logger.log('Activity tracking middleware initialized');

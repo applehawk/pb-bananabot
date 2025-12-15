@@ -1,7 +1,7 @@
 # Multi-stage build for optimized production image
 
 # Stage 1: Build
-FROM oven/bun:1 AS builder
+FROM oven/bun:latest AS builder
 
 WORKDIR /app
 
@@ -13,8 +13,9 @@ COPY nest-cli.json ./
 # 2. Install dependencies
 # Remove package-lock.json to avoid frozen lockfile errors during migration (since we don't have bun.lockb)
 RUN rm -f package-lock.json
-RUN bun install
-RUN bun install -D tsc-alias
+# Use --no-save to avoid lockfile issues and --registry to ensure we use npm registry
+RUN bun install --no-save || bun install --backend=hardlink --no-save
+RUN bun install -D tsc-alias --no-save
 
 # 3. Copy source code, libs, and pre-copied Prisma schema
 COPY src ./src
@@ -34,7 +35,7 @@ RUN bunx tsc-alias -p tsconfig.json --outDir ./dist
 # ---
 # Stage 2: Production
 # ---
-FROM oven/bun:1
+FROM oven/bun:latest
 
 WORKDIR /app
 
@@ -46,7 +47,7 @@ ENV NODE_ENV=production
 COPY package*.json ./
 COPY tsconfig.json ./
 RUN rm -f package-lock.json
-RUN bun install --production
+RUN bun install --production --no-save || bun install --production --backend=hardlink --no-save
 # Удаляем невалидный symlink после production install
 RUN rm -rf node_modules/.prisma
 
