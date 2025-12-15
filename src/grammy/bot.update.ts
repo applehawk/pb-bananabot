@@ -23,7 +23,9 @@ import { GrammYServiceExtension } from './grammy-service-extension';
 
 import { SubscriptionService } from './subscription.service';
 import { FSMService } from '../services/fsm/fsm.service';
+
 import { FSMEvent } from '../services/fsm/fsm.types';
+import { OverlayService } from '../services/fsm/overlay.service';
 
 /**
  * Bot Update Handler (grammY version)
@@ -49,7 +51,9 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     private readonly prisma: PrismaService,
     // Inject extension to force instantiation before BotUpdate runs
     private readonly grammyServiceExtension: GrammYServiceExtension,
+
     private readonly fsmService: FSMService, // Injected
+    private readonly overlayService: OverlayService, // Injected
   ) {
     this.logger.log('BotUpdate constructor called');
     this.adminChatId = Number(configService.get('ADMIN_CHAT_ID'));
@@ -81,13 +85,13 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
     this.registerCommands();
     this.registerCallbackHandlers();
     this.registerTextHandlers();
-    this.registerTextHandlers();
+
     this.registerPhotoHandlers();
     this.registerChatMemberHandlers();
     this.logger.log('Bot update handlers registered');
 
     // IMPORTANT: Start bot after all handlers AND conversations are registered
-    // IMPORTANT: Start bot after all handlers AND conversations are registered
+
     await this.grammyService.startBot();
     this.logger.log('Bot started successfully');
   }
@@ -387,9 +391,11 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
 
 ⚡ _Просто отправьте фото или текст, чтобы начать творить!_`;
 
+    const activeOverlays = user ? (await this.overlayService.getActiveOverlays(user.id)).map(o => o.type) : [];
+
     await ctx.reply(welcomeMessage, {
       parse_mode: 'Markdown',
-      reply_markup: getMainKeyboard(),
+      reply_markup: getMainKeyboard(activeOverlays),
     });
   }
 
@@ -598,6 +604,17 @@ export class BotUpdate implements OnModuleInit, OnApplicationBootstrap {
       }
       if (messageText === '💎 Купить кредиты') {
         await ctx.conversation.enter(CommandEnum.BUY_CREDITS);
+        return;
+      }
+      if (messageText === '⚡ Спецпредложение') {
+        // Trigger Special Offer / Tripwire Flow
+        // For now, redirect to BUY_CREDITS or a specific OFFER conversation
+        await ctx.conversation.enter(CommandEnum.BUY_CREDITS);
+        // Implementation detail: BUY_CREDITS should check for active offer and show it first
+        return;
+      }
+      if (messageText === '🎁 Бонусы (🔥)') {
+        await ctx.conversation.enter(CommandEnum.BONUSES);
         return;
       }
 

@@ -21,6 +21,9 @@ export class BurnableBonusService {
     /**
      * Grant a burnable bonus to a user
      */
+    /**
+     * Grant a burnable bonus to a user
+     */
     async grantBonus(userId: string, burnableBonusId: string) {
         try {
             const bonusTemplate = await this.prisma.burnableBonus.findUnique({
@@ -39,46 +42,66 @@ export class BurnableBonusService {
             } else if (bonusTemplate.expiresInHours) {
                 deadline = new Date(Date.now() + bonusTemplate.expiresInHours * 60 * 60 * 1000);
             } else {
-                // No expiration? Then effectively a regular bonus.
-                // But we treat it as burnable without deadline (infinite).
                 deadline = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year fallback
             }
 
-            // Add credits
-            await this.creditsService.addCredits(
-                userId,
-                bonusTemplate.amount,
-                'BONUS',
-                'FREE',
-                { burnableBonusId, type: 'BURNABLE_GRANT' }
-            );
-
-            // Create tracking record
-            await this.prisma.userBurnableBonus.create({
-                data: {
-                    userId,
-                    amount: bonusTemplate.amount,
-                    deadline,
-                    generationsRequired: bonusTemplate.conditionGenerations,
-                    topUpAmountRequired: bonusTemplate.conditionTopUpAmount,
-                    status: 'ACTIVE',
-                },
+            await this.executeGrant(userId, bonusTemplate.amount, deadline, {
+                burnableBonusId,
+                conditionGenerations: bonusTemplate.conditionGenerations,
+                conditionTopUpAmount: bonusTemplate.conditionTopUpAmount
             });
-
-            this.logger.log(`Granted burnable bonus ${bonusTemplate.amount} to user ${userId}`);
-
-            // Notify user
-            await this.sendBonusNotification(userId, bonusTemplate.amount, deadline, bonusTemplate.conditionGenerations, bonusTemplate.conditionTopUpAmount);
-
-            // FSM Trigger: BONUS_GRANTED
-            this.fsmService.trigger(userId, FSMEvent.BONUS_GRANTED, {
-                amount: bonusTemplate.amount,
-                reason: 'Burnable Bonus Granted'
-            }).catch(e => this.logger.warn(`Failed to trigger BONUS_GRANTED: ${e.message}`));
 
         } catch (error) {
             this.logger.error(`Failed to grant burnable bonus to user ${userId}`, error);
         }
+    }
+
+    /**
+     * Grant an ad-hoc burnable bonus (without template)
+     */
+    async grantAdHocBonus(userId: string, amount: number, hours: number, reason: string) {
+        const deadline = new Date(Date.now() + hours * 60 * 60 * 1000);
+        await this.executeGrant(userId, amount, deadline, {
+            reason,
+            conditionGenerations: 1, // Default condition or param?
+            // Assuming simplified ad-hoc bonus usually requires at least 1 gen to save?
+            // Or typically just "Use it".
+            // Let's assume FSM config might specifying this later, but for now strict defaults.
+        });
+    }
+
+    private async executeGrant(userId: string, amount: number, deadline: Date, meta: any) {
+        // Add credits
+        await this.creditsService.addCredits(
+            userId,
+            amount,
+            'BONUS',
+            'FREE',
+            { ...meta, type: 'BURNABLE_GRANT' }
+        );
+
+        // Create tracking record
+        await this.prisma.userBurnableBonus.create({
+            data: {
+                userId,
+                amount,
+                deadline,
+                generationsRequired: meta.conditionGenerations ?? 1, // Default 1 gen to save
+                topUpAmountRequired: meta.conditionTopUpAmount ?? null,
+                status: 'ACTIVE',
+            },
+        });
+
+        this.logger.log(`Granted burnable bonus ${amount} to user ${userId}`);
+
+        // Notify user
+        await this.sendBonusNotification(userId, amount, deadline, meta.conditionGenerations, meta.conditionTopUpAmount);
+
+        // FSM Trigger: BONUS_GRANTED
+        this.fsmService.trigger(userId, FSMEvent.BONUS_GRANTED, {
+            amount,
+            reason: meta.reason || 'Burnable Bonus Granted'
+        }).catch(e => this.logger.warn(`Failed to trigger BONUS_GRANTED: ${e.message}`));
     }
 
     /**

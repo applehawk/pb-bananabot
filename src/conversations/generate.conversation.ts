@@ -378,8 +378,10 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
                 const tripwireId = (fullSettings as any).tripwirePackageId;
                 const freeCreditsAmount = (fullSettings as any).freeCreditsAmount || 3;
 
-                // Tripwire Condition: User has used up their free credits (or close to it)
-                const isNewUser = (user?.freeCreditsUsed || 0) >= freeCreditsAmount;
+                // Tripwire Condition: User has no payments AND insufficient balance.
+                // "New User" defined as someone who has never paid.
+                const totalPaid = await ctx.paymentService.getUserTotalPaidAmount(user.id);
+                const isNewUser = totalPaid === 0;
 
                 if (tripwireId && isNewUser) {
                     // Offer Tripwire
@@ -392,6 +394,9 @@ export async function processGenerateInput(ctx: MyContext): Promise<boolean> {
                             packageId: tripwireId,
                             reason: 'Insufficient credits for generation (new user)'
                         }).catch(e => console.warn(`Failed to trigger TRIPWIRE_SHOWN: ${e.message}`));
+
+                        // Ensure UserOverlay is created so Main Menu shows special offer
+                        await ctx.overlayService.activateTripwire(user as unknown as any).catch(e => console.warn(`Failed to activate tripwire overlay: ${e.message}`));
 
                         const kb = new InlineKeyboard()
                             .url(`🚀 Купить старт за ${pkg.priceYooMoney || pkg.price}₽`, url)

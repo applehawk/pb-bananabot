@@ -3,15 +3,29 @@ import { FSMEvent, FSMActionType } from '@prisma/client';
 export { FSMEvent, FSMActionType };
 
 // Re-export state codes if needed, or keep local if not in DB enum
-export export enum FSMStateCode {
+export enum FSMStateCode {
     // Lifecycle States
-    NEW = 'NEW',
+    NEW = 'NEW', // [NEW]
+
+    // [STARTED, DEAD, FIRST_GENERATION, EARLY_EXPERIMENTER]
     ACTIVATING = 'ACTIVATING',
+
+    // [ACTIVE_FREE, LOW_BALANCE_FREE, FREELOADER_EXPERIMENTER]
     ACTIVE_FREE = 'ACTIVE_FREE',
+
+    // [FREE_EXHAUSTED, PAID_EXHAUSTED, TRIPWIRE_ELIGIBLE, TRIPWIRE_OFFERED, TRIPWIRE_EXPIRED]
     PAYWALL = 'PAYWALL',
-    PAID_ACTIVE = 'PAID_ACTIVE',
+
+    // [PAID_ACTIVE, PAID_LOW_BALANCE]
+    PAID_ACTIVE = 'PAID_ACTIVE', // Note: BONUS states are now Overlays
+
+    // [INACTIVE_FREE, INACTIVE_PAID, CHURN_RISK]
     INACTIVE = 'INACTIVE',
+
+    // [LONG_TERM_CHURN]
     CHURNED = 'CHURNED',
+
+    // [BLOCKED, SUPPRESSED]
     BLOCKED = 'BLOCKED',
 }
 

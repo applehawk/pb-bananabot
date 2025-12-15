@@ -282,9 +282,45 @@ export class GenerationService {
         });
       }
 
+      // 1.5 Enhance Prompt (Copied from TextToImage)
+      let finalPrompt = prompt;
+      let enhancedPromptText: string | undefined;
+      let enhancementCost = 0;
+
+      if (settings.autoEnhance) {
+        this.logger.log(`Auto-enhancing prompt for user ${userId} (Img2Img)`);
+        const instruction = settings.enhancementPrompt || undefined;
+        const enhanceModelId = 'gemini-2.5-flash';
+
+        try {
+          enhancedPromptText = await this.geminiService.enhancePrompt(prompt, instruction, enhanceModelId);
+          finalPrompt = enhancedPromptText;
+
+          // Calculate Cost
+          try {
+            // Approx tokens: 1 token ~= 4 chars
+            const inputToks = Math.ceil(prompt.length / 4) + (instruction ? Math.ceil(instruction.length / 4) : 100);
+            const outputToks = Math.ceil(enhancedPromptText.length / 4);
+
+            const costResult = await this.creditsService.calculateTokenCost(
+              enhanceModelId,
+              inputToks,
+              outputToks,
+              userId
+            );
+            enhancementCost = costResult.creditsToDeduct;
+            this.logger.log(`Enhancement cost: ${enhancementCost} credits`);
+          } catch (costErr) {
+            this.logger.warn(`Failed to calculate enhancement cost: ${costErr.message}`);
+          }
+        } catch (e) {
+          this.logger.warn(`Enhancement failed: ${e.message}`);
+        }
+      }
+
       // 2. Execute
       const result = await this.geminiService.generateFromImage({
-        prompt,
+        prompt: finalPrompt,
         // negativePrompt removed
         aspectRatio: generation.aspectRatio,
         inputImages: inputImages.map((img) => ({
@@ -302,13 +338,17 @@ export class GenerationService {
         settings,
         result: {
           images: result.images,
-          enhancedPrompt: null, // Img2img usually doesn't enhance prompt the same way or it's not in result type yet
-          metadata: { inputImagesCount: numInputImages }
+          enhancedPrompt: enhancedPromptText,
+          metadata: {
+            inputImagesCount: numInputImages,
+            enhancementCost
+          }
         },
         estimatedInputTokens,
         estimatedOutputTokens,
         reservedAmount,
-        numberOfImages: 1 // Output is usually 1 for img2img
+        numberOfImages: 1, // Output is usually 1 for img2img
+        extraCost: enhancementCost
       });
 
     } catch (error) {

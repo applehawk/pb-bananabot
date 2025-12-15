@@ -7,6 +7,7 @@ import { CreditsService } from '../credits/credits.service';
 import { GenerationService } from '../generation/generation.service';
 import { BurnableBonusService } from '../credits/burnable-bonus.service';
 import { FSMService } from '../services/fsm/fsm.service';
+import { OverlayService } from '../services/fsm/overlay.service';
 import { GenerationMode } from '../enum/generation-mode.enum';
 
 /**
@@ -71,6 +72,7 @@ export interface CustomContextProps {
   paymentService: PaymentService;
   burnableBonusService: BurnableBonusService;
   fsmService: FSMService;
+  overlayService: OverlayService;
 }
 
 /**

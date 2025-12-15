@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../database/prisma.service';
 import { FSMService } from './fsm.service';
+import { OverlayService } from './overlay.service';
 import { FSMEvent } from './fsm.types';
 
 @Injectable()
@@ -11,6 +12,7 @@ export class FSMScheduler {
     constructor(
         private readonly prisma: PrismaService,
         private readonly fsmService: FSMService,
+        private readonly overlayService: OverlayService,
     ) { }
 
     /**
@@ -19,6 +21,9 @@ export class FSMScheduler {
     @Cron(CronExpression.EVERY_MINUTE)
     async handleTimeouts() {
         this.logger.debug('Running FSM timeout checks...');
+
+        // 0. Expire Overlays
+        await this.overlayService.expireOverlays();
 
         // 1. Find transitions with timeouts
         const activeTransitionsWithTimeout = await this.prisma.fSMTransition.findMany({

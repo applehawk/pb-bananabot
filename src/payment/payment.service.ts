@@ -531,4 +531,21 @@ export class PaymentService {
       }
     }
   }
+  /**
+   * Calculate total paid amount by user (completed purchases only)
+   */
+  async getUserTotalPaidAmount(userId: string): Promise<number> {
+    const aggregate = await this.prisma.transaction.aggregate({
+      where: {
+        userId,
+        status: TransactionStatus.COMPLETED,
+        type: TransactionType.PURCHASE
+      },
+      _sum: {
+        amount: true
+      }
+    });
+
+    return aggregate._sum.amount || 0;
+  }
 }

@@ -1,3 +1,4 @@
+import { OverlayType } from '@prisma/client';
 import { Keyboard } from 'grammy';
 
 /**
@@ -5,15 +6,25 @@ import { Keyboard } from 'grammy';
  *
  * Постоянная клавиатура с основными командами бота
  */
-export function getMainKeyboard() {
-  return new Keyboard()
+export function getMainKeyboard(activeOverlays: string[] = []) {
+  const keyboard = new Keyboard();
+
+  // Special Offer Button (Highest Priority)
+  if (activeOverlays.includes(OverlayType.TRIPWIRE) || activeOverlays.includes(OverlayType.SPECIAL_OFFER)) {
+    keyboard.text('⚡ Спецпредложение').row();
+  }
+
+  // Active Bonus Indicator
+  const bonusText = activeOverlays.includes(OverlayType.BONUS) ? '🎁 Бонусы (🔥)' : '🎁 Бонусы';
+
+  keyboard
     .text('💳 Пополнить')
-    .text('🎁 Бонусы')
+    .text(bonusText)
     .row()
     .text('❓ Помощь')
-    .text('⚙️ Настройки')
-    .resized()
-    .persistent();
+    .text('⚙️ Настройки');
+
+  return keyboard.resized().persistent();
 }
 
 /**

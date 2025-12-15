@@ -1,13 +1,20 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { FSMEvent, FSMActionType, FSMConditionOperator, FSMContext, FSMEventPayload } from './fsm.types';
-import { FSMState, FSMTransition, FSMCondition, User, UserFSMState, TransactionStatus, TransactionType } from '@prisma/client';
+import { FSMState, FSMTransition, FSMCondition, User, UserFSMState, TransactionStatus, TransactionType, FSMEvent as PrismaFSMEvent } from '@prisma/client';
+import { OverlayService } from './overlay.service';
+import { BotService } from '../../grammy/bot.service';
 
 @Injectable()
 export class FSMService {
     private readonly logger = new Logger(FSMService.name);
 
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly overlayService: OverlayService,
+        @Inject(forwardRef(() => BotService))
+        private readonly botService: BotService
+    ) { }
 
     /**
      * Main entry point to trigger an FSM event for a user.
@@ -83,7 +90,12 @@ export class FSMService {
         }
 
         // If no transition found, we might need to stay in same state or log "No transition"
+        // If no transition found, we might need to stay in same state or log "No transition"
         this.logger.debug(`No valid transition found for ${event} from state ${currentState.name}`);
+
+        // [NEW] Overlay Processing (Parallel to Lifecycle)
+        // Even if no lifecycle transition happened, overlays might trigger (e.g. Generation count incremented)
+        await this.overlayService.process(user, event as unknown as PrismaFSMEvent);
     }
 
     /**
@@ -330,6 +342,12 @@ export class FSMService {
         for (const action of transition.actions) {
             await this.dispatchAction(user, action, payload);
         }
+
+        // [NEW] Overlay Processing (After Transition)
+        // Context has changed (state updated), so we re-evaluate overlays
+        if (transition.triggerEvent) {
+            await this.overlayService.process(user, transition.triggerEvent as unknown as PrismaFSMEvent);
+        }
     }
 
     private async dispatchAction(user: User, action: any, payload?: FSMEventPayload) {
@@ -340,12 +358,14 @@ export class FSMService {
 
             switch (action.type) {
                 case FSMActionType.SEND_MESSAGE:
-                    // await this.messagingService.sendMessage(user.telegramId, config.templateId, payload);
-                    this.logger.log(`[ACTION] Send Message Template: ${config.templateId}`);
+                    if (user.telegramId) {
+                        await this.botService.sendMessage(Number(user.telegramId), config.templateId || config.message || 'Hello!');
+                        this.logger.log(`[ACTION] Sent Message: ${config.templateId}`);
+                    }
                     break;
 
                 case FSMActionType.GRANT_BURNABLE_BONUS:
-                    // await this.bonusService.grantBonus(user.id, config.amount, config.hours);
+                    await this.overlayService.grantBonus(user, config.amount, 'fsm_action', config.hours);
                     this.logger.log(`[ACTION] Grant Bonus: ${config.amount}`);
                     break;
 
@@ -362,19 +382,22 @@ export class FSMService {
                     break;
 
                 case FSMActionType.SHOW_TRIPWIRE:
-                    this.logger.log(`[ACTION] Show Tripwire`);
+                    await this.overlayService.activateTripwire(user);
+                    this.logger.log(`[ACTION] Show Tripwire (Forced)`);
                     break;
 
                 case FSMActionType.SEND_SPECIAL_OFFER:
+                    await this.overlayService.activateSpecialOffer(user, config.offerId || 'default_offer');
                     this.logger.log(`[ACTION] Send Special Offer`);
                     break;
 
                 case FSMActionType.ENABLE_REFERRAL:
-                    this.logger.log(`[ACTION] Enable Referral`);
+                    await this.overlayService.enableReferral(user);
+                    this.logger.log(`[ACTION] Enable Referral (Forced)`);
                     break;
 
                 case FSMActionType.SWITCH_MODEL_HINT:
-                    this.logger.log(`[ACTION] Switch Model Hint`);
+                    this.logger.log(`[ACTION] Switch Model Hint (Not implemented yet - requires user preferences service)`);
                     break;
 
                 case FSMActionType.NO_ACTION:

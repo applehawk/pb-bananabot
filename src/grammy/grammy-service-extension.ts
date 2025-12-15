@@ -5,6 +5,7 @@ import { CreditsService } from '../credits/credits.service';
 import { GenerationService } from '../generation/generation.service';
 import { PaymentService } from '../payment/payment.service';
 import { BurnableBonusService } from '../credits/burnable-bonus.service';
+import { OverlayService } from '../services/fsm/overlay.service';
 
 /**
  * Extension для GrammYService
@@ -22,6 +23,8 @@ export class GrammYServiceExtension {
     private readonly paymentService: PaymentService,
     @Inject(forwardRef(() => BurnableBonusService))
     private readonly burnableBonusService: BurnableBonusService,
+    @Inject(forwardRef(() => OverlayService))
+    private readonly overlayService: OverlayService,
   ) {
     // Расширяем middleware для инъекции новых сервисов
     this.setupImageGenServices();
@@ -37,6 +40,7 @@ export class GrammYServiceExtension {
       ctx.generationService = this.generationService;
       ctx.paymentService = this.paymentService;
       ctx.burnableBonusService = this.burnableBonusService;
+      ctx.overlayService = this.overlayService;
       await next();
     });
 
